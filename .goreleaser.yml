@@ -1,0 +1,24 @@
+version: 2
+builds:
+  - main: ./cmd/protomcp
+    binary: protomcp
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=0
+
+archives:
+  - format: tar.gz
+    name_template: "protomcp_{{ .Os }}_{{ .Arch }}"
+
+brews:
+  - repository:
+      owner: protomcp
+      name: homebrew-tap
+    homepage: "https://protomcp.dev"
+    description: "Language-agnostic MCP runtime"
