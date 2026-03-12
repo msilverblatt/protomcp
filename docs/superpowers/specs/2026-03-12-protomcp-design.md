@@ -435,6 +435,57 @@ def connect_db(connection_string: str) -> ToolResult:
     )
 ```
 
+## Documentation
+
+### Framework
+
+Documentation is built with **Starlight** (Astro) — the emerging standard for open source dev tools docs. Starlight ships minimal JavaScript, has built-in search and i18n, and is framework-agnostic (no React/Vue dependency).
+
+### Site Structure
+
+```
+docs.protomcp.dev/
+├── Getting Started
+│   ├── Installation
+│   ├── Quick Start (5-minute tutorial: install, write a tool, run)
+│   └── How It Works (architecture explainer with diagrams)
+├── Guides
+│   ├── Writing Tools (Python)
+│   ├── Writing Tools (TypeScript)
+│   ├── Writing Tools (Go)
+│   ├── Writing Tools (Rust)
+│   ├── Writing Tools (Other Languages)
+│   ├── Dynamic Tool Lists
+│   ├── Hot Reload
+│   ├── Error Handling
+│   └── Production Deployment
+├── Reference
+│   ├── CLI Reference
+│   ├── Protobuf Spec
+│   ├── Python API
+│   ├── TypeScript API
+│   ├── Go API
+│   ├── Rust API
+│   └── Configuration
+├── Concepts
+│   ├── Architecture
+│   ├── Tool List Modes (open/allowlist/blocklist)
+│   ├── Transport Options
+│   └── MCP Protocol (for the curious — not required reading)
+└── Community
+    ├── Contributing
+    ├── Writing a Language Library
+    └── Changelog
+```
+
+### Documentation Standards
+
+- **Every feature has a guide and a reference page.** Guides explain when and why. Reference pages are exhaustive API docs.
+- **Every code example is tested.** Examples are extracted from actual test files or validated in CI. No stale examples.
+- **"Writing Tools (Other Languages)" guide** walks through implementing the protobuf contract from scratch in an unsupported language. This is a key differentiator — protomcp's promise is "any language," so the docs must prove it.
+- **Architecture diagrams** use Mermaid (Starlight has built-in support) showing the Go binary, unix socket, tool process, and MCP client relationships.
+- **Interactive examples** where possible — embedded terminal output showing hot-reload in action, tool list changes, etc.
+
 ## Deliverables by Priority
 
 ### v1.0 — Core
@@ -447,20 +498,23 @@ def connect_db(connection_string: str) -> ToolResult:
 6. CLI: `protomcp dev` and `protomcp run`
 7. Python library (decorator API, schema generation, tool_manager)
 8. TypeScript library (same API surface)
+9. Documentation site (Starlight): Getting Started, Guides (Python, TS, Dynamic Tool Lists, Hot Reload), Reference (CLI, Protobuf Spec, Python API, TS API), Concepts (Architecture, Tool List Modes, Transports)
 
 ### v1.1 — Expand
 
-9. Go library
-10. Rust library
-11. Middleware/hooks system (interceptor chain in Go binary)
-12. Auth support (OAuth 2.1, JWT, API Key) at the transport layer
-13. Build-time validation (tool naming, descriptions, argument structure)
+10. Go library
+11. Rust library
+12. Middleware/hooks system (interceptor chain in Go binary)
+13. Auth support (OAuth 2.1, JWT, API Key) at the transport layer
+14. Build-time validation (tool naming, descriptions, argument structure)
+15. Documentation: Go/Rust guides and API reference, Middleware guide, Auth guide, "Writing a Language Library" community guide
 
 ### v1.2 — Ecosystem
 
-14. OpenAPI spec ingestion (auto-generate tools from API specs)
-15. File-system routing (optional alternative to decorators)
-16. Additional community language libraries
+16. OpenAPI spec ingestion (auto-generate tools from API specs)
+17. File-system routing (optional alternative to decorators)
+18. Additional community language libraries
+19. Documentation: OpenAPI guide, File-system routing guide, expanded community section
 
 ## Non-Goals
 
