@@ -1,0 +1,146 @@
+---
+draft: false
+title: Custom Middleware
+description: Intercept tool calls with before/after hooks using custom middleware registered from tool processes.
+---
+
+Custom middleware lets you intercept tool calls with before/after hooks. Middleware is registered by the tool process during the handshake and dispatched by the Go binary.
+
+## How it works
+
+1. Tool process registers middleware during startup (after listing tools, before handshake-complete)
+2. When a `tools/call` request arrives, the Go binary sends intercept requests to the tool process
+3. **Before phase**: middleware runs in priority order (lowest first). Each can modify arguments or reject the call
+4. The tool handler runs
+5. **After phase**: middleware runs in reverse priority order. Each can modify the result
+
+---
+
+## Python
+
+```python
+from protomcp import tool, ToolResult
+from protomcp.middleware import middleware
+
+@middleware("audit_log", priority=10)
+def audit_log(phase, tool_name, args_json, result_json, is_error):
+    if phase == "before":
+        print(f"[AUDIT] Calling {tool_name} with {args_json}")
+        return {}  # no modifications
+    elif phase == "after":
+        print(f"[AUDIT] {tool_name} returned (error={is_error}): {result_json}")
+        return {}
+
+@middleware("rate_limiter", priority=5)
+def rate_limiter(phase, tool_name, args_json, result_json, is_error):
+    if phase == "before":
+        if is_rate_limited(tool_name):
+            return {"reject": True, "reject_reason": "Rate limit exceeded"}
+    return {}
+
+@tool("greet")
+def greet(name: str) -> ToolResult:
+    return ToolResult(result=f"Hello, {name}!")
+```
+
+### Handler return values
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `reject` | `bool` | Reject the call (before phase only) |
+| `reject_reason` | `str` | Reason for rejection |
+| `arguments_json` | `str` | Modified arguments JSON (before phase) |
+| `result_json` | `str` | Modified result JSON (after phase) |
+
+---
+
+## TypeScript
+
+```typescript
+import { tool, ToolResult, middleware } from 'protomcp';
+import { z } from 'zod';
+
+middleware('audit_log', 10, (phase, toolName, argsJson, resultJson, isError) => {
+  if (phase === 'before') {
+    console.log(`[AUDIT] Calling ${toolName} with ${argsJson}`);
+    return {};
+  } else {
+    console.log(`[AUDIT] ${toolName} returned (error=${isError}): ${resultJson}`);
+    return {};
+  }
+});
+
+middleware('rate_limiter', 5, (phase, toolName) => {
+  if (phase === 'before') {
+    if (isRateLimited(toolName)) {
+      return { reject: true, rejectReason: 'Rate limit exceeded' };
+    }
+  }
+  return {};
+});
+
+tool({
+  name: 'greet',
+  description: 'Greet someone',
+  args: z.object({ name: z.string() }),
+  handler({ name }) {
+    return new ToolResult({ result: `Hello, ${name}!` });
+  },
+});
+```
+
+---
+
+## Go
+
+The Go SDK does not currently expose a middleware registration API. Middleware is registered by tool processes using the Python, TypeScript, or Rust SDKs.
+
+---
+
+## Rust
+
+The Rust SDK does not currently expose a middleware registration API. Middleware support is planned for a future release.
+
+---
+
+## Priority
+
+Middleware priority determines execution order:
+- **Before phase**: lowest priority number runs first
+- **After phase**: highest priority number runs first (reverse order)
+
+This ensures that outermost middleware (e.g., auth at priority 1) wraps innermost middleware (e.g., logging at priority 100).
+
+---
+
+## Argument modification
+
+Middleware in the before phase can modify the tool arguments by returning `arguments_json`:
+
+```python
+@middleware("inject_defaults", priority=50)
+def inject_defaults(phase, tool_name, args_json, result_json, is_error):
+    if phase == "before":
+        import json
+        args = json.loads(args_json)
+        if "timeout" not in args:
+            args["timeout"] = 30
+        return {"arguments_json": json.dumps(args)}
+    return {}
+```
+
+---
+
+## Rejection
+
+Middleware in the before phase can reject a call entirely:
+
+```python
+@middleware("block_dangerous", priority=1)
+def block_dangerous(phase, tool_name, args_json, result_json, is_error):
+    if phase == "before" and tool_name in BLOCKED_TOOLS:
+        return {"reject": True, "reject_reason": f"Tool {tool_name} is blocked"}
+    return {}
+```
+
+When a call is rejected, the tool handler does not run and no after-phase middleware executes.

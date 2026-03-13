@@ -1,0 +1,70 @@
+---
+draft: false
+title: Authentication
+description: Configure built-in token and API key authentication for network transports.
+---
+
+protomcp includes built-in authentication middleware for network transports (SSE, HTTP). Auth is configured via the `--auth` flag and is automatically skipped for stdio transport.
+
+## Configuration
+
+Use `--auth` to require authentication. The flag accepts `scheme:ENV_VAR` pairs:
+
+```sh
+# Require Bearer token authentication
+pmcp run --auth token:MY_API_TOKEN server.py
+
+# Require API key authentication
+pmcp run --auth apikey:SERVICE_API_KEY server.py
+
+# Multiple auth requirements (all must pass)
+pmcp run --auth token:AUTH_TOKEN --auth apikey:ADMIN_KEY server.py
+```
+
+### Supported schemes
+
+| Scheme | Header | Format |
+|--------|--------|--------|
+| `token` | `Authorization` | `Bearer <value>` |
+| `apikey` | `X-API-Key` | `<value>` |
+
+### Environment variables
+
+The `--auth` flag references environment variables by name. The environment variable must be set at startup:
+
+```sh
+export MY_API_TOKEN="secret-token-value"
+pmcp run --auth token:MY_API_TOKEN server.py
+```
+
+If the environment variable is not set, `pmcp` exits with an error.
+
+---
+
+## How it works
+
+1. `pmcp` reads the `--auth` flag values at startup
+2. For each `scheme:ENV_VAR` pair, it reads the environment variable value
+3. On each incoming request (for network transports only):
+   - `token` scheme: validates that `Authorization: Bearer <value>` matches
+   - `apikey` scheme: validates that `X-API-Key: <value>` matches
+4. If validation fails, the request is rejected with an unauthorized error
+5. If all auth checks pass, the request proceeds to the middleware chain and tool handler
+
+---
+
+## Stdio transport
+
+Auth is automatically skipped when using stdio transport (`pmcp dev`). Since stdio communication happens over local pipes, there is no network boundary to authenticate across.
+
+---
+
+## Multiple auth requirements
+
+When multiple `--auth` flags are provided, all must pass. This lets you require both a Bearer token and an API key:
+
+```sh
+pmcp run --auth token:USER_TOKEN --auth apikey:SERVICE_KEY server.py
+```
+
+Both `USER_TOKEN` and `SERVICE_KEY` environment variables must be set, and both authentication checks must pass for each request.
