@@ -5,6 +5,13 @@ export interface ToolDef<T extends z.ZodType = z.ZodType> {
   name: string;
   description: string;
   inputSchemaJson: string;
+  outputSchemaJson: string;
+  title: string;
+  destructiveHint: boolean;
+  idempotentHint: boolean;
+  readOnlyHint: boolean;
+  openWorldHint: boolean;
+  taskSupport: boolean;
   handler: (args: z.infer<T>) => any;
 }
 
@@ -15,6 +22,13 @@ interface ToolOptions<T extends z.ZodObject<any>> {
   args: T;
   handler: (args: z.infer<T>) => any;
   name?: string;
+  output?: z.ZodObject<any>;
+  title?: string;
+  destructiveHint?: boolean;
+  idempotentHint?: boolean;
+  readOnlyHint?: boolean;
+  openWorldHint?: boolean;
+  taskSupport?: boolean;
 }
 
 export function tool<T extends z.ZodObject<any>>(options: ToolOptions<T>): ToolDef<T> {
@@ -23,10 +37,20 @@ export function tool<T extends z.ZodObject<any>>(options: ToolOptions<T>): ToolD
   // inferred name (e.g. "handler"). Ignore that inference and treat it as unnamed.
   const inferredName = options.handler.name;
   const usableName = inferredName && inferredName !== 'handler' ? inferredName : undefined;
+  const outputSchemaJson = options.output
+    ? JSON.stringify(zodToJsonSchema(options.output, { target: 'openApi3' }))
+    : '';
   const def: ToolDef<T> = {
     name: options.name || usableName || `tool_${registry.length}`,
     description: options.description,
     inputSchemaJson: JSON.stringify(schema),
+    outputSchemaJson,
+    title: options.title ?? '',
+    destructiveHint: options.destructiveHint ?? false,
+    idempotentHint: options.idempotentHint ?? false,
+    readOnlyHint: options.readOnlyHint ?? false,
+    openWorldHint: options.openWorldHint ?? false,
+    taskSupport: options.taskSupport ?? false,
     handler: options.handler,
   };
   registry.push(def);

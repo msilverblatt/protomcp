@@ -61,4 +61,34 @@ describe('tool()', () => {
 
     expect(add.handler({ a: 2, b: 3 })).toBe(5);
   });
+
+  it('generates output schema from Zod', () => {
+    const t = tool({
+      name: 'search',
+      description: 'Search',
+      args: z.object({ q: z.string() }),
+      output: z.object({ title: z.string(), score: z.number() }),
+      handler: (args) => ({ title: 'test', score: 0.9 }),
+    });
+    const tools = getRegisteredTools();
+    const def = tools[tools.length - 1];
+    expect(def.outputSchemaJson).toBeTruthy();
+    const schema = JSON.parse(def.outputSchemaJson);
+    expect(schema.properties.title).toBeTruthy();
+  });
+
+  it('includes tool metadata', () => {
+    const t = tool({
+      name: 'delete_doc',
+      description: 'Delete',
+      args: z.object({ id: z.string() }),
+      title: 'Delete Document',
+      destructiveHint: true,
+      handler: (args) => 'deleted',
+    });
+    const tools = getRegisteredTools();
+    const def = tools[tools.length - 1];
+    expect(def.title).toBe('Delete Document');
+    expect(def.destructiveHint).toBe(true);
+  });
 });
