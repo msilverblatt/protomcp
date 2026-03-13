@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"sort"
 
 	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
@@ -81,6 +82,7 @@ func CustomMiddleware(dispatcher MiddlewareDispatcher, registered []RegisteredMW
 				mw := sorted[i]
 				resp, afterErr := dispatcher.SendMiddlewareIntercept(ctx, mw.Name, "after", toolName, currentArgs, resultJSON, isError)
 				if afterErr != nil {
+					fmt.Fprintf(os.Stderr, "[protomcp] middleware %q after-phase error: %v\n", mw.Name, afterErr)
 					return result, err
 				}
 				if modified := resp.GetResultJson(); modified != "" {
