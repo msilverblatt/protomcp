@@ -4,6 +4,7 @@ import { getRegisteredTools } from './tool.js';
 import { ToolResult } from './result.js';
 import { ToolContext } from './context.js';
 import { toolManager } from './manager.js';
+import { getRegisteredMiddleware, type MiddlewareDef } from './middleware.js';
 
 export async function run(): Promise<void> {
   const socketPath = process.env['PROTOMCP_SOCKET'];
@@ -23,6 +24,36 @@ export async function run(): Promise<void> {
   const CallToolResponse = root.lookupType('protomcp.CallToolResponse');
   const ToolError = root.lookupType('protomcp.ToolError');
   const ReloadResponse = root.lookupType('protomcp.ReloadResponse');
+  const RegisterMiddlewareRequest = root.lookupType('protomcp.RegisterMiddlewareRequest');
+  const MiddlewareInterceptResponse = root.lookupType('protomcp.MiddlewareInterceptResponse');
+
+  // Map middleware names to handlers for intercept dispatch
+  const mwHandlers = new Map<string, MiddlewareDef['handler']>();
+
+  async function sendMiddlewareRegistrations(): Promise<void> {
+    const mwDefs = getRegisteredMiddleware();
+    for (const mw of mwDefs) {
+      mwHandlers.set(mw.name, mw.handler);
+      const reg = Envelope.create({
+        registerMiddleware: RegisterMiddlewareRequest.create({
+          name: mw.name,
+          priority: mw.priority,
+        }),
+      });
+      await transport.send(reg);
+      // Wait for acknowledgment
+      try {
+        await transport.recv();
+      } catch {
+        return;
+      }
+    }
+    // Send handshake-complete signal
+    const complete = Envelope.create({
+      reloadResponse: ReloadResponse.create({ success: true }),
+    });
+    await transport.send(complete);
+  }
 
   async function sendListTools(requestId: string): Promise<void> {
     const tools = getRegisteredTools();
@@ -59,6 +90,38 @@ export async function run(): Promise<void> {
 
     if (env['msg'] === 'listTools') {
       await sendListTools(requestId);
+      await sendMiddlewareRegistrations();
+    } else if (env['msg'] === 'middlewareIntercept') {
+      const req = env['middlewareIntercept'] ?? {};
+      const mwName: string = req['middlewareName'] ?? '';
+      const handler = mwHandlers.get(mwName);
+
+      let respFields: Record<string, any> = {};
+      if (handler) {
+        try {
+          const result = handler(
+            req['phase'] ?? '',
+            req['toolName'] ?? '',
+            req['argumentsJson'] ?? '',
+            req['resultJson'] ?? '',
+            req['isError'] ?? false
+          );
+          if (result) respFields = result;
+        } catch (err: any) {
+          respFields = { reject: true, rejectReason: String(err?.message ?? err) };
+        }
+      }
+
+      const resp = Envelope.create({
+        middlewareInterceptResponse: MiddlewareInterceptResponse.create({
+          argumentsJson: respFields['argumentsJson'] ?? respFields['arguments_json'] ?? '',
+          resultJson: respFields['resultJson'] ?? respFields['result_json'] ?? '',
+          reject: respFields['reject'] ?? false,
+          rejectReason: respFields['rejectReason'] ?? respFields['reject_reason'] ?? '',
+        }),
+        requestId,
+      });
+      await transport.send(resp);
     } else if (env['msg'] === 'callTool') {
       const req = env['callTool'] ?? {};
       const toolName: string = req['name'] ?? '';
@@ -125,6 +188,7 @@ export async function run(): Promise<void> {
       });
       await transport.send(reloadResp);
       await sendListTools(requestId);
+      await sendMiddlewareRegistrations();
     }
   }
 }

@@ -12,6 +12,7 @@ from protomcp.tool import get_registered_tools
 from protomcp.result import ToolResult
 from protomcp.context import ToolContext
 from protomcp.log import ServerLogger
+from protomcp.middleware import get_registered_middleware
 from protomcp import manager
 
 log: ServerLogger = ServerLogger(send_fn=lambda msg: None)
@@ -29,6 +30,9 @@ def run():
     global log
     log = ServerLogger(send_fn=transport.send)
 
+    # Track middleware handlers for intercept dispatch
+    _mw_handlers = {}
+
     while True:
         try:
             env = transport.recv()
@@ -37,10 +41,13 @@ def run():
 
         if env.HasField("list_tools"):
             _handle_list_tools(transport, env)
+            _send_middleware_registrations(transport, _mw_handlers)
         elif env.HasField("call_tool"):
             _handle_call_tool(transport, env)
         elif env.HasField("reload"):
-            _handle_reload(transport, env)
+            _handle_reload(transport, env, _mw_handlers)
+        elif env.HasField("middleware_intercept"):
+            _handle_middleware_intercept(transport, env, _mw_handlers)
 
 def _handle_list_tools(transport, env):
     tools = get_registered_tools()
@@ -123,7 +130,7 @@ def _handle_call_tool(transport, env):
     resp = pb.Envelope(call_result=resp_msg, request_id=env.request_id)
     transport.send(resp)
 
-def _handle_reload(transport, env):
+def _handle_reload(transport, env, mw_handlers):
     # For now, just acknowledge. Full reload with importlib is complex.
     resp = pb.Envelope(
         reload_response=pb.ReloadResponse(success=True),
@@ -132,3 +139,56 @@ def _handle_reload(transport, env):
     transport.send(resp)
     # Also re-send tool list
     _handle_list_tools(transport, env)
+    _send_middleware_registrations(transport, mw_handlers)
+
+def _send_middleware_registrations(transport, mw_handlers):
+    mw_defs = get_registered_middleware()
+    for mw in mw_defs:
+        mw_handlers[mw.name] = mw.handler
+        reg = pb.Envelope(
+            register_middleware=pb.RegisterMiddlewareRequest(
+                name=mw.name,
+                priority=mw.priority,
+            ),
+        )
+        transport.send(reg)
+        # Wait for acknowledgment
+        try:
+            ack = transport.recv()
+        except ConnectionError:
+            return
+    # Send handshake-complete signal
+    complete = pb.Envelope(
+        reload_response=pb.ReloadResponse(success=True),
+    )
+    transport.send(complete)
+
+def _handle_middleware_intercept(transport, env, mw_handlers):
+    req = env.middleware_intercept
+    handler = mw_handlers.get(req.middleware_name)
+
+    resp_fields = {}
+    if handler:
+        try:
+            result = handler(
+                phase=req.phase,
+                tool_name=req.tool_name,
+                args_json=req.arguments_json,
+                result_json=req.result_json,
+                is_error=req.is_error,
+            )
+            if isinstance(result, dict):
+                resp_fields = result
+        except Exception as e:
+            resp_fields = {"reject": True, "reject_reason": str(e)}
+
+    resp = pb.Envelope(
+        middleware_intercept_response=pb.MiddlewareInterceptResponse(
+            arguments_json=resp_fields.get("arguments_json", ""),
+            result_json=resp_fields.get("result_json", ""),
+            reject=resp_fields.get("reject", False),
+            reject_reason=resp_fields.get("reject_reason", ""),
+        ),
+        request_id=env.request_id,
+    )
+    transport.send(resp)
