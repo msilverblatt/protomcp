@@ -265,6 +265,117 @@ func TestStreamReassembly_InterleavedStreams(t *testing.T) {
 	}
 }
 
+func TestCallToolStream(t *testing.T) {
+	mgr, toolConn := testStreamSetup(t)
+
+	payload := `[{"type":"text","text":"` + strings.Repeat("X", 200*1024) + `"}]`
+	chunkSize := 64 * 1024
+
+	ctx := context.Background()
+	ch, err := mgr.CallToolStream(ctx, "generate", `{"size":204800}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Read the CallToolRequest from the tool side
+	toolEnv, err := envelope.Read(toolConn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqID := toolEnv.GetRequestId()
+
+	// Send header + chunks from tool side
+	envelope.Write(toolConn, &pb.Envelope{
+		RequestId: reqID,
+		Msg: &pb.Envelope_StreamHeader{
+			StreamHeader: &pb.StreamHeader{
+				FieldName: "result_json",
+				TotalSize: uint64(len(payload)),
+				ChunkSize: uint32(chunkSize),
+			},
+		},
+	})
+
+	remaining := []byte(payload)
+	for len(remaining) > 0 {
+		sz := chunkSize
+		if sz > len(remaining) {
+			sz = len(remaining)
+		}
+		envelope.Write(toolConn, &pb.Envelope{
+			RequestId: reqID,
+			Msg: &pb.Envelope_StreamChunk{
+				StreamChunk: &pb.StreamChunk{
+					Data:  remaining[:sz],
+					Final: sz >= len(remaining),
+				},
+			},
+		})
+		remaining = remaining[sz:]
+	}
+
+	// Read events from channel
+	var gotHeader bool
+	var assembled []byte
+	for evt := range ch {
+		if evt.Header != nil {
+			gotHeader = true
+			if evt.Header.TotalSize != uint64(len(payload)) {
+				t.Errorf("header total_size = %d, want %d", evt.Header.TotalSize, len(payload))
+			}
+		}
+		if evt.Chunk != nil {
+			assembled = append(assembled, evt.Chunk...)
+		}
+	}
+
+	if !gotHeader {
+		t.Error("never received header event")
+	}
+	if string(assembled) != payload {
+		t.Errorf("assembled length = %d, want %d", len(assembled), len(payload))
+	}
+}
+
+func TestCallToolStream_NonChunked(t *testing.T) {
+	mgr, toolConn := testStreamSetup(t)
+
+	ctx := context.Background()
+	ch, err := mgr.CallToolStream(ctx, "echo", `{"message":"hi"}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Read the CallToolRequest from the tool side
+	toolEnv, err := envelope.Read(toolConn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqID := toolEnv.GetRequestId()
+
+	// Send a normal (non-chunked) response
+	envelope.Write(toolConn, &pb.Envelope{
+		RequestId: reqID,
+		Msg: &pb.Envelope_CallResult{CallResult: &pb.CallToolResponse{
+			ResultJson: `[{"type":"text","text":"hi"}]`,
+		}},
+	})
+
+	// Channel should receive a single Result event
+	var gotResult bool
+	for evt := range ch {
+		if evt.Result != nil {
+			gotResult = true
+			if evt.Result.ResultJson != `[{"type":"text","text":"hi"}]` {
+				t.Errorf("unexpected result: %s", evt.Result.ResultJson)
+			}
+		}
+	}
+	if !gotResult {
+		t.Error("never received result event")
+	}
+}
+
 func TestStreamReassembly_CrashMidStream(t *testing.T) {
 	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("pmcp-crash-%d-%d.sock", os.Getpid(), time.Now().UnixNano()))
 	defer os.Remove(socketPath)
@@ -308,5 +419,134 @@ func TestStreamReassembly_CrashMidStream(t *testing.T) {
 	case resp := <-respCh:
 		t.Fatalf("unexpected response after crash: %v", resp)
 	default: // expected — no response
+	}
+}
+
+func TestRawSidebandTransfer(t *testing.T) {
+	mgr, toolConn := testStreamSetup(t)
+	respCh := mgr.RegisterPending("req-1")
+
+	payload := `[{"type":"text","text":"` + strings.Repeat("X", 200*1024) + `"}]`
+
+	// Send a RawHeader envelope
+	header := &pb.Envelope{
+		Msg: &pb.Envelope_RawHeader{
+			RawHeader: &pb.RawHeader{
+				RequestId: "req-1",
+				FieldName: "result_json",
+				Size:      uint64(len(payload)),
+			},
+		},
+	}
+	envelope.Write(toolConn, header)
+
+	// Send raw bytes directly (no protobuf framing)
+	toolConn.Write([]byte(payload))
+
+	select {
+	case resp := <-respCh:
+		result := resp.GetCallResult()
+		if result == nil {
+			t.Fatal("expected CallToolResponse")
+		}
+		if result.ResultJson != payload {
+			t.Errorf("result length = %d, want %d", len(result.ResultJson), len(payload))
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("timeout")
+	}
+}
+
+func TestRawSidebandTransfer_ThenNormalMessage(t *testing.T) {
+	mgr, toolConn := testStreamSetup(t)
+	respCh1 := mgr.RegisterPending("req-1")
+	respCh2 := mgr.RegisterPending("req-2")
+
+	payload := `[{"type":"text","text":"big data"}]`
+
+	// Send raw sideband for req-1
+	header := &pb.Envelope{
+		Msg: &pb.Envelope_RawHeader{
+			RawHeader: &pb.RawHeader{
+				RequestId: "req-1",
+				FieldName: "result_json",
+				Size:      uint64(len(payload)),
+			},
+		},
+	}
+	envelope.Write(toolConn, header)
+	toolConn.Write([]byte(payload))
+
+	// Send normal protobuf response for req-2
+	envelope.Write(toolConn, &pb.Envelope{
+		RequestId: "req-2",
+		Msg: &pb.Envelope_CallResult{CallResult: &pb.CallToolResponse{
+			ResultJson: `[{"type":"text","text":"normal"}]`,
+		}},
+	})
+
+	// Both should arrive correctly
+	select {
+	case resp := <-respCh1:
+		if resp.GetCallResult().ResultJson != payload {
+			t.Error("req-1: wrong result")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("req-1 timeout")
+	}
+
+	select {
+	case resp := <-respCh2:
+		if resp.GetCallResult().ResultJson != `[{"type":"text","text":"normal"}]` {
+			t.Error("req-2: wrong result")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("req-2 timeout")
+	}
+}
+
+func TestRawSidebandTransfer_StreamChannel(t *testing.T) {
+	mgr, toolConn := testStreamSetup(t)
+
+	ctx := context.Background()
+	ch, err := mgr.CallToolStream(ctx, "generate", `{"size":204800}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Read the CallToolRequest from the tool side
+	toolEnv, err := envelope.Read(toolConn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqID := toolEnv.GetRequestId()
+
+	payload := strings.Repeat("Y", 200*1024)
+
+	// Send raw sideband
+	header := &pb.Envelope{
+		Msg: &pb.Envelope_RawHeader{
+			RawHeader: &pb.RawHeader{
+				RequestId: reqID,
+				FieldName: "result_json",
+				Size:      uint64(len(payload)),
+			},
+		},
+	}
+	envelope.Write(toolConn, header)
+	toolConn.Write([]byte(payload))
+
+	// StreamEvent channel should receive the result directly
+	var gotResult bool
+	for evt := range ch {
+		if evt.Result != nil {
+			gotResult = true
+			if evt.Result.ResultJson != payload {
+				t.Errorf("result length = %d, want %d", len(evt.Result.ResultJson), len(payload))
+			}
+		}
+	}
+	if !gotResult {
+		t.Error("never received result event")
 	}
 }

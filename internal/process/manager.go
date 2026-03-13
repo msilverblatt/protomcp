@@ -24,6 +24,19 @@ type streamAssembly struct {
 	created   time.Time
 }
 
+// StreamEvent represents one event in a chunked tool call response.
+type StreamEvent struct {
+	// Header is set for the first event (stream start).
+	Header *pb.StreamHeader
+	// Chunk is set for data events.
+	Chunk []byte
+	// Final is true when this is the last chunk.
+	Final bool
+	// Result is set when the tool returns a non-streamed response
+	// (payload was below threshold).
+	Result *pb.CallToolResponse
+}
+
 // RegisteredMiddleware represents a middleware registered by the tool process during handshake.
 type RegisteredMiddleware struct {
 	Name     string
@@ -50,8 +63,9 @@ type Manager struct {
 	listener net.Listener
 	mu       sync.Mutex
 	writeMu  sync.Mutex // protects concurrent writes to conn
-	pending  map[string]chan *pb.Envelope
-	streams  map[string]*streamAssembly
+	pending   map[string]chan *pb.Envelope
+	streams   map[string]*streamAssembly
+	streamChs map[string]chan StreamEvent
 	tools       []*pb.ToolDefinition
 	middlewares []RegisteredMiddleware
 	crashCh     chan error
@@ -81,6 +95,7 @@ func NewManager(cfg ManagerConfig) *Manager {
 		cfg:         cfg,
 		pending:     make(map[string]chan *pb.Envelope),
 		streams:     make(map[string]*streamAssembly),
+		streamChs:   make(map[string]chan StreamEvent),
 		crashCh:     make(chan error, 1),
 		stopCh:      make(chan struct{}),
 		handshakeCh: make(chan *pb.Envelope, 4),
@@ -249,6 +264,62 @@ func (m *Manager) CallTool(ctx context.Context, name, argsJSON string) (*pb.Call
 		}
 		return result, nil
 	}
+}
+
+// CallToolStream sends a CallToolRequest and returns a channel that receives
+// stream events. If the tool responds with a single (non-chunked) message,
+// the channel receives one StreamEvent with Result set. If the tool streams,
+// it receives a Header event followed by Chunk events.
+func (m *Manager) CallToolStream(ctx context.Context, name, argsJSON string) (<-chan StreamEvent, error) {
+	reqID := m.nextRequestID()
+
+	env := &pb.Envelope{
+		RequestId: reqID,
+		Msg: &pb.Envelope_CallTool{
+			CallTool: &pb.CallToolRequest{
+				Name:          name,
+				ArgumentsJson: argsJSON,
+			},
+		},
+	}
+
+	ch := make(chan StreamEvent, 16)
+
+	m.mu.Lock()
+	m.streamChs[reqID] = ch
+	m.mu.Unlock()
+
+	m.writeMu.Lock()
+	err := envelope.Write(m.conn, env)
+	m.writeMu.Unlock()
+	if err != nil {
+		m.mu.Lock()
+		delete(m.streamChs, reqID)
+		m.mu.Unlock()
+		close(ch)
+		return nil, fmt.Errorf("write CallToolRequest: %w", err)
+	}
+
+	// Cleanup on context cancellation or timeout.
+	go func() {
+		timeout := m.cfg.CallTimeout
+		timer := time.NewTimer(timeout)
+		defer timer.Stop()
+
+		select {
+		case <-ctx.Done():
+		case <-timer.C:
+		}
+
+		m.mu.Lock()
+		if _, ok := m.streamChs[reqID]; ok {
+			delete(m.streamChs, reqID)
+			close(ch)
+		}
+		m.mu.Unlock()
+	}()
+
+	return ch, nil
 }
 
 // Reload sends a ReloadRequest, waits for ReloadResponse, then receives the
@@ -537,7 +608,7 @@ func (m *Manager) readLoop() {
 			}
 		}
 
-		env, err := envelope.Read(m.conn)
+		env, rawPayload, err := envelope.ReadRaw(m.conn)
 		if err != nil {
 			select {
 			case <-m.stopCh:
@@ -553,12 +624,53 @@ func (m *Manager) readLoop() {
 			return
 		}
 
+		// Raw sideband transfer — payload arrived without protobuf wrapping.
+		// Check before reqID routing since RawHeader carries its own request_id.
+		if rawPayload != nil {
+			rh := env.GetRawHeader()
+			rawReqID := rh.RequestId
+
+			result := &pb.Envelope{
+				RequestId: rawReqID,
+				Msg: &pb.Envelope_CallResult{
+					CallResult: &pb.CallToolResponse{},
+				},
+			}
+			switch rh.FieldName {
+			case "result_json":
+				result.GetCallResult().ResultJson = string(rawPayload)
+			case "structured_content_json":
+				result.GetCallResult().StructuredContentJson = string(rawPayload)
+			}
+
+			m.mu.Lock()
+			sCh, isStream := m.streamChs[rawReqID]
+			pendCh, isPending := m.pending[rawReqID]
+			m.mu.Unlock()
+
+			if isStream {
+				select {
+				case sCh <- StreamEvent{Result: result.GetCallResult()}:
+				default:
+				}
+				m.mu.Lock()
+				delete(m.streamChs, rawReqID)
+				m.mu.Unlock()
+				close(sCh)
+			} else if isPending {
+				select {
+				case pendCh <- result:
+				default:
+				}
+			}
+			continue
+		}
+
 		reqID := env.GetRequestId()
 		if reqID == "" {
 			// Route unsolicited messages by type
 			switch {
 			case env.GetToolList() != nil, env.GetRegisterMiddleware() != nil, env.GetReloadResponse() != nil:
-				// Handshake/reload messages
 				select {
 				case m.handshakeCh <- env:
 				default:
@@ -588,60 +700,106 @@ func (m *Manager) readLoop() {
 			continue
 		}
 
-		// Stream reassembly.
+		// Stream reassembly / forwarding.
 		if sh := env.GetStreamHeader(); sh != nil {
-			assembly := &streamAssembly{
-				fieldName: sh.FieldName,
-				totalSize: sh.TotalSize,
-				created:   time.Now(),
+			m.mu.Lock()
+			sCh, isStream := m.streamChs[reqID]
+			m.mu.Unlock()
+
+			if isStream {
+				// Streaming mode — forward header to channel.
+				select {
+				case sCh <- StreamEvent{Header: sh}:
+				default:
+				}
+			} else {
+				// Reassembly mode (non-streaming host).
+				assembly := &streamAssembly{
+					fieldName: sh.FieldName,
+					totalSize: sh.TotalSize,
+					created:   time.Now(),
+				}
+				if sh.TotalSize > 0 {
+					assembly.buf.Grow(int(sh.TotalSize))
+				}
+				m.streams[reqID] = assembly
 			}
-			if sh.TotalSize > 0 {
-				assembly.buf.Grow(int(sh.TotalSize))
-			}
-			m.streams[reqID] = assembly
 			continue
 		}
 
 		if sc := env.GetStreamChunk(); sc != nil {
-			assembly, ok := m.streams[reqID]
-			if !ok {
-				continue // no header — discard silently
-			}
-			assembly.buf.Write(sc.Data)
+			m.mu.Lock()
+			sCh, isStream := m.streamChs[reqID]
+			m.mu.Unlock()
 
-			if sc.Final {
-				delete(m.streams, reqID)
-				result := &pb.Envelope{
-					RequestId: reqID,
-					Msg: &pb.Envelope_CallResult{
-						CallResult: &pb.CallToolResponse{},
-					},
+			if isStream {
+				// Streaming mode — forward chunk to channel.
+				evt := StreamEvent{Chunk: sc.Data, Final: sc.Final}
+				select {
+				case sCh <- evt:
+				default:
 				}
-				switch assembly.fieldName {
-				case "result_json":
-					result.GetCallResult().ResultJson = assembly.buf.String()
-				case "structured_content_json":
-					result.GetCallResult().StructuredContentJson = assembly.buf.String()
+				if sc.Final {
+					m.mu.Lock()
+					delete(m.streamChs, reqID)
+					m.mu.Unlock()
+					close(sCh)
 				}
-
-				m.mu.Lock()
-				ch, chOk := m.pending[reqID]
-				m.mu.Unlock()
-				if chOk {
-					select {
-					case ch <- result:
-					default:
+			} else {
+				// Reassembly mode.
+				assembly, ok := m.streams[reqID]
+				if !ok {
+					continue
+				}
+				assembly.buf.Write(sc.Data)
+				if sc.Final {
+					delete(m.streams, reqID)
+					result := &pb.Envelope{
+						RequestId: reqID,
+						Msg: &pb.Envelope_CallResult{
+							CallResult: &pb.CallToolResponse{},
+						},
+					}
+					switch assembly.fieldName {
+					case "result_json":
+						result.GetCallResult().ResultJson = assembly.buf.String()
+					case "structured_content_json":
+						result.GetCallResult().StructuredContentJson = assembly.buf.String()
+					}
+					m.mu.Lock()
+					ch, chOk := m.pending[reqID]
+					m.mu.Unlock()
+					if chOk {
+						select {
+						case ch <- result:
+						default:
+						}
 					}
 				}
 			}
 			continue
 		}
 
+		// Normal response dispatch — check streamChs first.
 		m.mu.Lock()
-		ch, ok := m.pending[reqID]
+		sCh, isStream := m.streamChs[reqID]
+		ch, isPending := m.pending[reqID]
 		m.mu.Unlock()
 
-		if ok {
+		if isStream {
+			// Tool returned a non-chunked response to a streaming request.
+			result := env.GetCallResult()
+			if result != nil {
+				select {
+				case sCh <- StreamEvent{Result: result}:
+				default:
+				}
+			}
+			m.mu.Lock()
+			delete(m.streamChs, reqID)
+			m.mu.Unlock()
+			close(sCh)
+		} else if isPending {
 			select {
 			case ch <- env:
 			default:
