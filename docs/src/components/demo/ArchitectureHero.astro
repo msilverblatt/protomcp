@@ -1,0 +1,176 @@
+---
+// Animated architecture diagram showing MCP Host → pmcp → Your Code
+---
+
+<div class="hero-container">
+  <div class="architecture">
+    <div class="node node-host">
+      <div class="node-label">MCP Host</div>
+      <div class="node-sub">Claude, Cursor, etc.</div>
+    </div>
+
+    <div class="connector connector-left">
+      <div class="connector-label">JSON-RPC</div>
+      <div class="connector-line"></div>
+      <div class="packet packet-request"></div>
+      <div class="packet packet-response"></div>
+    </div>
+
+    <div class="node node-pmcp">
+      <div class="node-label">pmcp</div>
+      <div class="node-sub">Go binary</div>
+    </div>
+
+    <div class="connector connector-right">
+      <div class="connector-label">protobuf</div>
+      <div class="connector-line"></div>
+      <div class="packet packet-request"></div>
+      <div class="packet packet-response"></div>
+    </div>
+
+    <div class="node node-code">
+      <div class="node-label">Your Code</div>
+      <div class="node-sub">Python, TS, Go…</div>
+    </div>
+  </div>
+
+  <p class="hero-text">
+    pmcp sits between your MCP host and your tool process. It translates JSON-RPC to protobuf,
+    handles hot reload, and manages tool registration.
+  </p>
+</div>
+
+<style>
+  .hero-container {
+    padding: 2rem 0 1rem;
+    text-align: center;
+  }
+
+  .architecture {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 2rem 1rem;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .node {
+    padding: 1.2rem 1.5rem;
+    border-radius: 12px;
+    background: var(--sl-color-bg-nav);
+    border: 2px solid;
+    text-align: center;
+    min-width: 130px;
+    z-index: 1;
+  }
+
+  .node-host { border-color: #64ffda; }
+  .node-pmcp { border-color: #ffd700; }
+  .node-code { border-color: #ff6b6b; }
+
+  .node-label {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--sl-color-text);
+  }
+
+  .node-sub {
+    font-size: 0.8rem;
+    color: var(--sl-color-text-accent);
+    margin-top: 0.25rem;
+  }
+
+  .connector {
+    position: relative;
+    width: 120px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .connector-label {
+    position: absolute;
+    top: -4px;
+    font-size: 0.7rem;
+    color: var(--sl-color-text-accent);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+
+  .connector-line {
+    width: 100%;
+    height: 2px;
+    background: var(--sl-color-gray-5);
+  }
+
+  .packet {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    opacity: 0;
+  }
+
+  .connector-left .packet-request {
+    background: #64ffda;
+    animation: packet-right var(--cycle-duration, 6s) ease-in-out infinite;
+    animation-delay: var(--phase-delay, 0s);
+  }
+
+  .connector-right .packet-request {
+    background: #ffd700;
+    animation: packet-right var(--cycle-duration, 6s) ease-in-out infinite;
+    animation-delay: calc(var(--phase-delay, 0s) + 0.3s);
+  }
+
+  .connector-left .packet-response {
+    background: #64ffda;
+    animation: packet-left var(--cycle-duration, 6s) ease-in-out infinite;
+    animation-delay: calc(var(--phase-delay, 0s) + 2.5s);
+  }
+
+  .connector-right .packet-response {
+    background: #ffd700;
+    animation: packet-left var(--cycle-duration, 6s) ease-in-out infinite;
+    animation-delay: calc(var(--phase-delay, 0s) + 2.2s);
+  }
+
+  @keyframes packet-right {
+    0%, 15% { left: 0; opacity: 0; }
+    20% { opacity: 1; }
+    35% { left: calc(100% - 12px); opacity: 1; }
+    40%, 100% { left: calc(100% - 12px); opacity: 0; }
+  }
+
+  @keyframes packet-left {
+    0%, 15% { left: calc(100% - 12px); opacity: 0; }
+    20% { opacity: 1; }
+    35% { left: 0; opacity: 1; }
+    40%, 100% { left: 0; opacity: 0; }
+  }
+
+  .hero-text {
+    max-width: 600px;
+    margin: 1rem auto 0;
+    color: var(--sl-color-text-accent);
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 640px) {
+    .architecture {
+      flex-direction: column;
+      gap: 0;
+    }
+    .connector {
+      width: 60px;
+      height: 80px;
+      transform: rotate(90deg);
+    }
+    .node { min-width: 160px; }
+  }
+</style>
