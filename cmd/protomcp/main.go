@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"time"
 
 	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
 	"github.com/msilverblatt/protomcp/internal/config"
@@ -15,6 +16,7 @@ import (
 	"github.com/msilverblatt/protomcp/internal/reload"
 	"github.com/msilverblatt/protomcp/internal/toollist"
 	"github.com/msilverblatt/protomcp/internal/transport"
+	"github.com/msilverblatt/protomcp/internal/validate"
 )
 
 func main() {
@@ -31,6 +33,11 @@ func main() {
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
+
+	if cfg.Command == "validate" {
+		runValidate(ctx, cfg)
+		return
+	}
 
 	// 1. Create tool list manager
 	tlm := toollist.New()
@@ -188,6 +195,45 @@ func parseLogLevel(s string) slog.Level {
 		return slog.LevelError
 	default:
 		return slog.LevelInfo
+	}
+}
+
+func runValidate(ctx context.Context, cfg *config.Config) {
+	var runtimeCmd string
+	var runtimeArgs []string
+	if cfg.Runtime != "" {
+		runtimeCmd = cfg.Runtime
+		runtimeArgs = []string{cfg.File}
+	} else {
+		runtimeCmd, runtimeArgs = config.RuntimeCommand(cfg.File)
+	}
+
+	pm := process.NewManager(process.ManagerConfig{
+		File:        cfg.File,
+		RuntimeCmd:  runtimeCmd,
+		RuntimeArgs: runtimeArgs,
+		SocketPath:  cfg.SocketPath,
+		MaxRetries:  1,
+		CallTimeout: 30 * time.Second,
+	})
+
+	tools, err := pm.Start(ctx)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: failed to start tool process: %v\n", err)
+		os.Exit(1)
+	}
+	defer pm.Stop()
+
+	result := validate.Tools(tools, cfg.Strict)
+
+	if cfg.Format == "json" {
+		fmt.Println(result.FormatJSON())
+	} else {
+		fmt.Print(result.FormatText())
+	}
+
+	if !result.Pass {
+		os.Exit(1)
 	}
 }
 
