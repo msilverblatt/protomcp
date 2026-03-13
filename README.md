@@ -1,7 +1,11 @@
 # protomcp
 
+[![CI](https://github.com/msilverblatt/protomcp/actions/workflows/ci.yml/badge.svg)](https://github.com/msilverblatt/protomcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go)](https://go.dev)
+[![PyPI](https://img.shields.io/pypi/v/protomcp)](https://pypi.org/project/protomcp/)
+[![npm](https://img.shields.io/npm/v/protomcp)](https://www.npmjs.com/package/protomcp)
+[![crates.io](https://img.shields.io/crates/v/protomcp)](https://crates.io/crates/protomcp)
 
 **Write MCP tools in any language. One file, one command, hot-reload.**
 
