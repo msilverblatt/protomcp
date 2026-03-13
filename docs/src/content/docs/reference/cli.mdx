@@ -36,9 +36,58 @@ pmcp run tools.ts
 pmcp run tools.ts --transport sse --host 0.0.0.0 --port 8080
 ```
 
+### `pmcp validate <file> [flags]`
+
+Validate tool definitions without starting the server. Spawns the tool process, collects tool definitions, validates them, and exits.
+
+```sh
+# Basic validation
+pmcp validate tools.py
+
+# Strict mode (enforces description length, generic name detection)
+pmcp validate tools.py --strict
+
+# JSON output
+pmcp validate tools.py --format json
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--strict` | `false` | Enable strict validation (min 10 char descriptions, generic name detection) |
+| `--format` | `text` | Output format: `text` or `json` |
+
+Validation checks:
+- Tool name format: must match `^[a-zA-Z_][a-zA-Z0-9_]*$`
+- No duplicate tool names
+- All tools have descriptions
+- Input schema is valid JSON Schema
+- **Strict mode**: description at least 10 characters, no generic names like "tool1"
+
 ---
 
 ## Flags
+
+### `--auth <scheme:ENV_VAR>`
+
+**Repeatable.** Configure authentication for network transports (SSE, HTTP, WebSocket). Skipped for stdio.
+
+| Scheme | Header | Format |
+|--------|--------|--------|
+| `token` | `Authorization` | `Bearer <value>` |
+| `apikey` | `X-API-Key` | `<value>` |
+
+```sh
+# Require Bearer token
+pmcp run tools.py --transport sse --auth token:MY_TOKEN
+
+# Require API key
+pmcp run tools.py --transport sse --auth apikey:SERVICE_KEY
+
+# Multiple (all must pass)
+pmcp run tools.py --transport sse --auth token:MY_TOKEN --auth apikey:SERVICE_KEY
+```
+
+The environment variable must be set at startup. See [Authentication](/guides/auth/) for details.
 
 ### `--transport <value>`
 

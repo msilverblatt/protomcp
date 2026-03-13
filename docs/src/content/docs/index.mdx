@@ -80,15 +80,64 @@ tool({
 });
 ```
 
+```go
+// tools.go (Go)
+package main
+
+import (
+	"fmt"
+	"github.com/msilverblatt/protomcp/sdk/go/protomcp"
+)
+
+func main() {
+	protomcp.Tool("add",
+		protomcp.Description("Add two numbers"),
+		protomcp.Args(protomcp.IntArg("a"), protomcp.IntArg("b")),
+		protomcp.Handler(func(ctx protomcp.ToolContext, args map[string]interface{}) protomcp.ToolResult {
+			a := int(args["a"].(float64))
+			b := int(args["b"].(float64))
+			return protomcp.Result(fmt.Sprintf("%d", a+b))
+		}),
+	)
+	protomcp.Run()
+}
+```
+
+```rust
+// src/main.rs (Rust)
+use protomcp::{tool, ToolResult, ArgDef};
+
+#[tokio::main]
+async fn main() {
+    tool("add")
+        .description("Add two numbers")
+        .arg(ArgDef::int("a"))
+        .arg(ArgDef::int("b"))
+        .handler(|_ctx, args| {
+            let a = args["a"].as_i64().unwrap_or(0);
+            let b = args["b"].as_i64().unwrap_or(0);
+            ToolResult::new(format!("{}", a + b))
+        })
+        .register();
+    protomcp::run().await;
+}
+```
+
 ```sh
 # Python
 pmcp dev tools.py
 
 # TypeScript
 pmcp dev tools.ts
+
+# Go
+pmcp dev tools.go
+
+# Rust
+pmcp dev src/main.rs
 ```
 
-Then add either command to your MCP client config. That's it.
+Then add the command to your MCP client config. That's it.
 
 ## Quick Links
 
@@ -96,5 +145,9 @@ Then add either command to your MCP client config. That's it.
 - [Quick Start](/getting-started/quick-start/) — 5-minute tutorial
 - [Python Guide](/guides/writing-tools-python/) — `@tool()` decorator, `ToolResult`, `tool_manager`
 - [TypeScript Guide](/guides/writing-tools-typescript/) — `tool()`, Zod schemas, `toolManager`
+- [Go Guide](/guides/writing-tools-go/) — `Tool()`, functional options, `ToolResult`
+- [Rust Guide](/guides/writing-tools-rust/) — `tool()` builder, `ToolResult`, `ArgDef`
+- [Custom Middleware](/guides/middleware/) — intercept tool calls with before/after hooks
+- [Authentication](/guides/auth/) — token and API key auth for network transports
 - [CLI Reference](/reference/cli/) — all commands and flags
 - [Protobuf Spec](/reference/protobuf-spec/) — wire protocol
