@@ -1,3 +1,5 @@
+//go:build ignore
+
 // Full showcase: structured output, dynamic tools, metadata, error handling.
 // Run: pmcp dev examples/go/full_showcase.go
 package main

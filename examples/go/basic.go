@@ -1,3 +1,5 @@
+//go:build ignore
+
 // A minimal protomcp tool — adds and multiplies numbers.
 // Run: pmcp dev examples/go/basic.go
 package main

@@ -1,3 +1,5 @@
+//go:build ignore
+
 // File search tool with progress, cancellation, and logging.
 // Run: pmcp dev examples/go/real_world.go
 package main
