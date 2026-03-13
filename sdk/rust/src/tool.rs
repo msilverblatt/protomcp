@@ -78,6 +78,7 @@ impl ToolBuilder {
     pub fn idempotent_hint(mut self, v: bool) -> Self { self.idempotent = v; self }
     pub fn read_only_hint(mut self, v: bool) -> Self { self.read_only = v; self }
     pub fn open_world_hint(mut self, v: bool) -> Self { self.open_world = v; self }
+    pub fn task_support_hint(mut self, v: bool) -> Self { self.task_support = v; self }
 
     pub fn register(self) {
         let mut properties = serde_json::Map::new();

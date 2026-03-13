@@ -65,10 +65,12 @@ protomcp.Tool("delete_file",
 | Option | Description |
 |--------|-------------|
 | `Description(s)` | Human-readable description (required) |
+| `Title(s)` | Display name shown in the MCP host UI |
 | `DestructiveHint(bool)` | Hint: the tool has destructive side effects |
 | `IdempotentHint(bool)` | Hint: calling multiple times has the same effect as once |
 | `ReadOnlyHint(bool)` | Hint: the tool does not modify state |
 | `OpenWorldHint(bool)` | Hint: the tool may access external resources |
+| `TaskSupportHint(bool)` | Hint: the tool supports long-running async task semantics |
 
 ### Argument types
 

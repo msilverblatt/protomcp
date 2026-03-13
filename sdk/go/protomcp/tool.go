@@ -67,6 +67,7 @@ func Handler(fn func(ToolContext, map[string]interface{}) ToolResult) ToolOption
 	return func(td *ToolDef) { td.HandlerFn = fn }
 }
 
+func Title(v string) ToolOption                { return func(td *ToolDef) { td.Title = v } }
 func DestructiveHint(v bool) ToolOption { return func(td *ToolDef) { td.Destructive = v } }
 func IdempotentHint(v bool) ToolOption  { return func(td *ToolDef) { td.Idempotent = v } }
 func ReadOnlyHint(v bool) ToolOption    { return func(td *ToolDef) { td.ReadOnly = v } }

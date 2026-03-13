@@ -68,6 +68,7 @@ tool("delete_file")
 | `.idempotent_hint(bool)` | Hint: calling multiple times has the same effect as once |
 | `.read_only_hint(bool)` | Hint: the tool does not modify state |
 | `.open_world_hint(bool)` | Hint: the tool may access external resources |
+| `.task_support_hint(bool)` | Hint: the tool supports long-running async task semantics |
 
 ### Argument types
 

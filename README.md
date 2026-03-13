@@ -134,7 +134,7 @@ Then add the `pmcp dev` command to your MCP client config. That's it.
 - **Any Language** — write tools in Python, TypeScript, Go, Rust, or any language that speaks protobuf over a unix socket
 - **Hot Reload** — save your file and tools reload instantly, no restart needed
 - **Dynamic Tool Lists** — tools can enable/disable themselves at runtime based on context
-- **5 Transports** — stdio, SSE, streamable HTTP, WebSocket, gRPC
+- **5 Transports** — stdio, SSE, streamable HTTP, WebSocket, in-process
 - **Structured Output** — define output schemas for typed tool results
 - **Async Tasks** — long-running operations with background task tracking
 - **Progress & Cancellation** — report progress and respond to cancellation requests
@@ -154,7 +154,7 @@ Then add the `pmcp dev` command to your MCP client config. That's it.
 | Custom middleware | Built-in | No | No |
 | Authentication | Built-in (token, apikey) | Manual | Manual |
 | Validation | `pmcp validate` | No | No |
-| Transports | stdio, SSE, HTTP, WS, gRPC | stdio, SSE | Varies by SDK |
+| Transports | stdio, SSE, HTTP, WS, in-process | stdio, SSE | Varies by SDK |
 | Structured output | Yes | No | Varies |
 | Async tasks | Yes | No | No |
 | Single binary | Yes (Go) | No (Python runtime) | No (per-language) |
