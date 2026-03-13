@@ -24,10 +24,15 @@ export default defineConfig({
           items: [
             { label: 'Writing Tools (Python)', slug: 'guides/writing-tools-python' },
             { label: 'Writing Tools (TypeScript)', slug: 'guides/writing-tools-typescript' },
+            { label: 'Writing Tools (Go)', slug: 'guides/writing-tools-go' },
+            { label: 'Writing Tools (Rust)', slug: 'guides/writing-tools-rust' },
+            { label: 'Custom Middleware', slug: 'guides/middleware' },
+            { label: 'Authentication', slug: 'guides/auth' },
             { label: 'Dynamic Tool Lists', slug: 'guides/dynamic-tool-lists' },
             { label: 'Hot Reload', slug: 'guides/hot-reload' },
             { label: 'Error Handling', slug: 'guides/error-handling' },
             { label: 'Production Deployment', slug: 'guides/production-deployment' },
+            { label: 'Writing a Language Library', slug: 'guides/writing-a-language-library' },
           ],
         },
         {
