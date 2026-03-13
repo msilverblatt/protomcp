@@ -133,7 +133,7 @@ def _handle_call_tool(transport, env):
     result_json_bytes = result_json_str.encode('utf-8') if result_json_str else b''
 
     if len(result_json_bytes) > chunk_threshold:
-        transport.send_chunked(
+        transport.send_raw(
             request_id=env.request_id,
             field_name='result_json',
             data=result_json_bytes,

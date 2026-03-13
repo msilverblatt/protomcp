@@ -48,6 +48,21 @@ class Transport:
             self.send(chunk_env)
             offset = end
 
+    def send_raw(self, request_id: str, field_name: str, data: bytes):
+        """Send a large field as a RawHeader + raw bytes (no protobuf wrapping on payload)."""
+        header = pb.Envelope(
+            raw_header=pb.RawHeader(
+                request_id=request_id,
+                field_name=field_name,
+                size=len(data),
+            ),
+        )
+        # Send the protobuf header normally
+        header_bytes = header.SerializeToString()
+        length = struct.pack(">I", len(header_bytes))
+        # Send header + raw payload in one sendall to minimize syscalls
+        self._sock.sendall(length + header_bytes + data)
+
     def recv(self) -> pb.Envelope:
         length_bytes = self._recv_exactly(4)
         length = struct.unpack(">I", length_bytes)[0]
