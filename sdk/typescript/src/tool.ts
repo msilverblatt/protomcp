@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
+import type { ToolContext } from './context.js';
 
 export interface ToolDef<T extends z.ZodType = z.ZodType> {
   name: string;
@@ -12,7 +13,7 @@ export interface ToolDef<T extends z.ZodType = z.ZodType> {
   readOnlyHint: boolean;
   openWorldHint: boolean;
   taskSupport: boolean;
-  handler: (args: z.infer<T>) => any;
+  handler: (args: z.infer<T>, ctx: ToolContext) => any;
 }
 
 const registry: ToolDef<any>[] = [];
@@ -20,7 +21,7 @@ const registry: ToolDef<any>[] = [];
 interface ToolOptions<T extends z.ZodObject<any>> {
   description: string;
   args: T;
-  handler: (args: z.infer<T>) => any;
+  handler: (args: z.infer<T>, ctx: ToolContext) => any;
   name?: string;
   output?: z.ZodObject<any>;
   title?: string;

@@ -2,6 +2,7 @@ import * as process from 'process';
 import { Transport } from './transport.js';
 import { getRegisteredTools } from './tool.js';
 import { ToolResult } from './result.js';
+import { ToolContext } from './context.js';
 import { toolManager } from './manager.js';
 
 export async function run(): Promise<void> {
@@ -30,6 +31,13 @@ export async function run(): Promise<void> {
         name: t.name,
         description: t.description,
         inputSchemaJson: t.inputSchemaJson,
+        outputSchemaJson: t.outputSchemaJson,
+        title: t.title,
+        destructiveHint: t.destructiveHint,
+        idempotentHint: t.idempotentHint,
+        readOnlyHint: t.readOnlyHint,
+        openWorldHint: t.openWorldHint,
+        taskSupport: t.taskSupport,
       })
     );
     const resp = Envelope.create({
@@ -74,7 +82,9 @@ export async function run(): Promise<void> {
       let respMsg;
       try {
         const args = argumentsJson ? JSON.parse(argumentsJson) : {};
-        const result = await toolDef.handler(args);
+        const progressToken: string = req['progressToken'] ?? '';
+        const ctx = new ToolContext(progressToken, (msg: any) => transport.send(Envelope.create(msg)));
+        const result = await toolDef.handler(args, ctx);
 
         if (result instanceof ToolResult) {
           const callResp: Record<string, any> = {
