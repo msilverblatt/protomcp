@@ -10,12 +10,12 @@ Building MCP tools today means wrestling with protocol boilerplate, restarting y
 ## How It Works
 
 ```
-┌─────────────┐         ┌──────────────┐         ┌──────────────┐
-│             │  MCP     │              │ protobuf │              │
-│  MCP Host   │◄───────►│    pmcp      │◄────────►│  Your Code   │
-│  (Claude,   │ JSON-RPC │   (Go)      │  unix    │  (any lang)  │
-│   Cursor…)  │  stdio   │             │  socket  │              │
-└─────────────┘         └──────────────┘         └──────────────┘
+┌─────────────┐          ┌─────────────┐           ┌──────────────┐
+│             │   MCP    │             │  protobuf │              │
+│  MCP Host   │ ◄──────► │    pmcp     │ ◄────────►│  Your Code   │
+│  (Claude,   │ JSON-RPC │   (Go)      │   unix    │  (any lang)  │
+│   Cursor…)  │  stdio   │             │   socket  │              │
+└─────────────┘          └─────────────┘           └──────────────┘
 ```
 
 pmcp sits between your MCP host and your tool process. It speaks MCP (JSON-RPC over stdio) on one side and a simple protobuf protocol over a unix socket on the other. Your tool process registers handlers, and pmcp handles everything else: listing tools, routing calls, hot reload, and dynamic tool management.
