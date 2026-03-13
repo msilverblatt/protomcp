@@ -5,10 +5,16 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'gen'))
 import protomcp_pb2 as pb
 
+import inspect
+
 from protomcp.transport import Transport
 from protomcp.tool import get_registered_tools
 from protomcp.result import ToolResult
+from protomcp.context import ToolContext
+from protomcp.log import ServerLogger
 from protomcp import manager
+
+log: ServerLogger = ServerLogger(send_fn=lambda msg: None)
 
 def run():
     socket_path = os.environ.get("PROTOMCP_SOCKET")
@@ -19,6 +25,9 @@ def run():
     transport = Transport(socket_path)
     transport.connect()
     manager._init(transport)
+
+    global log
+    log = ServerLogger(send_fn=transport.send)
 
     while True:
         try:
@@ -41,6 +50,13 @@ def _handle_list_tools(transport, env):
             name=t.name,
             description=t.description,
             input_schema_json=t.input_schema_json,
+            output_schema_json=t.output_schema_json,
+            title=t.title,
+            destructive_hint=t.destructive_hint,
+            idempotent_hint=t.idempotent_hint,
+            read_only_hint=t.read_only_hint,
+            open_world_hint=t.open_world_hint,
+            task_support=t.task_support,
         ))
     resp = pb.Envelope(
         tool_list=pb.ToolListResponse(tools=tool_defs),
@@ -70,7 +86,15 @@ def _handle_call_tool(transport, env):
 
     try:
         args = json.loads(req.arguments_json) if req.arguments_json else {}
-        result = handler(**args)
+        sig = inspect.signature(handler)
+        if "ctx" in sig.parameters:
+            ctx = ToolContext(
+                progress_token=req.progress_token,
+                send_fn=transport.send,
+            )
+            result = handler(ctx=ctx, **args)
+        else:
+            result = handler(**args)
 
         if isinstance(result, ToolResult):
             resp_msg = pb.CallToolResponse(

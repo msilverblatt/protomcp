@@ -12,15 +12,39 @@ class ToolDef:
     description: str
     input_schema_json: str
     handler: Callable
+    output_schema_json: str = ""
+    title: str = ""
+    destructive_hint: bool = False
+    idempotent_hint: bool = False
+    read_only_hint: bool = False
+    open_world_hint: bool = False
+    task_support: bool = False
 
-def tool(description: str):
+def tool(
+    description: str,
+    output_type=None,
+    title: str = "",
+    destructive: bool = False,
+    idempotent: bool = False,
+    read_only: bool = False,
+    open_world: bool = False,
+    task_support: bool = False,
+):
     def decorator(func: Callable) -> Callable:
         schema = _generate_schema(func)
+        output_schema = _generate_dataclass_schema(output_type) if output_type is not None else {}
         _registry.append(ToolDef(
             name=func.__name__,
             description=description,
             input_schema_json=json.dumps(schema),
             handler=func,
+            output_schema_json=json.dumps(output_schema) if output_schema else "",
+            title=title,
+            destructive_hint=destructive,
+            idempotent_hint=idempotent,
+            read_only_hint=read_only,
+            open_world_hint=open_world,
+            task_support=task_support,
         ))
         return func
     return decorator
@@ -68,6 +92,28 @@ def _is_optional_type(hint) -> bool:
     if origin is typing.Union:
         return type(None) in hint.__args__
     return False
+
+def _generate_dataclass_schema(dataclass_type) -> dict:
+    import dataclasses
+    if not dataclasses.is_dataclass(dataclass_type):
+        return {}
+    hints = get_type_hints(dataclass_type)
+    fields = dataclasses.fields(dataclass_type)
+    properties = {}
+    required = []
+    for field in fields:
+        hint = hints.get(field.name, Any)
+        json_type = _python_type_to_json(hint)
+        prop: dict[str, Any] = {"type": json_type}
+        if field.default is not dataclasses.MISSING or field.default_factory is not dataclasses.MISSING:  # type: ignore[misc]
+            pass  # optional field
+        elif not _is_optional_type(hint):
+            required.append(field.name)
+        properties[field.name] = prop
+    schema: dict[str, Any] = {"type": "object", "properties": properties}
+    if required:
+        schema["required"] = required
+    return schema
 
 def _python_type_to_json(hint) -> str:
     origin = getattr(hint, "__origin__", None)
