@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
 
 	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
 )
@@ -13,6 +14,10 @@ var Log *ServerLogger
 
 // mwHandlers maps middleware name to handler during runtime.
 var mwHandlers map[string]func(phase, toolName, argsJSON, resultJSON string, isError bool) map[string]interface{}
+
+// activeCancels maps request_id to cancel function for in-flight tool calls.
+var activeCancels map[string]context.CancelFunc
+var cancelsMu sync.Mutex
 
 func Run() {
 	socketPath := os.Getenv("PROTOMCP_SOCKET")
@@ -30,6 +35,7 @@ func Run() {
 
 	Log = NewServerLogger(func(env *pb.Envelope) error { return tp.Send(env) }, "protomcp-go")
 	mwHandlers = make(map[string]func(phase, toolName, argsJSON, resultJSON string, isError bool) map[string]interface{})
+	activeCancels = make(map[string]context.CancelFunc)
 
 	for {
 		env, err := tp.Recv()
@@ -49,6 +55,12 @@ func Run() {
 			handleReload(tp, reqID)
 		case env.GetMiddlewareIntercept() != nil:
 			handleMiddlewareIntercept(tp, env.GetMiddlewareIntercept(), reqID)
+		case env.GetCancel() != nil:
+			cancelsMu.Lock()
+			if cancel, ok := activeCancels[env.GetCancel().GetRequestId()]; ok {
+				cancel()
+			}
+			cancelsMu.Unlock()
 		}
 	}
 }
@@ -129,19 +141,46 @@ func handleCallTool(tp *Transport, req *pb.CallToolRequest, reqID string) {
 
 	var args map[string]interface{}
 	if req.ArgumentsJson != "" {
-		json.Unmarshal([]byte(req.ArgumentsJson), &args)
+		if err := json.Unmarshal([]byte(req.ArgumentsJson), &args); err != nil {
+			tp.Send(&pb.Envelope{
+				RequestId: reqID,
+				Msg: &pb.Envelope_CallResult{
+					CallResult: &pb.CallToolResponse{
+						IsError:    true,
+						ResultJson: fmt.Sprintf(`[{"type":"text","text":"Invalid arguments JSON: %s"}]`, err.Error()),
+						Error: &pb.ToolError{
+							ErrorCode:  "INVALID_INPUT",
+							Message:    fmt.Sprintf("Failed to parse arguments: %s", err.Error()),
+							Suggestion: "Ensure arguments is valid JSON",
+							Retryable:  false,
+						},
+					},
+				},
+			})
+			return
+		}
 	}
 	if args == nil {
 		args = map[string]interface{}{}
 	}
 
+	callCtx, cancel := context.WithCancel(context.Background())
+	cancelsMu.Lock()
+	activeCancels[reqID] = cancel
+	cancelsMu.Unlock()
+
 	ctx := ToolContext{
-		Ctx:           context.Background(),
+		Ctx:           callCtx,
 		ProgressToken: req.ProgressToken,
 		sendFn:        func(env *pb.Envelope) error { return tp.Send(env) },
 	}
 
 	result := handler(ctx, args)
+
+	cancel()
+	cancelsMu.Lock()
+	delete(activeCancels, reqID)
+	cancelsMu.Unlock()
 
 	resp := &pb.CallToolResponse{
 		IsError:      result.IsError,
