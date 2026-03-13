@@ -8,3 +8,4 @@ __pycache__/
 *.pb.go
 *_pb2.py
 .superpowers/
+sdk/rust/target/
