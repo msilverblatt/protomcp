@@ -1,6 +1,7 @@
 package process
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -14,6 +15,14 @@ import (
 	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
 	"github.com/msilverblatt/protomcp/internal/envelope"
 )
+
+// streamAssembly tracks an in-progress chunked transfer.
+type streamAssembly struct {
+	fieldName string
+	buf       bytes.Buffer
+	totalSize uint64
+	created   time.Time
+}
 
 // RegisteredMiddleware represents a middleware registered by the tool process during handshake.
 type RegisteredMiddleware struct {
@@ -40,7 +49,9 @@ type Manager struct {
 	conn     net.Conn
 	listener net.Listener
 	mu       sync.Mutex
+	writeMu  sync.Mutex // protects concurrent writes to conn
 	pending  map[string]chan *pb.Envelope
+	streams  map[string]*streamAssembly
 	tools       []*pb.ToolDefinition
 	middlewares []RegisteredMiddleware
 	crashCh     chan error
@@ -50,6 +61,12 @@ type Manager struct {
 
 	// handshakeCh receives unsolicited ToolListResponse messages (no request_id).
 	handshakeCh chan *pb.Envelope
+
+	// Callbacks for unsolicited messages from the tool process
+	onProgress     func(*pb.ProgressNotification)
+	onLog          func(*pb.LogMessage)
+	onEnableTools  func([]string)
+	onDisableTools func([]string)
 }
 
 // NewManager creates a new process manager with the given configuration.
@@ -63,6 +80,7 @@ func NewManager(cfg ManagerConfig) *Manager {
 	return &Manager{
 		cfg:         cfg,
 		pending:     make(map[string]chan *pb.Envelope),
+		streams:     make(map[string]*streamAssembly),
 		crashCh:     make(chan error, 1),
 		stopCh:      make(chan struct{}),
 		handshakeCh: make(chan *pb.Envelope, 4),
@@ -140,6 +158,12 @@ func (m *Manager) Start(ctx context.Context) ([]*pb.ToolDefinition, error) {
 		m.cleanup()
 		return nil, fmt.Errorf("accept connection: %w", err)
 	case conn := <-acceptCh:
+		// Increase socket buffers to handle concurrent protobuf messages
+		// without deadlocking when both sides saturate small default buffers.
+		if uc, ok := conn.(*net.UnixConn); ok {
+			uc.SetReadBuffer(1024 * 1024)
+			uc.SetWriteBuffer(1024 * 1024)
+		}
 		m.conn = conn
 	}
 
@@ -202,7 +226,10 @@ func (m *Manager) CallTool(ctx context.Context, name, argsJSON string) (*pb.Call
 		m.mu.Unlock()
 	}()
 
-	if err := envelope.Write(m.conn, env); err != nil {
+	m.writeMu.Lock()
+	err := envelope.Write(m.conn, env)
+	m.writeMu.Unlock()
+	if err != nil {
 		return nil, fmt.Errorf("write CallToolRequest: %w", err)
 	}
 
@@ -247,7 +274,10 @@ func (m *Manager) Reload(ctx context.Context) ([]*pb.ToolDefinition, error) {
 		m.mu.Unlock()
 	}()
 
-	if err := envelope.Write(m.conn, env); err != nil {
+	m.writeMu.Lock()
+	err := envelope.Write(m.conn, env)
+	m.writeMu.Unlock()
+	if err != nil {
 		return nil, fmt.Errorf("write ReloadRequest: %w", err)
 	}
 
@@ -309,6 +339,18 @@ func (m *Manager) Middlewares() []RegisteredMiddleware {
 	return m.middlewares
 }
 
+// OnProgress sets a callback for progress notifications from the tool process.
+func (m *Manager) OnProgress(fn func(*pb.ProgressNotification)) { m.onProgress = fn }
+
+// OnLog sets a callback for log messages from the tool process.
+func (m *Manager) OnLog(fn func(*pb.LogMessage)) { m.onLog = fn }
+
+// OnEnableTools sets a callback for enable-tools requests from the tool process.
+func (m *Manager) OnEnableTools(fn func([]string)) { m.onEnableTools = fn }
+
+// OnDisableTools sets a callback for disable-tools requests from the tool process.
+func (m *Manager) OnDisableTools(fn func([]string)) { m.onDisableTools = fn }
+
 func (m *Manager) awaitHandshakeComplete(ctx context.Context) ([]RegisteredMiddleware, error) {
 	var middlewares []RegisteredMiddleware
 	// Short timeout for handshake-complete signal. If v1.0 SDKs don't send it,
@@ -336,8 +378,11 @@ func (m *Manager) awaitHandshakeComplete(ctx context.Context) ([]RegisteredMiddl
 						RegisterMiddlewareResponse: &pb.RegisterMiddlewareResponse{Success: true},
 					},
 				}
-				if err := envelope.Write(m.conn, resp); err != nil {
-					return nil, fmt.Errorf("write RegisterMiddlewareResponse: %w", err)
+				m.writeMu.Lock()
+				writeErr := envelope.Write(m.conn, resp)
+				m.writeMu.Unlock()
+				if writeErr != nil {
+					return nil, fmt.Errorf("write RegisterMiddlewareResponse: %w", writeErr)
 				}
 				timer.Reset(500 * time.Millisecond)
 				continue
@@ -375,7 +420,10 @@ func (m *Manager) SendMiddlewareIntercept(ctx context.Context, mwName, phase, to
 		m.mu.Unlock()
 	}()
 
-	if err := envelope.Write(m.conn, env); err != nil {
+	m.writeMu.Lock()
+	err := envelope.Write(m.conn, env)
+	m.writeMu.Unlock()
+	if err != nil {
 		return nil, fmt.Errorf("write MiddlewareInterceptRequest: %w", err)
 	}
 
@@ -394,6 +442,28 @@ func (m *Manager) SendMiddlewareIntercept(ctx context.Context, mwName, phase, to
 		}
 		return mir, nil
 	}
+}
+
+// NewManagerForTest creates a Manager with a pre-established connection.
+func NewManagerForTest(cfg ManagerConfig, conn net.Conn) *Manager {
+	m := NewManager(cfg)
+	m.conn = conn
+	return m
+}
+
+// RegisterPending registers a pending request channel and returns it.
+func (m *Manager) RegisterPending(reqID string) chan *pb.Envelope {
+	ch := make(chan *pb.Envelope, 1)
+	m.mu.Lock()
+	m.pending[reqID] = ch
+	m.mu.Unlock()
+	return ch
+}
+
+// StartReadLoop starts the readLoop (blocking).
+func (m *Manager) StartReadLoop() {
+	m.readWg.Add(1)
+	m.readLoop()
 }
 
 func (m *Manager) nextRequestID() string {
@@ -425,7 +495,10 @@ func (m *Manager) listTools(ctx context.Context) ([]*pb.ToolDefinition, error) {
 		m.mu.Unlock()
 	}()
 
-	if err := envelope.Write(m.conn, env); err != nil {
+	m.writeMu.Lock()
+	err := envelope.Write(m.conn, env)
+	m.writeMu.Unlock()
+	if err != nil {
 		return nil, fmt.Errorf("write ListToolsRequest: %w", err)
 	}
 
@@ -456,6 +529,14 @@ func (m *Manager) readLoop() {
 		default:
 		}
 
+		// Clean up orphaned stream assemblies.
+		now := time.Now()
+		for id, asm := range m.streams {
+			if now.Sub(asm.created) > m.cfg.CallTimeout {
+				delete(m.streams, id)
+			}
+		}
+
 		env, err := envelope.Read(m.conn)
 		if err != nil {
 			select {
@@ -474,10 +555,84 @@ func (m *Manager) readLoop() {
 
 		reqID := env.GetRequestId()
 		if reqID == "" {
-			// Unsolicited message (e.g., ToolListResponse after reload).
-			select {
-			case m.handshakeCh <- env:
+			// Route unsolicited messages by type
+			switch {
+			case env.GetToolList() != nil, env.GetRegisterMiddleware() != nil, env.GetReloadResponse() != nil:
+				// Handshake/reload messages
+				select {
+				case m.handshakeCh <- env:
+				default:
+				}
+			case env.GetProgress() != nil:
+				if m.onProgress != nil {
+					m.onProgress(env.GetProgress())
+				}
+			case env.GetLog() != nil:
+				if m.onLog != nil {
+					m.onLog(env.GetLog())
+				}
+			case env.GetEnableTools() != nil:
+				if m.onEnableTools != nil {
+					m.onEnableTools(env.GetEnableTools().ToolNames)
+				}
+			case env.GetDisableTools() != nil:
+				if m.onDisableTools != nil {
+					m.onDisableTools(env.GetDisableTools().ToolNames)
+				}
 			default:
+				select {
+				case m.handshakeCh <- env:
+				default:
+				}
+			}
+			continue
+		}
+
+		// Stream reassembly.
+		if sh := env.GetStreamHeader(); sh != nil {
+			assembly := &streamAssembly{
+				fieldName: sh.FieldName,
+				totalSize: sh.TotalSize,
+				created:   time.Now(),
+			}
+			if sh.TotalSize > 0 {
+				assembly.buf.Grow(int(sh.TotalSize))
+			}
+			m.streams[reqID] = assembly
+			continue
+		}
+
+		if sc := env.GetStreamChunk(); sc != nil {
+			assembly, ok := m.streams[reqID]
+			if !ok {
+				continue // no header — discard silently
+			}
+			assembly.buf.Write(sc.Data)
+
+			if sc.Final {
+				delete(m.streams, reqID)
+				result := &pb.Envelope{
+					RequestId: reqID,
+					Msg: &pb.Envelope_CallResult{
+						CallResult: &pb.CallToolResponse{},
+					},
+				}
+				switch assembly.fieldName {
+				case "result_json":
+					result.GetCallResult().ResultJson = assembly.buf.String()
+				case "structured_content_json":
+					result.GetCallResult().StructuredContentJson = assembly.buf.String()
+				}
+
+				m.mu.Lock()
+				ch, chOk := m.pending[reqID]
+				m.mu.Unlock()
+				if chOk {
+					select {
+					case ch <- result:
+					default:
+					}
+				}
 			}
 			continue
 		}

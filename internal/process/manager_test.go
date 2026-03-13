@@ -2,10 +2,16 @@ package process_test
 
 import (
 	"context"
+	"fmt"
+	"net"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
+	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
+	"github.com/msilverblatt/protomcp/internal/envelope"
 	"github.com/msilverblatt/protomcp/internal/process"
 )
 
@@ -89,5 +95,218 @@ func TestReload(t *testing.T) {
 	}
 	if len(tools) == 0 {
 		t.Fatal("expected tools after reload")
+	}
+}
+
+func testStreamSetup(t *testing.T) (*process.Manager, net.Conn) {
+	t.Helper()
+	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("pmcp-test-%d-%d.sock", os.Getpid(), time.Now().UnixNano()))
+	t.Cleanup(func() { os.Remove(socketPath) })
+
+	listener, err := net.Listen("unix", socketPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { listener.Close() })
+
+	toolConn, err := net.Dial("unix", socketPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { toolConn.Close() })
+
+	serverConn, err := listener.Accept()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { serverConn.Close() })
+
+	cfg := process.ManagerConfig{
+		SocketPath:  socketPath,
+		CallTimeout: 5 * time.Second,
+	}
+	mgr := process.NewManagerForTest(cfg, serverConn)
+	go mgr.StartReadLoop()
+
+	return mgr, toolConn
+}
+
+func TestStreamReassembly(t *testing.T) {
+	mgr, toolConn := testStreamSetup(t)
+	respCh := mgr.RegisterPending("req-1")
+
+	fullPayload := strings.Repeat("A", 200*1024)
+	fullResultJSON := fmt.Sprintf(`[{"type":"text","text":"%s"}]`, fullPayload)
+	chunkSize := 64 * 1024
+
+	envelope.Write(toolConn, &pb.Envelope{
+		RequestId: "req-1",
+		Msg: &pb.Envelope_StreamHeader{StreamHeader: &pb.StreamHeader{
+			FieldName: "result_json", TotalSize: uint64(len(fullResultJSON)), ChunkSize: uint32(chunkSize),
+		}},
+	})
+
+	remaining := []byte(fullResultJSON)
+	for len(remaining) > 0 {
+		sz := chunkSize
+		if sz > len(remaining) {
+			sz = len(remaining)
+		}
+		envelope.Write(toolConn, &pb.Envelope{
+			RequestId: "req-1",
+			Msg: &pb.Envelope_StreamChunk{StreamChunk: &pb.StreamChunk{
+				Data: remaining[:sz], Final: sz >= len(remaining),
+			}},
+		})
+		remaining = remaining[sz:]
+	}
+
+	select {
+	case resp := <-respCh:
+		result := resp.GetCallResult()
+		if result == nil {
+			t.Fatal("expected CallToolResponse")
+		}
+		if result.ResultJson != fullResultJSON {
+			t.Errorf("reassembled length = %d, want %d", len(result.ResultJson), len(fullResultJSON))
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("timeout")
+	}
+}
+
+func TestStreamReassembly_UnknownSize(t *testing.T) {
+	mgr, toolConn := testStreamSetup(t)
+	respCh := mgr.RegisterPending("req-1")
+
+	payload := `[{"type":"text","text":"hello"}]`
+
+	envelope.Write(toolConn, &pb.Envelope{
+		RequestId: "req-1",
+		Msg: &pb.Envelope_StreamHeader{StreamHeader: &pb.StreamHeader{
+			FieldName: "result_json", TotalSize: 0, ChunkSize: 1024,
+		}},
+	})
+	envelope.Write(toolConn, &pb.Envelope{
+		RequestId: "req-1",
+		Msg: &pb.Envelope_StreamChunk{StreamChunk: &pb.StreamChunk{Data: []byte(payload), Final: true}},
+	})
+
+	select {
+	case resp := <-respCh:
+		if resp.GetCallResult().ResultJson != payload {
+			t.Errorf("got %q, want %q", resp.GetCallResult().ResultJson, payload)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("timeout")
+	}
+}
+
+func TestStreamReassembly_UnknownRequestID(t *testing.T) {
+	mgr, toolConn := testStreamSetup(t)
+
+	// Send chunk with no matching header — should be discarded.
+	envelope.Write(toolConn, &pb.Envelope{
+		RequestId: "req-orphan",
+		Msg: &pb.Envelope_StreamChunk{StreamChunk: &pb.StreamChunk{Data: []byte("hello"), Final: true}},
+	})
+
+	// Send normal response to verify readLoop still works.
+	respCh := mgr.RegisterPending("req-2")
+	envelope.Write(toolConn, &pb.Envelope{
+		RequestId: "req-2",
+		Msg: &pb.Envelope_CallResult{CallResult: &pb.CallToolResponse{ResultJson: `[{"type":"text","text":"ok"}]`}},
+	})
+
+	select {
+	case resp := <-respCh:
+		if resp.GetCallResult().ResultJson != `[{"type":"text","text":"ok"}]` {
+			t.Error("unexpected result")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("timeout — readLoop may have crashed")
+	}
+}
+
+func TestStreamReassembly_InterleavedStreams(t *testing.T) {
+	mgr, toolConn := testStreamSetup(t)
+	respCh1 := mgr.RegisterPending("req-1")
+	respCh2 := mgr.RegisterPending("req-2")
+
+	payload1 := `[{"type":"text","text":"AAAA"}]`
+	payload2 := `[{"type":"text","text":"BBBB"}]`
+
+	for _, id := range []string{"req-1", "req-2"} {
+		envelope.Write(toolConn, &pb.Envelope{
+			RequestId: id,
+			Msg: &pb.Envelope_StreamHeader{StreamHeader: &pb.StreamHeader{FieldName: "result_json", ChunkSize: 1024}},
+		})
+	}
+
+	// Interleave chunks
+	envelope.Write(toolConn, &pb.Envelope{RequestId: "req-1", Msg: &pb.Envelope_StreamChunk{StreamChunk: &pb.StreamChunk{Data: []byte(payload1[:15])}}})
+	envelope.Write(toolConn, &pb.Envelope{RequestId: "req-2", Msg: &pb.Envelope_StreamChunk{StreamChunk: &pb.StreamChunk{Data: []byte(payload2[:15])}}})
+	envelope.Write(toolConn, &pb.Envelope{RequestId: "req-1", Msg: &pb.Envelope_StreamChunk{StreamChunk: &pb.StreamChunk{Data: []byte(payload1[15:]), Final: true}}})
+	envelope.Write(toolConn, &pb.Envelope{RequestId: "req-2", Msg: &pb.Envelope_StreamChunk{StreamChunk: &pb.StreamChunk{Data: []byte(payload2[15:]), Final: true}}})
+
+	for i, ch := range []chan *pb.Envelope{respCh1, respCh2} {
+		want := payload1
+		if i == 1 {
+			want = payload2
+		}
+		select {
+		case resp := <-ch:
+			if resp.GetCallResult().ResultJson != want {
+				t.Errorf("stream %d: got %q, want %q", i+1, resp.GetCallResult().ResultJson, want)
+			}
+		case <-time.After(5 * time.Second):
+			t.Fatalf("stream %d: timeout", i+1)
+		}
+	}
+}
+
+func TestStreamReassembly_CrashMidStream(t *testing.T) {
+	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("pmcp-crash-%d-%d.sock", os.Getpid(), time.Now().UnixNano()))
+	defer os.Remove(socketPath)
+
+	listener, err := net.Listen("unix", socketPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+
+	toolConn, err := net.Dial("unix", socketPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	serverConn, err := listener.Accept()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := process.ManagerConfig{SocketPath: socketPath, CallTimeout: 2 * time.Second}
+	mgr := process.NewManagerForTest(cfg, serverConn)
+	done := make(chan struct{})
+	go func() { mgr.StartReadLoop(); close(done) }()
+
+	respCh := mgr.RegisterPending("req-1")
+
+	envelope.Write(toolConn, &pb.Envelope{
+		RequestId: "req-1",
+		Msg: &pb.Envelope_StreamHeader{StreamHeader: &pb.StreamHeader{FieldName: "result_json", TotalSize: 100000, ChunkSize: 1024}},
+	})
+	toolConn.Close()
+
+	select {
+	case <-done: // readLoop exited
+	case <-time.After(5 * time.Second):
+		t.Fatal("readLoop didn't exit after tool crash")
+	}
+
+	select {
+	case resp := <-respCh:
+		t.Fatalf("unexpected response after crash: %v", resp)
+	default: // expected — no response
 	}
 }
