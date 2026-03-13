@@ -55,7 +55,7 @@ result := RawToolsCallResult{
 data, _ := json.Marshal(result)
 ```
 
-The `result_json` bytes pass through untouched. The only case we need to fall back to parsing is when `result_json` is not a valid JSON array (malformed input), in which case we wrap it as a text content item — same as today's fallback.
+The `result_json` bytes pass through untouched. Use a fast check (first non-whitespace byte is `[`) to determine if the JSON is already a valid content array. If not, fall back to wrapping as a text content item — same as today's fallback path.
 
 ### Files
 
@@ -65,7 +65,7 @@ The `result_json` bytes pass through untouched. The only case we need to fall ba
 ### Validation
 
 - All existing tests pass (behavior unchanged for well-formed results)
-- D4 payload benchmark shows improvement at 10KB+ sizes
+- D4 payload benchmark (already exists in `fastmcp_deep_comparison_test.go`) shows improvement at 10KB+ sizes
 
 ---
 
@@ -74,6 +74,8 @@ The `result_json` bytes pass through untouched. The only case we need to fall ba
 ### Problem
 
 Even with Phase C, the protobuf layer serializes/deserializes the entire payload as one message. A 5MB result means ~15MB peak memory (serialized + deserialized + working copies). The length-prefixed framing also means the Go `readLoop` blocks until the entire message is received.
+
+The existing `maxMessageSize` in `envelope.go` caps messages at 10MB, which limits non-chunked payloads. With chunking, individual messages stay small regardless of total payload size.
 
 ### Design
 
@@ -94,10 +96,10 @@ message StreamChunk {
 }
 ```
 
-Added to `Envelope.oneof msg`:
+Added to `Envelope.oneof msg` at the next available field numbers:
 ```protobuf
-StreamHeader stream_header = 16;
-StreamChunk stream_chunk = 17;
+StreamHeader stream_header = 28;
+StreamChunk stream_chunk = 29;
 ```
 
 #### Wire Flow
@@ -116,19 +118,32 @@ Each chunk is still a length-prefixed protobuf Envelope — the framing layer do
 
 #### Go Side: readLoop Reassembly
 
+The `readLoop` is a single goroutine, so it naturally handles interleaved chunks from concurrent streams (multiple in-flight tool calls) without additional synchronization.
+
 When `readLoop` receives a `stream_header`:
-1. Create a `streamAssembly` struct keyed by `request_id`: `{ fieldName string, buf bytes.Buffer, totalSize uint64 }`
-2. On each `stream_chunk` with matching `request_id`, append `data` to `buf`
-3. On `final: true`, construct a `CallToolResponse` with the assembled field, dispatch to the pending channel
+1. Create a `streamAssembly` struct keyed by `request_id`: `{ fieldName string, buf bytes.Buffer, totalSize uint64, created time.Time }`
+2. If `total_size > 0`, pre-allocate the buffer with `buf.Grow(totalSize)` to avoid repeated reallocation
+3. If `total_size == 0` (unknown), the buffer grows dynamically via `bytes.Buffer`'s internal doubling
+4. On each `stream_chunk` with matching `request_id`, append `data` to `buf`
+5. On `final: true`, construct a `CallToolResponse` with the assembled field, dispatch to the pending channel, remove from assembly map
+6. If `total_size > 0` and assembled size differs, log a warning but still dispatch (non-fatal)
 
 The `CallTool` caller sees no difference — it still receives a complete `*pb.CallToolResponse` from the channel.
+
+#### Error Handling and Cleanup
+
+- **Tool crash mid-stream:** The `readLoop` exits on socket EOF/error. All in-progress assemblies are abandoned. The `CallTool` callers time out via their existing `timer` and return an error. No leaked goroutines.
+- **Orphaned assemblies:** The `readLoop` periodically checks (on each envelope read) for assemblies older than `CallTimeout` and removes them. This handles edge cases where a tool sends a `stream_header` but never sends chunks.
+- **Unknown request_id on chunk:** Discard the chunk silently (same behavior as today for unmatched response envelopes).
+- **No explicit abort message:** The SDK can signal failure by sending a `CallToolResponse` with `is_error: true` instead of continuing chunks. The `readLoop` checks for a pending assembly on that `request_id` and cleans it up before dispatching the error response.
 
 #### SDK Side: Transparent Chunking
 
 The SDK's transport layer checks the serialized size of `result_json` before sending. If it exceeds the threshold (default 64KB), it:
-1. Sends a `StreamHeader` envelope
-2. Sends N `StreamChunk` envelopes
-3. Tool author code is unchanged
+1. Sends a `StreamHeader` envelope with `total_size` set to the known length
+2. Sends N `StreamChunk` envelopes, each with up to `chunk_size` bytes
+3. The final chunk has `final: true`
+4. Tool author code is unchanged — chunking is entirely within the transport layer
 
 #### Threshold
 
@@ -138,8 +153,8 @@ The SDK's transport layer checks the serialized size of `result_json` before sen
 
 ### Files
 
-- `proto/protomcp.proto` — add `StreamHeader`, `StreamChunk` to Envelope oneof
-- `internal/process/manager.go` — `readLoop` stream assembly logic
+- `proto/protomcp.proto` — add `StreamHeader`, `StreamChunk` to Envelope oneof (fields 28, 29)
+- `internal/process/manager.go` — `readLoop` stream assembly logic, orphan cleanup
 - `sdk/python/src/protomcp/transport.py` — chunked send logic
 - `sdk/typescript/src/transport.ts` — chunked send logic
 - Regenerate protobuf code for Go, Python, TypeScript
@@ -147,7 +162,7 @@ The SDK's transport layer checks the serialized size of `result_json` before sen
 ### Validation
 
 - Existing tests pass (payloads under threshold use old path)
-- New unit tests for stream assembly in `manager_test.go`
+- New unit tests for stream assembly in `manager_test.go` (happy path, crash mid-stream, unknown-size, interleaved streams)
 - D4 payload benchmark shows improvement at 100KB+ sizes
 
 ---
@@ -181,28 +196,50 @@ During `initialize`, the host advertises streaming support:
 
 If the host does not advertise `x-protomcp-stream`, the proxy falls back to full buffering (Phase A reassembly + single JSON-RPC response). Full backward compatibility.
 
+The host's `maxChunkSize` is forwarded to the SDK as the chunk size for internal streaming (Phase A), aligning internal and external chunk boundaries to avoid re-buffering.
+
 #### Streaming JSON-RPC Response Format
 
-When streaming is enabled, large tool results are delivered as a sequence of messages with a shared correlation ID:
+When streaming is enabled, large tool results are delivered as a sequence of JSON-RPC **notifications** (no `id` field) bracketed by the original response:
 
 ```json
-{"jsonrpc":"2.0","id":1,"x-stream":"start","x-stream-id":"s-1","x-total-size":524288}
-{"jsonrpc":"2.0","x-stream-id":"s-1","x-stream":"chunk","x-data":"<base64 or raw text>"}
-{"jsonrpc":"2.0","x-stream-id":"s-1","x-stream":"chunk","x-data":"<base64 or raw text>"}
-{"jsonrpc":"2.0","id":1,"x-stream":"end","x-stream-id":"s-1","result":{"isError":false}}
+{"jsonrpc":"2.0","method":"x-protomcp-stream/start","params":{"id":1,"streamId":"s-42","totalSize":524288}}
+{"jsonrpc":"2.0","method":"x-protomcp-stream/chunk","params":{"streamId":"s-42","data":"<base64 or raw text>"}}
+{"jsonrpc":"2.0","method":"x-protomcp-stream/chunk","params":{"streamId":"s-42","data":"<base64 or raw text>"}}
+{"jsonrpc":"2.0","id":1,"result":{"content":[],"isError":false,"x-stream-complete":"s-42"}}
 ```
 
-The `start` message carries the original request `id`. Intermediate `chunk` messages omit `id` (they're not complete responses). The `end` message carries `id` again with the final metadata.
+This format is valid JSON-RPC 2.0: the `start` and `chunk` messages are notifications (no `id`), and the final message is a standard response with `id` and `result`. Hosts that don't understand the notifications ignore them per the JSON-RPC spec. The final response contains metadata; the actual content was delivered via chunks.
+
+#### Stream ID Generation
+
+Stream IDs are generated as `s-{monotonic counter}` scoped to the connection (transport instance). The counter is an atomic uint64 on the handler, ensuring uniqueness across concurrent tool calls on the same connection.
+
+#### Handler Architecture
+
+The current `Handler.Handle()` returns `(*JSONRPCResponse, error)`. For streaming, a new method is introduced:
+
+```go
+type StreamWriter interface {
+    WriteNotification(method string, params interface{}) error
+    WriteResponse(resp *JSONRPCResponse) error
+    Flush() error
+}
+```
+
+The handler detects streaming capability (stored during `initialize`) and, for large results, calls `StreamWriter` methods instead of returning a single response. The transport implementations (`stdio`, `http`, `sse`) each implement `StreamWriter`.
+
+For non-streaming hosts, the existing return-based interface is unchanged.
 
 #### Transport-Specific Delivery
 
-- **HTTP (streamable-http):** Chunked transfer encoding. Response headers sent immediately, chunks written as they arrive from the internal protocol. Connection stays open until `end`.
-- **SSE:** Each chunk is an SSE `data:` event. The `event:` field carries `x-stream-chunk`. Correlation via `x-stream-id`.
-- **Stdio:** Each chunk is a newline-delimited JSON message. Same format as above.
+- **HTTP (streamable-http):** Chunked transfer encoding. Response headers sent on first write, chunks flushed as they arrive. Connection stays open until final response.
+- **SSE:** Each notification is an SSE `data:` event. Standard SSE framing.
+- **Stdio:** Each notification/response is a newline-delimited JSON line. Standard stdio framing.
 
 #### Backpressure
 
-The Go proxy reads the next internal chunk only after the previous chunk has been flushed to the transport. A slow HTTP client naturally throttles the tool process through the unix socket. No unbounded buffering anywhere in the pipeline.
+The Go proxy reads the next internal chunk (Phase A) only after the previous chunk has been flushed to the transport via `StreamWriter.Flush()`. A slow HTTP client naturally throttles the tool process through the unix socket. No unbounded buffering anywhere in the pipeline.
 
 #### What This Enables
 
@@ -214,15 +251,15 @@ The Go proxy reads the next internal chunk only after the previous chunk has bee
 
 ### Files
 
-- `internal/mcp/handler.go` — detect streaming capability, stream results when available
-- `internal/mcp/types.go` — streaming message types
-- `internal/transport/http.go` — chunked HTTP response writing
-- `internal/transport/stdio.go` — streaming message format
-- `internal/transport/sse.go` — streaming SSE events (if applicable)
+- `internal/mcp/handler.go` — detect streaming capability, use `StreamWriter` for large results
+- `internal/mcp/types.go` — `StreamWriter` interface, streaming notification types
+- `internal/transport/http.go` — implement `StreamWriter` with chunked transfer encoding
+- `internal/transport/stdio.go` — implement `StreamWriter` with NDJSON
+- `internal/transport/sse.go` — implement `StreamWriter` with SSE events
 
 ### Validation
 
-- Non-streaming hosts get identical behavior to today
+- Non-streaming hosts get identical behavior to today (no `x-protomcp-stream` capability = full buffering)
 - New integration tests with a streaming-capable test client
 - Benchmark: time-to-first-byte for 1MB+ payloads
 - Memory profile: proxy RSS stays flat regardless of payload size
