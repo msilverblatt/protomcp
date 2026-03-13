@@ -86,6 +86,14 @@ type ToolsCallResult struct {
 	StructuredContent json.RawMessage `json:"structuredContent,omitempty"`
 }
 
+// RawToolsCallResult is like ToolsCallResult but passes content through
+// as raw JSON bytes, avoiding a parse/re-serialize round trip.
+type RawToolsCallResult struct {
+	Content           json.RawMessage `json:"content"`
+	IsError           bool            `json:"isError,omitempty"`
+	StructuredContent json.RawMessage `json:"structuredContent,omitempty"`
+}
+
 type ContentItem struct {
 	Type string `json:"type"`
 	Text string `json:"text,omitempty"`
