@@ -5,7 +5,9 @@
 
 **Write MCP tools in any language. One file, one command, hot-reload.**
 
-Building MCP tools today means wrestling with protocol boilerplate, restarting your AI host every time you change a line, and being locked into one language per SDK. protomcp eliminates all of that — you write a handler function, run `pmcp dev tools.py`, and your tools are live in Claude Desktop, Cursor, or any MCP client. Change your code, save the file, and it reloads instantly.
+Build MCP tools without protocol boilerplate, restarting your server with very change, or needing a different SDK for every language. 
+
+protomcp lets you write a handler function, run `pmcp dev tools.py`, and your tools just work with any MCP client. Change your code, save the file, and it reloads instantly.
 
 ## How It Works
 
