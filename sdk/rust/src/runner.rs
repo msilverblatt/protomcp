@@ -1,9 +1,11 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use crate::proto;
 use crate::transport::Transport;
 use crate::tool::with_registry;
 use crate::context::ToolContext;
+use crate::middleware::with_middleware_registry;
 
 pub async fn run() {
     let socket_path = std::env::var("PROTOMCP_SOCKET")
@@ -23,7 +25,7 @@ pub async fn run() {
         match env.msg {
             Some(proto::envelope::Msg::ListTools(_)) => {
                 handle_list_tools(&transport, &request_id).await;
-                send_handshake_complete(&transport).await;
+                send_middleware_registrations(&transport).await;
             }
             Some(proto::envelope::Msg::CallTool(req)) => {
                 handle_call_tool(&transport, &req, &request_id).await;
@@ -139,17 +141,65 @@ async fn handle_reload(transport: &Transport, request_id: &str) {
     };
     let _ = transport.send(&resp).await;
     handle_list_tools(transport, "").await;
+    send_middleware_registrations(transport).await;
+}
+
+async fn send_middleware_registrations(transport: &Transport) {
+    let names_and_priorities: Vec<(String, i32)> = with_middleware_registry(|mws| {
+        mws.iter().map(|mw| (mw.name.clone(), mw.priority)).collect()
+    });
+
+    for (name, priority) in &names_and_priorities {
+        let reg = proto::Envelope {
+            msg: Some(proto::envelope::Msg::RegisterMiddleware(proto::RegisterMiddlewareRequest {
+                name: name.clone(),
+                priority: *priority,
+            })),
+            ..Default::default()
+        };
+        let _ = transport.send(&reg).await;
+        // Wait for acknowledgment
+        if transport.recv().await.is_err() {
+            return;
+        }
+    }
     send_handshake_complete(transport).await;
 }
 
 async fn handle_middleware_intercept(transport: &Transport, req: &proto::MiddlewareInterceptRequest, request_id: &str) {
+    let mut args_json = req.arguments_json.clone();
+    let mut result_json = req.result_json.clone();
+    let mut reject = false;
+    let mut reject_reason = String::new();
+
+    let mw_result: Option<HashMap<String, String>> = with_middleware_registry(|mws| {
+        mws.iter()
+            .find(|mw| mw.name == req.middleware_name)
+            .map(|mw| (mw.handler)(&req.phase, &req.tool_name, &req.arguments_json, &req.result_json, req.is_error))
+    });
+
+    if let Some(result) = mw_result {
+        if result.get("reject").is_some_and(|v| v == "true") {
+            reject = true;
+            if let Some(reason) = result.get("reject_reason") {
+                reject_reason = reason.clone();
+            }
+        }
+        if let Some(v) = result.get("arguments_json") {
+            args_json = v.clone();
+        }
+        if let Some(v) = result.get("result_json") {
+            result_json = v.clone();
+        }
+    }
+
     let resp = proto::Envelope {
         request_id: request_id.to_string(),
         msg: Some(proto::envelope::Msg::MiddlewareInterceptResponse(proto::MiddlewareInterceptResponse {
-            arguments_json: req.arguments_json.clone(),
-            result_json: req.result_json.clone(),
-            reject: false,
-            reject_reason: String::new(),
+            arguments_json: args_json,
+            result_json,
+            reject,
+            reject_reason,
         })),
         ..Default::default()
     };
