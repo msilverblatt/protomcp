@@ -127,8 +127,20 @@ def _handle_call_tool(transport, env):
             result_json=json.dumps([{"type": "text", "text": str(e)}]),
         )
 
-    resp = pb.Envelope(call_result=resp_msg, request_id=env.request_id)
-    transport.send(resp)
+    # Check if result_json exceeds chunk threshold — stream if so.
+    chunk_threshold = int(os.environ.get('PROTOMCP_CHUNK_THRESHOLD', '65536'))
+    result_json_str = resp_msg.result_json
+    result_json_bytes = result_json_str.encode('utf-8') if result_json_str else b''
+
+    if len(result_json_bytes) > chunk_threshold:
+        transport.send_chunked(
+            request_id=env.request_id,
+            field_name='result_json',
+            data=result_json_bytes,
+        )
+    else:
+        resp = pb.Envelope(call_result=resp_msg, request_id=env.request_id)
+        transport.send(resp)
 
 def _handle_reload(transport, env, mw_handlers):
     # For now, just acknowledge. Full reload with importlib is complex.
