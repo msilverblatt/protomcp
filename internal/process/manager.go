@@ -15,6 +15,12 @@ import (
 	"github.com/msilverblatt/protomcp/internal/envelope"
 )
 
+// RegisteredMiddleware represents a middleware registered by the tool process during handshake.
+type RegisteredMiddleware struct {
+	Name     string
+	Priority int32
+}
+
 // ManagerConfig configures how the process manager spawns and communicates
 // with a tool process.
 type ManagerConfig struct {
@@ -35,8 +41,9 @@ type Manager struct {
 	listener net.Listener
 	mu       sync.Mutex
 	pending  map[string]chan *pb.Envelope
-	tools    []*pb.ToolDefinition
-	crashCh  chan error
+	tools       []*pb.ToolDefinition
+	middlewares []RegisteredMiddleware
+	crashCh     chan error
 	stopCh   chan struct{}
 	readWg   sync.WaitGroup
 	nextID   int
@@ -149,6 +156,16 @@ func (m *Manager) Start(ctx context.Context) ([]*pb.ToolDefinition, error) {
 
 	m.mu.Lock()
 	m.tools = tools
+	m.mu.Unlock()
+
+	// Wait for optional middleware registrations + handshake-complete signal.
+	middlewares, err := m.awaitHandshakeComplete(ctx)
+	if err != nil {
+		m.cleanup()
+		return nil, fmt.Errorf("handshake middleware: %w", err)
+	}
+	m.mu.Lock()
+	m.middlewares = middlewares
 	m.mu.Unlock()
 
 	return tools, nil
@@ -283,6 +300,100 @@ func (m *Manager) Tools() []*pb.ToolDefinition {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.tools
+}
+
+// Middlewares returns the list of middleware registered during handshake.
+func (m *Manager) Middlewares() []RegisteredMiddleware {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.middlewares
+}
+
+func (m *Manager) awaitHandshakeComplete(ctx context.Context) ([]RegisteredMiddleware, error) {
+	var middlewares []RegisteredMiddleware
+	// Short timeout for handshake-complete signal. If v1.0 SDKs don't send it,
+	// we treat "no message within 500ms" as handshake-complete (backward compat).
+	timer := time.NewTimer(500 * time.Millisecond)
+	defer timer.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-timer.C:
+			return middlewares, nil
+		case env := <-m.handshakeCh:
+			if rr := env.GetReloadResponse(); rr != nil {
+				return middlewares, nil
+			}
+			if rm := env.GetRegisterMiddleware(); rm != nil {
+				middlewares = append(middlewares, RegisteredMiddleware{
+					Name:     rm.Name,
+					Priority: rm.Priority,
+				})
+				resp := &pb.Envelope{
+					Msg: &pb.Envelope_RegisterMiddlewareResponse{
+						RegisterMiddlewareResponse: &pb.RegisterMiddlewareResponse{Success: true},
+					},
+				}
+				if err := envelope.Write(m.conn, resp); err != nil {
+					return nil, fmt.Errorf("write RegisterMiddlewareResponse: %w", err)
+				}
+				timer.Reset(500 * time.Millisecond)
+				continue
+			}
+		}
+	}
+}
+
+// SendMiddlewareIntercept sends a middleware intercept request and waits for the response.
+func (m *Manager) SendMiddlewareIntercept(ctx context.Context, mwName, phase, toolName, argsJSON, resultJSON string, isError bool) (*pb.MiddlewareInterceptResponse, error) {
+	reqID := m.nextRequestID()
+
+	env := &pb.Envelope{
+		RequestId: reqID,
+		Msg: &pb.Envelope_MiddlewareIntercept{
+			MiddlewareIntercept: &pb.MiddlewareInterceptRequest{
+				MiddlewareName: mwName,
+				Phase:          phase,
+				ToolName:       toolName,
+				ArgumentsJson:  argsJSON,
+				ResultJson:     resultJSON,
+				IsError:        isError,
+			},
+		},
+	}
+
+	respCh := make(chan *pb.Envelope, 1)
+	m.mu.Lock()
+	m.pending[reqID] = respCh
+	m.mu.Unlock()
+
+	defer func() {
+		m.mu.Lock()
+		delete(m.pending, reqID)
+		m.mu.Unlock()
+	}()
+
+	if err := envelope.Write(m.conn, env); err != nil {
+		return nil, fmt.Errorf("write MiddlewareInterceptRequest: %w", err)
+	}
+
+	timer := time.NewTimer(m.cfg.CallTimeout)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-timer.C:
+		return nil, fmt.Errorf("middleware intercept %q timed out", mwName)
+	case resp := <-respCh:
+		mir := resp.GetMiddlewareInterceptResponse()
+		if mir == nil {
+			return nil, fmt.Errorf("unexpected response type for MiddlewareIntercept")
+		}
+		return mir, nil
+	}
 }
 
 func (m *Manager) nextRequestID() string {
