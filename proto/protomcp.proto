@@ -34,6 +34,12 @@ message Envelope {
     TaskStatusResponse task_status_response = 21;
     TaskResultRequest task_result = 22;
     TaskCancelRequest task_cancel = 23;
+
+    // Middleware
+    RegisterMiddlewareRequest register_middleware = 24;
+    RegisterMiddlewareResponse register_middleware_response = 25;
+    MiddlewareInterceptRequest middleware_intercept = 26;
+    MiddlewareInterceptResponse middleware_intercept_response = 27;
   }
   // Correlation ID for matching requests to responses.
   string request_id = 14;
@@ -167,4 +173,31 @@ message TaskResultRequest {
 
 message TaskCancelRequest {
   string task_id = 1;
+}
+
+// --- Middleware ---
+
+message RegisterMiddlewareRequest {
+  string name = 1;
+  int32 priority = 2;
+}
+
+message RegisterMiddlewareResponse {
+  bool success = 1;
+}
+
+message MiddlewareInterceptRequest {
+  string middleware_name = 1;
+  string phase = 2;
+  string tool_name = 3;
+  string arguments_json = 4;
+  string result_json = 5;
+  bool is_error = 6;
+}
+
+message MiddlewareInterceptResponse {
+  string arguments_json = 1;
+  string result_json = 2;
+  bool reject = 3;
+  string reject_reason = 4;
 }
