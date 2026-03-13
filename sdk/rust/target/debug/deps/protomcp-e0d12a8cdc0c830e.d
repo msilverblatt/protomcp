@@ -1,0 +1,15 @@
+/Users/msilverblatt/hotmcp/sdk/rust/target/debug/deps/protomcp-e0d12a8cdc0c830e.d: src/lib.rs src/tool.rs src/result.rs src/context.rs src/manager.rs src/log.rs src/transport.rs src/runner.rs /Users/msilverblatt/hotmcp/sdk/rust/target/debug/build/protomcp-149dc39f49c0e519/out/protomcp.rs
+
+/Users/msilverblatt/hotmcp/sdk/rust/target/debug/deps/protomcp-e0d12a8cdc0c830e: src/lib.rs src/tool.rs src/result.rs src/context.rs src/manager.rs src/log.rs src/transport.rs src/runner.rs /Users/msilverblatt/hotmcp/sdk/rust/target/debug/build/protomcp-149dc39f49c0e519/out/protomcp.rs
+
+src/lib.rs:
+src/tool.rs:
+src/result.rs:
+src/context.rs:
+src/manager.rs:
+src/log.rs:
+src/transport.rs:
+src/runner.rs:
+/Users/msilverblatt/hotmcp/sdk/rust/target/debug/build/protomcp-149dc39f49c0e519/out/protomcp.rs:
+
+# env-dep:OUT_DIR=/Users/msilverblatt/hotmcp/sdk/rust/target/debug/build/protomcp-149dc39f49c0e519/out
