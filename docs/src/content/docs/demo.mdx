@@ -1,0 +1,52 @@
+---
+title: Demo
+description: See pmcp in action — animated architecture, terminal replay, and protocol view.
+template: splash
+hero:
+  tagline: See how pmcp works — from high-level architecture down to the wire protocol.
+---
+
+import ArchitectureHero from '../../components/demo/ArchitectureHero.astro';
+import TerminalReplay from '../../components/demo/TerminalReplay.astro';
+import ProtocolView from '../../components/demo/ProtocolView.astro';
+
+<div style="--cycle-duration: 8s; --phase-delay: 0s;">
+
+<ArchitectureHero />
+
+## In Action
+
+Watch a tool call flow through the system — from the terminal command to the wire protocol.
+
+<div class="demo-panels">
+  <TerminalReplay />
+  <ProtocolView />
+</div>
+
+</div>
+
+<style>{`
+  .demo-panels {
+    display: flex;
+    gap: 1.5rem;
+    margin: 1.5rem 0;
+    align-items: flex-start;
+  }
+
+  @media (max-width: 768px) {
+    .demo-panels {
+      flex-direction: column;
+    }
+  }
+`}</style>
+
+---
+
+## Try It Yourself
+
+```sh
+brew install protomcp/tap/protomcp
+pmcp dev examples/python/basic.py
+```
+
+Check out the [Quick Start](/getting-started/quick-start/) guide or browse the [examples](https://github.com/msilverblatt/protomcp/tree/master/examples).

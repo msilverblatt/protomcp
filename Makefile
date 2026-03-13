@@ -30,5 +30,8 @@ test-ts:
 
 test-all: test test-python test-ts
 
+demo:
+	./examples/run-demo.sh
+
 clean:
 	rm -rf bin/ gen/
