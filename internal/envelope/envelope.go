@@ -53,3 +53,26 @@ func Read(r io.Reader) (*pb.Envelope, error) {
 
 	return env, nil
 }
+
+// ReadRaw reads a length-prefixed Envelope. If the envelope contains a
+// RawHeader, it also reads the subsequent raw bytes from the reader.
+// Returns (envelope, rawBytes, error). rawBytes is nil for non-RawHeader messages.
+func ReadRaw(r io.Reader) (*pb.Envelope, []byte, error) {
+	env, err := Read(r)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	rh := env.GetRawHeader()
+	if rh == nil {
+		return env, nil, nil
+	}
+
+	// Read raw bytes that follow the RawHeader
+	raw := make([]byte, rh.Size)
+	if _, err := io.ReadFull(r, raw); err != nil {
+		return nil, nil, fmt.Errorf("read raw payload (%d bytes): %w", rh.Size, err)
+	}
+
+	return env, raw, nil
+}
