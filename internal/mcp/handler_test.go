@@ -3,6 +3,8 @@ package mcp_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/msilverblatt/protomcp/internal/mcp"
@@ -11,7 +13,8 @@ import (
 )
 
 type mockToolBackend struct {
-	tools []*pb.ToolDefinition
+	tools      []*pb.ToolDefinition
+	callResult *pb.CallToolResponse
 }
 
 func (m *mockToolBackend) ActiveTools() []*pb.ToolDefinition {
@@ -19,6 +22,9 @@ func (m *mockToolBackend) ActiveTools() []*pb.ToolDefinition {
 }
 
 func (m *mockToolBackend) CallTool(ctx context.Context, name, argsJSON string) (*pb.CallToolResponse, error) {
+	if m.callResult != nil {
+		return m.callResult, nil
+	}
 	return &pb.CallToolResponse{
 		ResultJson: `[{"type":"text","text":"result"}]`,
 	}, nil
@@ -221,7 +227,7 @@ func TestHandleCancelledNotification(t *testing.T) {
 	h := mcp.NewHandler(&mockToolBackend{})
 
 	// Track a call first
-	h.CancelTracker().TrackCall("req-99")
+	h.CancelTracker().TrackCallWithContext(context.Background(), "req-99")
 
 	params, _ := json.Marshal(map[string]interface{}{
 		"requestId": "req-99",
@@ -316,5 +322,71 @@ func TestHandleTasksGet_Unknown(t *testing.T) {
 	}
 	if resp.Error == nil {
 		t.Fatal("expected error for unknown task")
+	}
+}
+
+func TestHandleToolsCall_RawPassthrough(t *testing.T) {
+	largeText := strings.Repeat("X", 100000)
+	contentJSON := fmt.Sprintf(`[{"type":"text","text":"%s"}]`, largeText)
+
+	backend := &mockToolBackend{
+		tools: []*pb.ToolDefinition{{Name: "generate", InputSchemaJson: `{"type":"object"}`}},
+		callResult: &pb.CallToolResponse{
+			ResultJson: contentJSON,
+		},
+	}
+	h := mcp.NewHandler(backend)
+
+	params, _ := json.Marshal(mcp.ToolsCallParams{Name: "generate"})
+	resp, err := h.Handle(context.Background(), mcp.JSONRPCRequest{
+		JSONRPC: "2.0",
+		ID:      json.RawMessage(`1`),
+		Method:  "tools/call",
+		Params:  params,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.Error != nil {
+		t.Fatalf("unexpected RPC error: %s", resp.Error.Message)
+	}
+
+	var result struct {
+		Content json.RawMessage `json:"content"`
+	}
+	json.Unmarshal(resp.Result, &result)
+
+	if string(result.Content) != contentJSON {
+		t.Errorf("content was re-serialized instead of passed through.\nGot length: %d\nWant length: %d", len(result.Content), len(contentJSON))
+	}
+}
+
+func TestHandleToolsCall_RawPassthrough_Fallback(t *testing.T) {
+	backend := &mockToolBackend{
+		tools: []*pb.ToolDefinition{{Name: "echo", InputSchemaJson: `{"type":"object"}`}},
+		callResult: &pb.CallToolResponse{
+			ResultJson: `"just a string"`,
+		},
+	}
+	h := mcp.NewHandler(backend)
+
+	params, _ := json.Marshal(mcp.ToolsCallParams{Name: "echo"})
+	resp, err := h.Handle(context.Background(), mcp.JSONRPCRequest{
+		JSONRPC: "2.0",
+		ID:      json.RawMessage(`1`),
+		Method:  "tools/call",
+		Params:  params,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var result struct {
+		Content []mcp.ContentItem `json:"content"`
+	}
+	json.Unmarshal(resp.Result, &result)
+
+	if len(result.Content) != 1 || result.Content[0].Type != "text" {
+		t.Errorf("expected fallback to text content, got: %+v", result.Content)
 	}
 }

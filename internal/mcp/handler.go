@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/msilverblatt/protomcp/internal/cancel"
 	"github.com/msilverblatt/protomcp/internal/tasks"
@@ -147,11 +148,13 @@ func (h *Handler) handleToolsCall(ctx context.Context, req JSONRPCRequest) (*JSO
 		argsJSON = string(params.Arguments)
 	}
 
-	// Track the request for cancellation if we have a request ID
+	// Create cancellable context tracked by request ID
 	reqIDStr := string(req.ID)
 	if reqIDStr != "" {
-		h.cancelTracker.TrackCall(reqIDStr)
+		var callCtx context.Context
+		callCtx, reqIDStr = h.cancelTracker.TrackCallWithContext(ctx, reqIDStr)
 		defer h.cancelTracker.Complete(reqIDStr)
+		ctx = callCtx
 	}
 
 	resp, err := h.backend.CallTool(ctx, params.Name, argsJSON)
@@ -164,24 +167,35 @@ func (h *Handler) handleToolsCall(ctx context.Context, req JSONRPCRequest) (*JSO
 		h.onToolListMutation(resp.EnableTools, resp.DisableTools)
 	}
 
-	// Parse the result_json as content array
-	var content []ContentItem
-	if resp.ResultJson != "" {
-		if err := json.Unmarshal([]byte(resp.ResultJson), &content); err != nil {
-			// If it's not a content array, wrap it as text
-			content = []ContentItem{{Type: "text", Text: resp.ResultJson}}
+	// Fast path: if result_json starts with '[', it's already a valid content
+	// array — pass it through as raw bytes to avoid parse/re-serialize overhead.
+	resultJSON := resp.ResultJson
+	trimmed := strings.TrimSpace(resultJSON)
+	if len(trimmed) > 0 && trimmed[0] == '[' {
+		result := RawToolsCallResult{
+			Content: json.RawMessage(resultJSON),
+			IsError: resp.IsError,
 		}
+		if resp.StructuredContentJson != "" {
+			result.StructuredContent = json.RawMessage(resp.StructuredContentJson)
+		}
+		return h.success(req.ID, result)
 	}
 
+	// Fallback: result_json is not a JSON array — wrap as text content.
+	var content []ContentItem
+	if resultJSON != "" {
+		if err := json.Unmarshal([]byte(resultJSON), &content); err != nil {
+			content = []ContentItem{{Type: "text", Text: resultJSON}}
+		}
+	}
 	result := ToolsCallResult{
 		Content: content,
 		IsError: resp.IsError,
 	}
-
 	if resp.StructuredContentJson != "" {
 		result.StructuredContent = json.RawMessage(resp.StructuredContentJson)
 	}
-
 	return h.success(req.ID, result)
 }
 
@@ -257,5 +271,47 @@ func ListChangedNotification() JSONRPCNotification {
 	return JSONRPCNotification{
 		JSONRPC: "2.0",
 		Method:  "notifications/tools/list_changed",
+	}
+}
+
+// ProgressNotification creates a notifications/progress notification from a tool process message.
+func ProgressNotification(msg *pb.ProgressNotification) JSONRPCNotification {
+	params := map[string]any{
+		"progressToken": msg.ProgressToken,
+		"progress":      msg.Progress,
+	}
+	if msg.Total > 0 {
+		params["total"] = msg.Total
+	}
+	if msg.Message != "" {
+		params["message"] = msg.Message
+	}
+	data, _ := json.Marshal(params)
+	return JSONRPCNotification{
+		JSONRPC: "2.0",
+		Method:  "notifications/progress",
+		Params:  data,
+	}
+}
+
+// LogNotification creates a notifications/message notification from a tool process log message.
+func LogNotification(msg *pb.LogMessage) JSONRPCNotification {
+	params := map[string]any{"level": msg.Level}
+	if msg.Logger != "" {
+		params["logger"] = msg.Logger
+	}
+	if msg.DataJson != "" {
+		var data any
+		if err := json.Unmarshal([]byte(msg.DataJson), &data); err == nil {
+			params["data"] = data
+		} else {
+			params["data"] = msg.DataJson
+		}
+	}
+	d, _ := json.Marshal(params)
+	return JSONRPCNotification{
+		JSONRPC: "2.0",
+		Method:  "notifications/message",
+		Params:  d,
 	}
 }
