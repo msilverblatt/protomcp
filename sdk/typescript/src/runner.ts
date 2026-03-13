@@ -177,8 +177,17 @@ export async function run(): Promise<void> {
         });
       }
 
-      const resp = Envelope.create({ callResult: respMsg, requestId });
-      await transport.send(resp);
+      // Check if result_json exceeds chunk threshold — stream if so.
+      const chunkThreshold = parseInt(process.env['PROTOMCP_CHUNK_THRESHOLD'] ?? '65536', 10);
+      const resultJson: string = (respMsg as any).resultJson ?? '';
+      const resultBytes = Buffer.from(resultJson, 'utf-8');
+
+      if (resultBytes.length > chunkThreshold) {
+        await transport.sendChunked(requestId, 'result_json', resultBytes);
+      } else {
+        const resp = Envelope.create({ callResult: respMsg, requestId });
+        await transport.send(resp);
+      }
     } else if (env['msg'] === 'reload') {
       // Full ESM module cache invalidation is deferred — same as Python SDK.
       // For now, acknowledge reload and re-send current tool list.

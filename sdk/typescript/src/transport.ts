@@ -107,6 +107,40 @@ export class Transport {
     });
   }
 
+  async sendChunked(requestId: string, fieldName: string, data: Buffer, chunkSize: number = 65536): Promise<void> {
+    const root = await this.getRoot();
+    const Envelope = root.lookupType('protomcp.Envelope');
+    const StreamHeader = root.lookupType('protomcp.StreamHeader');
+    const StreamChunk = root.lookupType('protomcp.StreamChunk');
+
+    // Send header
+    const header = Envelope.create({
+      requestId,
+      streamHeader: StreamHeader.create({
+        fieldName,
+        totalSize: data.length,
+        chunkSize,
+      }),
+    });
+    await this.send(header);
+
+    // Send chunks
+    let offset = 0;
+    while (offset < data.length) {
+      const end = Math.min(offset + chunkSize, data.length);
+      const isFinal = end >= data.length;
+      const chunk = Envelope.create({
+        requestId,
+        streamChunk: StreamChunk.create({
+          data: data.subarray(offset, end),
+          final: isFinal,
+        }),
+      });
+      await this.send(chunk);
+      offset = end;
+    }
+  }
+
   async recv(): Promise<Record<string, any>> {
     const root = await this.getRoot();
     const Envelope = root.lookupType('protomcp.Envelope');
