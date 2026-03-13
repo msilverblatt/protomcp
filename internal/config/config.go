@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -19,6 +20,9 @@ type Config struct {
 	Runtime            string
 	Host               string
 	Port               int
+	Auth               []string
+	Strict             bool
+	Format             string
 }
 
 func Parse(args []string) (*Config, error) {
@@ -27,8 +31,8 @@ func Parse(args []string) (*Config, error) {
 	}
 
 	cmd := args[0]
-	if cmd != "dev" && cmd != "run" {
-		return nil, fmt.Errorf("unknown command %q: must be 'dev' or 'run'", cmd)
+	if cmd != "dev" && cmd != "run" && cmd != "validate" {
+		return nil, fmt.Errorf("unknown command %q: must be 'dev', 'run', or 'validate'", cmd)
 	}
 
 	cfg := &Config{
@@ -111,6 +115,31 @@ func Parse(args []string) (*Config, error) {
 				return nil, fmt.Errorf("invalid --port: %w", err)
 			}
 			cfg.Port = p
+		case "--auth":
+			i++
+			if i >= len(args) {
+				return nil, fmt.Errorf("--auth requires a value")
+			}
+			parts := strings.SplitN(args[i], ":", 2)
+			if len(parts) != 2 || parts[1] == "" {
+				return nil, fmt.Errorf("invalid --auth format %q: expected scheme:ENV_VAR (e.g. token:MY_TOKEN)", args[i])
+			}
+			scheme := parts[0]
+			if scheme != "token" && scheme != "apikey" {
+				return nil, fmt.Errorf("unknown auth scheme %q: must be 'token' or 'apikey'", scheme)
+			}
+			cfg.Auth = append(cfg.Auth, args[i])
+		case "--strict":
+			cfg.Strict = true
+		case "--format":
+			i++
+			if i >= len(args) {
+				return nil, fmt.Errorf("--format requires a value")
+			}
+			if args[i] != "text" && args[i] != "json" {
+				return nil, fmt.Errorf("invalid --format %q: must be 'text' or 'json'", args[i])
+			}
+			cfg.Format = args[i]
 		default:
 			return nil, fmt.Errorf("unknown flag %q", args[i])
 		}
@@ -152,7 +181,12 @@ func RuntimeCommand(file string) (string, []string) {
 	case ".go":
 		return "go", []string{"run", file}
 	case ".rs":
-		return "cargo", []string{"run", file}
+		dir := filepath.Dir(file)
+		manifest := filepath.Join(dir, "Cargo.toml")
+		if _, err := os.Stat(manifest); err != nil {
+			manifest = filepath.Join(filepath.Dir(dir), "Cargo.toml")
+		}
+		return "cargo", []string{"run", "--manifest-path", manifest}
 	default:
 		return file, nil
 	}
