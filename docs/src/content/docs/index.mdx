@@ -6,16 +6,22 @@ template: splash
 hero:
   tagline: Write MCP tools in any language. Hot-reload without restarting your AI host.
   actions:
+    - text: See It In Action
+      link: /demo/
+      icon: right-arrow
+      variant: primary
     - text: Quick Start
       link: /getting-started/quick-start/
       icon: right-arrow
-      variant: primary
     - text: How It Works
       link: /getting-started/how-it-works/
       icon: open-book
 ---
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
+import ArchitectureHero from '../../components/demo/ArchitectureHero.astro';
+
+<ArchitectureHero />
 
 ## Why protomcp?
 

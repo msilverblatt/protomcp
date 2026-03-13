@@ -1,176 +1,281 @@
 ---
-// Animated architecture diagram showing MCP Host → pmcp → Your Code
+// Animated architecture diagram: MCP Host → pmcp → Your Code
 ---
 
-<div class="hero-container">
-  <div class="architecture">
-    <div class="node node-host">
-      <div class="node-label">MCP Host</div>
-      <div class="node-sub">Claude, Cursor, etc.</div>
+<div class="arch-hero">
+  <div class="arch-diagram">
+    <div class="arch-node arch-host">
+      <svg class="arch-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      <div class="arch-node-name">MCP Host</div>
+      <div class="arch-node-sub">Claude, Cursor, etc.</div>
     </div>
 
-    <div class="connector connector-left">
-      <div class="connector-label">JSON-RPC</div>
-      <div class="connector-line"></div>
-      <div class="packet packet-request"></div>
-      <div class="packet packet-response"></div>
+    <div class="arch-conn arch-conn-left">
+      <div class="arch-conn-label">JSON-RPC / stdio</div>
+      <div class="arch-conn-line"></div>
+      <div class="arch-pkt arch-pkt-req-1"></div>
+      <div class="arch-pkt arch-pkt-res-1"></div>
     </div>
 
-    <div class="node node-pmcp">
-      <div class="node-label">pmcp</div>
-      <div class="node-sub">Go binary</div>
+    <div class="arch-node arch-pmcp">
+      <svg class="arch-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <div class="arch-node-name">pmcp</div>
+      <div class="arch-node-sub">Go binary</div>
     </div>
 
-    <div class="connector connector-right">
-      <div class="connector-label">protobuf</div>
-      <div class="connector-line"></div>
-      <div class="packet packet-request"></div>
-      <div class="packet packet-response"></div>
+    <div class="arch-conn arch-conn-right">
+      <div class="arch-conn-label">protobuf / unix socket</div>
+      <div class="arch-conn-line"></div>
+      <div class="arch-pkt arch-pkt-req-2"></div>
+      <div class="arch-pkt arch-pkt-res-2"></div>
     </div>
 
-    <div class="node node-code">
-      <div class="node-label">Your Code</div>
-      <div class="node-sub">Python, TS, Go…</div>
+    <div class="arch-node arch-code">
+      <svg class="arch-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      <div class="arch-node-name">Your Code</div>
+      <div class="arch-node-sub">Python, TS, Go, Rust</div>
     </div>
   </div>
 
-  <p class="hero-text">
-    pmcp sits between your MCP host and your tool process. It translates JSON-RPC to protobuf,
-    handles hot reload, and manages tool registration.
-  </p>
+  <div class="arch-pills">
+    <span class="arch-pill">hot reload</span>
+    <span class="arch-pill">dynamic tool lists</span>
+    <span class="arch-pill">progress reporting</span>
+    <span class="arch-pill">cancellation</span>
+  </div>
 </div>
 
-<style>
-  .hero-container {
-    padding: 2rem 0 1rem;
+<style is:global>
+  .arch-hero {
+    padding: 0 !important;
+    margin-top: -4rem !important;
     text-align: center;
   }
 
-  .architecture {
+  .arch-diagram {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0;
-    padding: 2rem 1rem;
-    max-width: 800px;
+    padding: 0.75rem 1rem;
+    max-width: 940px;
     margin: 0 auto;
   }
 
-  .node {
-    padding: 1.2rem 1.5rem;
-    border-radius: 12px;
-    background: var(--sl-color-bg-nav);
-    border: 2px solid;
+  /* ── Nodes ── */
+  .arch-hero .arch-node {
+    padding: 1rem 1.4rem;
+    border-radius: 10px;
+    background: #101018;
+    border: 1.5px solid;
     text-align: center;
     min-width: 130px;
     z-index: 1;
-  }
-
-  .node-host { border-color: #64ffda; }
-  .node-pmcp { border-color: #ffd700; }
-  .node-code { border-color: #ff6b6b; }
-
-  .node-label {
-    font-weight: 700;
-    font-size: 1.1rem;
-    color: var(--sl-color-text);
-  }
-
-  .node-sub {
-    font-size: 0.8rem;
-    color: var(--sl-color-text-accent);
-    margin-top: 0.25rem;
-  }
-
-  .connector {
+    flex-shrink: 0;
     position: relative;
-    width: 120px;
+    transition: box-shadow 0.3s ease;
+  }
+
+  .arch-hero .arch-icon {
+    width: 20px;
+    height: 20px;
+    margin: 0 auto 0.35rem;
+    display: block;
+    opacity: 0.8;
+  }
+  .arch-host .arch-icon { color: #7B93DB; }
+  .arch-pmcp .arch-icon { color: #C9A06C; }
+  .arch-code .arch-icon { color: #9B8EC4; }
+
+  .arch-hero .arch-node-name {
+    font-weight: 700;
+    font-size: 1rem;
+    color: #D4D4D8;
+  }
+
+  .arch-hero .arch-node-sub {
+    font-size: 0.72rem;
+    color: #71717A;
+    margin-top: 0.15rem;
+  }
+
+  .arch-host { border-color: #7B93DB40; }
+  .arch-pmcp { border-color: #C9A06C50; }
+  .arch-code { border-color: #9B8EC440; }
+
+  .arch-host { animation: pulse-host 7s ease-in-out infinite; }
+  .arch-pmcp { animation: pulse-pmcp 7s ease-in-out infinite; }
+  .arch-code { animation: pulse-code 7s ease-in-out infinite; }
+
+  @keyframes pulse-host {
+    0%, 100% { box-shadow: none; }
+    68% { box-shadow: none; }
+    72% { box-shadow: 0 0 16px rgba(123, 147, 219, 0.25); }
+    80% { box-shadow: none; }
+  }
+
+  @keyframes pulse-pmcp {
+    0%, 100% { box-shadow: none; }
+    12% { box-shadow: none; }
+    15% { box-shadow: 0 0 16px rgba(201, 160, 108, 0.25); }
+    20% { box-shadow: none; }
+    46% { box-shadow: none; }
+    49% { box-shadow: 0 0 16px rgba(201, 160, 108, 0.25); }
+    54% { box-shadow: none; }
+  }
+
+  @keyframes pulse-code {
+    0%, 100% { box-shadow: none; }
+    28% { box-shadow: none; }
+    32% { box-shadow: 0 0 16px rgba(155, 142, 196, 0.25); }
+    40% { box-shadow: none; }
+  }
+
+  /* ── Connectors (flat structure — label absolute, line + packets siblings) ── */
+  .arch-hero .arch-conn {
+    position: relative;
+    width: 180px;
     height: 60px;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
   }
 
-  .connector-label {
+  .arch-hero .arch-conn-label {
     position: absolute;
-    top: -4px;
-    font-size: 0.7rem;
-    color: var(--sl-color-text-accent);
+    top: 0;
+    font-size: 0.6rem;
+    color: #52525B;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
     white-space: nowrap;
+    font-weight: 500;
   }
 
-  .connector-line {
+  .arch-hero .arch-conn-line {
     width: 100%;
-    height: 2px;
-    background: var(--sl-color-gray-5);
+    height: 1px;
+    background: #27272A;
   }
 
-  .packet {
+  /* ── Packets ── */
+  .arch-hero .arch-pkt {
     position: absolute;
-    width: 12px;
-    height: 12px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     opacity: 0;
   }
 
-  .connector-left .packet-request {
-    background: #64ffda;
-    animation: packet-right var(--cycle-duration, 6s) ease-in-out infinite;
-    animation-delay: var(--phase-delay, 0s);
+  .arch-pkt-req-1 {
+    background: #7B93DB;
+    box-shadow: 0 0 8px rgba(123, 147, 219, 0.6);
+    animation: arch-slide-right 7s ease-in-out infinite 0s;
   }
 
-  .connector-right .packet-request {
-    background: #ffd700;
-    animation: packet-right var(--cycle-duration, 6s) ease-in-out infinite;
-    animation-delay: calc(var(--phase-delay, 0s) + 0.3s);
+  .arch-pkt-req-2 {
+    background: #C9A06C;
+    box-shadow: 0 0 8px rgba(201, 160, 108, 0.6);
+    animation: arch-slide-right 7s ease-in-out infinite 1.2s;
   }
 
-  .connector-left .packet-response {
-    background: #64ffda;
-    animation: packet-left var(--cycle-duration, 6s) ease-in-out infinite;
-    animation-delay: calc(var(--phase-delay, 0s) + 2.5s);
+  .arch-pkt-res-2 {
+    background: #C9A06C;
+    box-shadow: 0 0 8px rgba(201, 160, 108, 0.6);
+    animation: arch-slide-left 7s ease-in-out infinite 3.0s;
   }
 
-  .connector-right .packet-response {
-    background: #ffd700;
-    animation: packet-left var(--cycle-duration, 6s) ease-in-out infinite;
-    animation-delay: calc(var(--phase-delay, 0s) + 2.2s);
+  .arch-pkt-res-1 {
+    background: #7B93DB;
+    box-shadow: 0 0 8px rgba(123, 147, 219, 0.6);
+    animation: arch-slide-left 7s ease-in-out infinite 4.2s;
   }
 
-  @keyframes packet-right {
-    0%, 15% { left: 0; opacity: 0; }
-    20% { opacity: 1; }
-    35% { left: calc(100% - 12px); opacity: 1; }
-    40%, 100% { left: calc(100% - 12px); opacity: 0; }
+  @keyframes arch-slide-right {
+    0%    { left: 0; opacity: 0; }
+    2%    { left: 0; opacity: 1; }
+    15%   { left: calc(100% - 8px); opacity: 1; }
+    17%   { left: calc(100% - 8px); opacity: 0; }
+    100%  { opacity: 0; }
   }
 
-  @keyframes packet-left {
-    0%, 15% { left: calc(100% - 12px); opacity: 0; }
-    20% { opacity: 1; }
-    35% { left: 0; opacity: 1; }
-    40%, 100% { left: 0; opacity: 0; }
+  @keyframes arch-slide-left {
+    0%    { left: calc(100% - 8px); opacity: 0; }
+    2%    { left: calc(100% - 8px); opacity: 1; }
+    15%   { left: 0; opacity: 1; }
+    17%   { left: 0; opacity: 0; }
+    100%  { opacity: 0; }
   }
 
-  .hero-text {
-    max-width: 600px;
-    margin: 1rem auto 0;
-    color: var(--sl-color-text-accent);
-    font-size: 0.95rem;
-    line-height: 1.6;
+  /* ── Pills ── */
+  .arch-pills {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 0.25rem;
   }
 
-  @media (max-width: 640px) {
-    .architecture {
+  .arch-hero .arch-pill {
+    padding: 0.25rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border: 1px solid #27272A;
+    color: #71717A;
+    background: #18181B;
+  }
+
+  /* ── Light mode ── */
+  :root[data-theme="light"] .arch-hero .arch-node {
+    background: #F8F8FA;
+  }
+  :root[data-theme="light"] .arch-hero .arch-node-name {
+    color: #27272A;
+  }
+  :root[data-theme="light"] .arch-hero .arch-node-sub {
+    color: #71717A;
+  }
+  :root[data-theme="light"] .arch-host { border-color: #7B93DB60; }
+  :root[data-theme="light"] .arch-pmcp { border-color: #C9A06C70; }
+  :root[data-theme="light"] .arch-code { border-color: #9B8EC460; }
+  :root[data-theme="light"] .arch-hero .arch-conn-line {
+    background: #D4D4D8;
+  }
+  :root[data-theme="light"] .arch-hero .arch-conn-label {
+    color: #71717A;
+  }
+  :root[data-theme="light"] .arch-hero .arch-pill {
+    border-color: #D4D4D8;
+    color: #52525B;
+    background: #F4F4F5;
+  }
+  :root[data-theme="light"] .arch-pkt-req-1,
+  :root[data-theme="light"] .arch-pkt-res-1 {
+    background: #5A73C0;
+    box-shadow: 0 0 8px rgba(90, 115, 192, 0.5);
+  }
+  :root[data-theme="light"] .arch-pkt-req-2,
+  :root[data-theme="light"] .arch-pkt-res-2 {
+    background: #B08A50;
+    box-shadow: 0 0 8px rgba(176, 138, 80, 0.5);
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 700px) {
+    .arch-diagram {
       flex-direction: column;
       gap: 0;
     }
-    .connector {
+    .arch-hero .arch-conn {
       width: 60px;
       height: 80px;
       transform: rotate(90deg);
     }
-    .node { min-width: 160px; }
+    .arch-hero .arch-node { min-width: 160px; }
+    .arch-pills { gap: 0.4rem; }
+    .arch-hero .arch-pill { font-size: 0.6rem; padding: 0.2rem 0.5rem; }
   }
 </style>

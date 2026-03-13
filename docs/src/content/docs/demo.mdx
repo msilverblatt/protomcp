@@ -1,46 +1,424 @@
 ---
 title: Demo
-description: See pmcp in action — animated architecture, terminal replay, and protocol view.
+description: See pmcp in action — four focused demos showing tool calls, progress, dynamic tool lists, and hot reload.
 template: splash
 hero:
-  tagline: See how pmcp works — from high-level architecture down to the wire protocol.
+  tagline: Watch an AI agent use tools through pmcp — from chat to wire protocol.
 ---
 
 import ArchitectureHero from '../../components/demo/ArchitectureHero.astro';
-import TerminalReplay from '../../components/demo/TerminalReplay.astro';
-import ProtocolView from '../../components/demo/ProtocolView.astro';
-
-<div style="--cycle-duration: 8s; --phase-delay: 0s;">
+import DemoSection from '../../components/demo/DemoSection.astro';
 
 <ArchitectureHero />
 
-## In Action
+## Tool Calls
 
-Watch a tool call flow through the system — from the terminal command to the wire protocol.
+The core flow — AI calls a tool, pmcp translates JSON-RPC to protobuf, your tool process handles it, result flows back.
 
-<div class="demo-panels">
-  <TerminalReplay />
-  <ProtocolView />
-</div>
+<DemoSection
+  title="Tool Call Flow"
+  demoId="demo1"
+  timeline={[[1, 600], [2, 800], [3, 400], [4, 350], [5, 300], [6, 700], [7, 300], [8, 200], [9, 700]]}
+  sideEffects={[{ step: 8, action: "complete-tool", target: "d1-tc-weather" }]}
+>
+  <Fragment slot="chat">
+    <div class="chat-item user-msg" data-step="1">
+      <div class="user-bubble">What's the weather in San Francisco?</div>
+    </div>
+    <div class="chat-item ai-msg" data-step="2">
+      <div class="ai-bubble">Let me check that for you.</div>
+    </div>
+    <div class="chat-item tool-card" data-step="3">
+      <div class="tc-bar tc-running" id="d1-tc-weather-bar"></div>
+      <div class="tc-body">
+        <div class="tc-head">
+          <span class="tc-icon">⚡</span>
+          <span class="tc-name">weather</span>
+          <span class="tc-status" id="d1-tc-weather-status">running</span>
+        </div>
+        <div class="tc-args">{"{"} city: "San Francisco" {"}"}</div>
+        <div class="tc-result" data-step="8">
+          <pre class="tc-json">{"{"} "temp": 62, "condition": "foggy", "wind": "12mph" {"}"}</pre>
+        </div>
+      </div>
+    </div>
+    <div class="chat-item ai-msg" data-step="9">
+      <div class="ai-bubble">It's <strong>62°F and foggy</strong> in San Francisco with 12mph winds.</div>
+    </div>
+  </Fragment>
+  <Fragment slot="flow">
+    <div class="flow-item fi-out" data-step="4">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">Host→pmcp</span>
+      <span class="fi-detail">tools/call "weather"</span>
+    </div>
+    <div class="flow-item fi-out" data-step="5">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">pmcp→App</span>
+      <span class="fi-detail">CallToolRequest</span>
+    </div>
+    <div class="flow-item fi-in" data-step="6">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">App→pmcp</span>
+      <span class="fi-detail">CallToolResult</span>
+    </div>
+    <div class="flow-item fi-in" data-step="7">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">pmcp→Host</span>
+      <span class="fi-detail">result: {"{"}"temp": 62, ...{"}"}</span>
+    </div>
+  </Fragment>
+</DemoSection>
 
-</div>
+## Progress Reporting
 
-<style>{`
-  .demo-panels {
-    display: flex;
-    gap: 1.5rem;
-    margin: 1.5rem 0;
-    align-items: flex-start;
-  }
+Long-running tools report progress in real time. Notifications flow back through pmcp to the host — no polling needed.
 
-  @media (max-width: 768px) {
-    .demo-panels {
-      flex-direction: column;
-    }
-  }
-`}</style>
+<DemoSection
+  title="Progress Reporting"
+  demoId="demo2"
+  timeline={[[1, 600], [2, 800], [3, 400], [4, 350], [5, 300], [6, 700], [7, 600], [8, 500], [9, 350], [10, 250], [11, 700]]}
+  sideEffects={[
+    { step: 6, action: "set-progress", target: "d2-search-progress", value: "33%" },
+    { step: 7, action: "set-progress", target: "d2-search-progress", value: "66%" },
+    { step: 8, action: "set-progress", target: "d2-search-progress", value: "100%" },
+    { step: 10, action: "complete-tool", target: "d2-tc-search" }
+  ]}
+>
+  <Fragment slot="chat">
+    <div class="chat-item user-msg" data-step="1">
+      <div class="user-bubble">Search src/ for all Python files</div>
+    </div>
+    <div class="chat-item ai-msg" data-step="2">
+      <div class="ai-bubble">Scanning the directory tree now.</div>
+    </div>
+    <div class="chat-item tool-card" data-step="3">
+      <div class="tc-bar tc-running" id="d2-tc-search-bar"></div>
+      <div class="tc-body">
+        <div class="tc-head">
+          <span class="tc-icon">⚡</span>
+          <span class="tc-name">search_files</span>
+          <span class="tc-status" id="d2-tc-search-status">running</span>
+        </div>
+        <div class="tc-args">{"{"} dir: "src", pattern: "*.py" {"}"}</div>
+        <div class="tc-progress">
+          <div class="tc-progress-fill" id="d2-search-progress-fill"></div>
+        </div>
+        <div class="tc-result" data-step="10">
+          <pre class="tc-json">found 47 files across 12 directories</pre>
+        </div>
+      </div>
+    </div>
+    <div class="chat-item ai-msg" data-step="11">
+      <div class="ai-bubble">Found <strong>47 Python files</strong> across 12 directories in src/.</div>
+    </div>
+  </Fragment>
+  <Fragment slot="flow">
+    <div class="flow-item fi-out" data-step="4">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">Host→pmcp</span>
+      <span class="fi-detail">tools/call "search_files"</span>
+    </div>
+    <div class="flow-item fi-out" data-step="5">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">pmcp→App</span>
+      <span class="fi-detail">CallToolRequest</span>
+    </div>
+    <div class="flow-item fi-progress" data-step="6">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">App→pmcp</span>
+      <span class="fi-detail">ProgressNotification 33%</span>
+    </div>
+    <div class="flow-item fi-progress" data-step="7">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">App→pmcp</span>
+      <span class="fi-detail">ProgressNotification 66%</span>
+    </div>
+    <div class="flow-item fi-progress" data-step="8">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">App→pmcp</span>
+      <span class="fi-detail">ProgressNotification 100%</span>
+    </div>
+    <div class="flow-item fi-in" data-step="9">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">App→pmcp</span>
+      <span class="fi-detail">CallToolResult</span>
+    </div>
+    <div class="flow-item fi-in" data-step="10">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">pmcp→Host</span>
+      <span class="fi-detail">result: 47 files</span>
+    </div>
+  </Fragment>
+</DemoSection>
 
----
+## Dynamic Tool Lists
+
+The tool process controls which tools are visible. Here, the `login` handler returns `enable_tools` in its result — pmcp updates the tool list and notifies the host. No restart, no config change.
+
+<DemoSection
+  title="Dynamic Tool Lists"
+  demoId="demo3"
+  timeline={[[1, 600], [2, 800], [3, 400], [4, 350], [5, 300], [6, 700], [7, 300], [8, 400], [9, 100], [10, 800], [11, 1000], [12, 400], [13, 350], [14, 300], [15, 700], [16, 300]]}
+  sideEffects={[
+    { step: 7, action: "complete-tool", target: "d3-tc-login" },
+    { step: 16, action: "complete-tool", target: "d3-tc-create" }
+  ]}
+>
+  <Fragment slot="chat">
+    <div class="chat-item user-msg" data-step="1">
+      <div class="user-bubble">Log me in as admin</div>
+    </div>
+    <div class="chat-item ai-msg" data-step="2">
+      <div class="ai-bubble">Authenticating you now.</div>
+    </div>
+    <div class="chat-item tool-card" data-step="3">
+      <div class="tc-bar tc-running" id="d3-tc-login-bar"></div>
+      <div class="tc-body">
+        <div class="tc-head">
+          <span class="tc-icon">⚡</span>
+          <span class="tc-name">login</span>
+          <span class="tc-status" id="d3-tc-login-status">running</span>
+        </div>
+        <div class="tc-args">{"{"} user: "admin" {"}"}</div>
+        <div class="tc-result" data-step="7">
+          <pre class="tc-json">Authenticated</pre>
+          <div class="unlock-badge">+create_record +delete_record</div>
+        </div>
+      </div>
+    </div>
+    <div class="chat-item ai-msg" data-step="10">
+      <div class="ai-bubble">You're logged in. <strong>create_record</strong> and <strong>delete_record</strong> are now available.</div>
+    </div>
+    <div class="chat-item user-msg" data-step="11">
+      <div class="user-bubble">Create a new user record for Alice</div>
+    </div>
+    <div class="chat-item tool-card" data-step="12">
+      <div class="tc-bar tc-running" id="d3-tc-create-bar"></div>
+      <div class="tc-body">
+        <div class="tc-head">
+          <span class="tc-icon">⚡</span>
+          <span class="tc-name">create_record</span>
+          <span class="tc-status" id="d3-tc-create-status">running</span>
+        </div>
+        <div class="tc-args">{"{"} name: "Alice", role: "editor" {"}"}</div>
+        <div class="tc-result" data-step="16">
+          <pre class="tc-json">Created user Alice (id: usr_847)</pre>
+        </div>
+      </div>
+    </div>
+  </Fragment>
+  <Fragment slot="flow">
+    <div class="flow-item fi-out" data-step="4">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">Host→pmcp</span>
+      <span class="fi-detail">tools/call "login"</span>
+    </div>
+    <div class="flow-item fi-out" data-step="5">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">pmcp→App</span>
+      <span class="fi-detail">CallToolRequest</span>
+    </div>
+    <div class="flow-item fi-in fi-highlight" data-step="6">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">App→pmcp</span>
+      <span class="fi-detail">CallToolResult + enable_tools</span>
+    </div>
+    <div class="flow-item fi-in" data-step="7">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">pmcp→Host</span>
+      <span class="fi-detail">result: "Authenticated"</span>
+    </div>
+    <div class="flow-item fi-notify" data-step="8">
+      <span class="fi-arrow">⇢</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">pmcp→Host</span>
+      <span class="fi-detail">notifications/tools/list_changed</span>
+    </div>
+    <div class="flow-sep" data-step="9"></div>
+    <div class="flow-item fi-out" data-step="13">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">Host→pmcp</span>
+      <span class="fi-detail">tools/call "create_record"</span>
+    </div>
+    <div class="flow-item fi-out" data-step="14">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">pmcp→App</span>
+      <span class="fi-detail">CallToolRequest</span>
+    </div>
+    <div class="flow-item fi-in" data-step="15">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">App→pmcp</span>
+      <span class="fi-detail">CallToolResult</span>
+    </div>
+    <div class="flow-item fi-in" data-step="16">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">pmcp→Host</span>
+      <span class="fi-detail">result: "Created user Alice"</span>
+    </div>
+  </Fragment>
+</DemoSection>
+
+## Hot Reload
+
+A tool call fails. The developer fixes the bug and saves. pmcp hot-reloads the fix — no restart needed. The AI retries and it works.
+
+<DemoSection
+  title="Hot Reload"
+  demoId="demo4"
+  timeline={[[1, 600], [2, 800], [3, 400], [4, 350], [5, 300], [6, 600], [7, 300], [8, 200], [9, 700], [10, 1500], [11, 300], [12, 400], [13, 600], [14, 400], [15, 500], [16, 200], [17, 800], [18, 400], [19, 350], [20, 300], [21, 600], [22, 300], [23, 200], [24, 700]]}
+  sideEffects={[
+    { step: 8, action: "error-tool", target: "d4-tc-export-err" },
+    { step: 23, action: "complete-tool", target: "d4-tc-export-ok" }
+  ]}
+>
+  <Fragment slot="chat">
+    <div class="chat-item user-msg" data-step="1">
+      <div class="user-bubble">Export the sales data as CSV</div>
+    </div>
+    <div class="chat-item ai-msg" data-step="2">
+      <div class="ai-bubble">I'll export that for you.</div>
+    </div>
+    <div class="chat-item tool-card" data-step="3">
+      <div class="tc-bar tc-running" id="d4-tc-export-err-bar"></div>
+      <div class="tc-body">
+        <div class="tc-head">
+          <span class="tc-icon">⚡</span>
+          <span class="tc-name">export_csv</span>
+          <span class="tc-status" id="d4-tc-export-err-status">running</span>
+        </div>
+        <div class="tc-args">{"{"} dataset: "sales" {"}"}</div>
+        <div class="tc-result" data-step="8">
+          <pre class="tc-json tc-error">error [INVALID_FORMAT]: CSV writer not initialized</pre>
+        </div>
+      </div>
+    </div>
+    <div class="chat-item ai-msg" data-step="9">
+      <div class="ai-bubble">The export tool has a bug — the CSV writer isn't initialized.</div>
+    </div>
+    <div class="chat-item system-msg" data-step="10">
+      ⟳ File changed: tools.py — reloading...
+    </div>
+    <div class="chat-item system-msg system-success" data-step="15">
+      ✓ Reconnected · 3 tools registered
+    </div>
+    <div class="chat-item ai-msg" data-step="16">
+      <div class="ai-bubble">Tools reloaded. Let me retry.</div>
+    </div>
+    <div class="chat-item tool-card" data-step="17">
+      <div class="tc-bar tc-running" id="d4-tc-export-ok-bar"></div>
+      <div class="tc-body">
+        <div class="tc-head">
+          <span class="tc-icon">⚡</span>
+          <span class="tc-name">export_csv</span>
+          <span class="tc-status" id="d4-tc-export-ok-status">running</span>
+        </div>
+        <div class="tc-args">{"{"} dataset: "sales" {"}"}</div>
+        <div class="tc-result" data-step="23">
+          <pre class="tc-json">Exported 1,204 rows to sales.csv</pre>
+        </div>
+      </div>
+    </div>
+    <div class="chat-item ai-msg" data-step="24">
+      <div class="ai-bubble">Done — <strong>1,204 rows</strong> exported to sales.csv.</div>
+    </div>
+  </Fragment>
+  <Fragment slot="flow">
+    <div class="flow-item fi-out" data-step="4">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">Host→pmcp</span>
+      <span class="fi-detail">tools/call "export_csv"</span>
+    </div>
+    <div class="flow-item fi-out" data-step="5">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">pmcp→App</span>
+      <span class="fi-detail">CallToolRequest</span>
+    </div>
+    <div class="flow-item fi-in fi-error" data-step="6">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">App→pmcp</span>
+      <span class="fi-detail">CallToolResult (is_error)</span>
+    </div>
+    <div class="flow-item fi-in fi-error" data-step="7">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">pmcp→Host</span>
+      <span class="fi-detail">error: INVALID_FORMAT</span>
+    </div>
+    <div class="flow-sep" data-step="10"></div>
+    <div class="flow-item fi-notify" data-step="11">
+      <span class="fi-arrow">⟳</span>
+      <span class="fi-proto fi-internal">internal</span>
+      <span class="fi-hop">pmcp</span>
+      <span class="fi-detail">file watch: tools.py modified</span>
+    </div>
+    <div class="flow-item fi-out" data-step="12">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">pmcp→App</span>
+      <span class="fi-detail">ReloadRequest</span>
+    </div>
+    <div class="flow-item fi-in" data-step="13">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">App→pmcp</span>
+      <span class="fi-detail">ReloadResponse {"{"} success: true {"}"}</span>
+    </div>
+    <div class="flow-item fi-notify" data-step="14">
+      <span class="fi-arrow">⇢</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">pmcp→Host</span>
+      <span class="fi-detail">notifications/tools/list_changed</span>
+    </div>
+    <div class="flow-sep" data-step="16"></div>
+    <div class="flow-item fi-out" data-step="18">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">Host→pmcp</span>
+      <span class="fi-detail">tools/call "export_csv"</span>
+    </div>
+    <div class="flow-item fi-out" data-step="19">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">pmcp→App</span>
+      <span class="fi-detail">CallToolRequest</span>
+    </div>
+    <div class="flow-item fi-in" data-step="20">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">App→pmcp</span>
+      <span class="fi-detail">CallToolResult</span>
+    </div>
+    <div class="flow-item fi-in" data-step="21">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">pmcp→Host</span>
+      <span class="fi-detail">result: "1,204 rows"</span>
+    </div>
+  </Fragment>
+</DemoSection>
 
 ## Try It Yourself
 
@@ -50,3 +428,4 @@ pmcp dev examples/python/basic.py
 ```
 
 Check out the [Quick Start](/getting-started/quick-start/) guide or browse the [examples](https://github.com/msilverblatt/protomcp/tree/master/examples).
+

@@ -10,7 +10,7 @@ export default defineConfig({
         github: 'https://github.com/msilverblatt/protomcp',
       },
       sidebar: [
-        { label: 'Demo', slug: 'demo' },
+        { label: 'Demo', slug: 'demo', badge: { text: 'Live', variant: 'tip' } },
         {
           label: 'Getting Started',
           items: [

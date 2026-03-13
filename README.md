@@ -2,11 +2,13 @@
 
 [![Build](https://github.com/msilverblatt/protomcp/actions/workflows/ci.yml/badge.svg)](https://github.com/msilverblatt/protomcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go)](https://go.dev)
+[![Go](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go)](https://go.dev)
 [![npm](https://img.shields.io/npm/v/protomcp)](https://www.npmjs.com/package/protomcp)
 [![PyPI](https://img.shields.io/pypi/v/protomcp)](https://pypi.org/project/protomcp/)
 
-**Language-agnostic MCP runtime** — write tools in any language, hot-reload without restarting your AI host.
+**Write MCP tools in any language. One file, one command, hot-reload.**
+
+Building MCP tools today means wrestling with protocol boilerplate, restarting your AI host every time you change a line, and being locked into one language per SDK. protomcp eliminates all of that — you write a handler function, run `pmcp dev tools.py`, and your tools are live in Claude Desktop, Cursor, or any MCP client. Change your code, save the file, and it reloads instantly.
 
 ## How It Works
 
@@ -67,7 +69,7 @@ pmcp dev tools.ts
 
 Then add either `pmcp dev` command to your MCP client config. That's it.
 
-**[See it in action →](docs/src/content/docs/demo.mdx)** — animated architecture diagram, terminal replay, and protocol view.
+**[See it in action →](https://msilverblatt.github.io/protomcp/demo/)**
 
 ## Features
 
@@ -105,13 +107,13 @@ Run all demos: `./examples/run-demo.sh`
 
 ## Documentation
 
-Full documentation is available in the [`docs/`](docs/) directory, built with [Starlight](https://starlight.astro.build):
+Full documentation at [msilverblatt.github.io/protomcp](https://msilverblatt.github.io/protomcp/):
 
-- [Quick Start](docs/src/content/docs/getting-started/quick-start.mdx)
-- [Python Guide](docs/src/content/docs/guides/writing-tools-python.mdx)
-- [TypeScript Guide](docs/src/content/docs/guides/writing-tools-typescript.mdx)
-- [CLI Reference](docs/src/content/docs/reference/cli.mdx)
-- [Protobuf Spec](docs/src/content/docs/reference/protobuf-spec.mdx)
+- [Quick Start](https://msilverblatt.github.io/protomcp/getting-started/quick-start/)
+- [Python Guide](https://msilverblatt.github.io/protomcp/guides/writing-tools-python/)
+- [TypeScript Guide](https://msilverblatt.github.io/protomcp/guides/writing-tools-typescript/)
+- [CLI Reference](https://msilverblatt.github.io/protomcp/reference/cli/)
+- [Protobuf Spec](https://msilverblatt.github.io/protomcp/reference/protobuf-spec/)
 
 ## License
 
