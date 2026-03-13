@@ -40,6 +40,10 @@ message Envelope {
     RegisterMiddlewareResponse register_middleware_response = 25;
     MiddlewareInterceptRequest middleware_intercept = 26;
     MiddlewareInterceptResponse middleware_intercept_response = 27;
+
+    // Streaming
+    StreamHeader stream_header = 28;
+    StreamChunk stream_chunk = 29;
   }
   // Correlation ID for matching requests to responses.
   string request_id = 14;
@@ -200,4 +204,17 @@ message MiddlewareInterceptResponse {
   string result_json = 2;
   bool reject = 3;
   string reject_reason = 4;
+}
+
+// StreamHeader initiates a chunked transfer for a large field.
+message StreamHeader {
+  string field_name = 1;     // field being streamed, e.g. "result_json"
+  uint64 total_size = 2;     // total bytes if known, 0 if unknown
+  uint32 chunk_size = 3;     // bytes per chunk
+}
+
+// StreamChunk carries one chunk of a streamed field.
+message StreamChunk {
+  bytes data = 1;            // chunk payload
+  bool final = 2;            // true on last chunk
 }
