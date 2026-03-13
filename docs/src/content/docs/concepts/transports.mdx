@@ -1,0 +1,150 @@
+---
+draft: false
+title: Transports
+description: All five protomcp transports — when to use each and compatibility.
+---
+
+## Overview
+
+protomcp supports five transports for the MCP host connection. The transport determines how your MCP client connects to protomcp. Your tool code is unaffected — it always communicates with protomcp via the same unix socket protocol.
+
+Set the transport with `--transport`:
+
+```sh
+protomcp dev tools.py --transport sse --port 8080
+```
+
+---
+
+## stdio (default)
+
+**Flag:** `--transport stdio`
+
+Reads MCP requests from stdin, writes responses to stdout. The MCP client spawns protomcp as a child process and communicates over its standard I/O.
+
+**Use when:** Your MCP client supports subprocess spawning (Claude Desktop, Cursor, most local clients).
+
+**Config:**
+
+```json
+{
+  "mcpServers": {
+    "mytools": {
+      "command": "protomcp",
+      "args": ["dev", "/path/to/tools.py"]
+    }
+  }
+}
+```
+
+No `--host` or `--port` needed. stdio is the simplest and most compatible option.
+
+---
+
+## HTTP SSE
+
+**Flag:** `--transport sse`
+
+Runs an HTTP server. MCP clients connect to `/sse` for a persistent Server-Sent Events stream (requests come in via SSE, responses go back via a separate HTTP endpoint).
+
+**Use when:**
+- Your MCP client connects over HTTP instead of spawning a subprocess
+- You want a single persistent connection
+- You're running protomcp on a remote server
+
+**Config:**
+
+```sh
+protomcp run tools.py --transport sse --host 0.0.0.0 --port 8080
+```
+
+MCP client config (remote):
+
+```json
+{
+  "mcpServers": {
+    "mytools": {
+      "url": "http://myserver:8080/sse"
+    }
+  }
+}
+```
+
+---
+
+## Streamable HTTP
+
+**Flag:** `--transport http`
+
+Modern HTTP transport. Handles MCP requests as HTTP requests with chunked/streaming responses. Supports multiple concurrent connections without a persistent SSE stream.
+
+**Use when:**
+- You need to handle many concurrent MCP clients
+- Your client uses the newer streamable HTTP transport spec
+- Load balancers or proxies are in the path (no long-lived connections needed)
+
+```sh
+protomcp run tools.py --transport http --host 0.0.0.0 --port 8080
+```
+
+---
+
+## WebSocket
+
+**Flag:** `--transport ws`
+
+Full-duplex WebSocket connection. The MCP client connects via WebSocket for bidirectional real-time communication.
+
+**Use when:**
+- You need low latency bidirectional messaging
+- Your MCP client supports WebSocket transport
+- You're building a browser-based MCP integration
+
+```sh
+protomcp run tools.py --transport ws --host 0.0.0.0 --port 8080
+```
+
+---
+
+## In-process
+
+**Flag:** `--transport inproc`
+
+No network I/O. The transport is connected directly in memory. Intended for testing and embedding protomcp in a Go application.
+
+**Use when:**
+- Writing integration tests for protomcp behavior
+- Embedding protomcp in a Go application without a network boundary
+
+```sh
+protomcp dev tools.py --transport inproc
+```
+
+---
+
+## Compatibility matrix
+
+| Transport | MCP clients | Hot reload | Multiple clients |
+|-----------|-------------|------------|-----------------|
+| stdio | Claude Desktop, Cursor, most local | Yes | No (one client) |
+| sse | HTTP-capable clients | Yes | One at a time |
+| http | Modern HTTP clients | Yes | Yes |
+| ws | WebSocket clients | Yes | Yes |
+| inproc | Go embed / testing | Yes | No |
+
+---
+
+## Host and port flags
+
+`--host` and `--port` only apply to HTTP-based transports (sse, http, ws):
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--host` | `localhost` | Address to bind |
+| `--port` | `8080` | Port to bind |
+
+For local-only access, use the default `localhost`. For external access:
+
+```sh
+protomcp run tools.py --transport sse --host 0.0.0.0 --port 8080
+```

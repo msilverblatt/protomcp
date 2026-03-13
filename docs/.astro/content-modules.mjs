@@ -1,0 +1,20 @@
+
+export default new Map([
+["src/content/docs/getting-started/how-it-works.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fgetting-started%2Fhow-it-works.mdx&astroContentModuleFlag=true")],
+["src/content/docs/concepts/tool-list-modes.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fconcepts%2Ftool-list-modes.mdx&astroContentModuleFlag=true")],
+["src/content/docs/index.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Findex.mdx&astroContentModuleFlag=true")],
+["src/content/docs/getting-started/quick-start.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fgetting-started%2Fquick-start.mdx&astroContentModuleFlag=true")],
+["src/content/docs/guides/dynamic-tool-lists.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fguides%2Fdynamic-tool-lists.mdx&astroContentModuleFlag=true")],
+["src/content/docs/guides/error-handling.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fguides%2Ferror-handling.mdx&astroContentModuleFlag=true")],
+["src/content/docs/guides/hot-reload.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fguides%2Fhot-reload.mdx&astroContentModuleFlag=true")],
+["src/content/docs/concepts/transports.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fconcepts%2Ftransports.mdx&astroContentModuleFlag=true")],
+["src/content/docs/concepts/architecture.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fconcepts%2Farchitecture.mdx&astroContentModuleFlag=true")],
+["src/content/docs/getting-started/installation.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fgetting-started%2Finstallation.mdx&astroContentModuleFlag=true")],
+["src/content/docs/guides/writing-tools-python.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fguides%2Fwriting-tools-python.mdx&astroContentModuleFlag=true")],
+["src/content/docs/guides/writing-tools-typescript.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fguides%2Fwriting-tools-typescript.mdx&astroContentModuleFlag=true")],
+["src/content/docs/guides/production-deployment.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fguides%2Fproduction-deployment.mdx&astroContentModuleFlag=true")],
+["src/content/docs/reference/cli.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Freference%2Fcli.mdx&astroContentModuleFlag=true")],
+["src/content/docs/reference/python-api.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Freference%2Fpython-api.mdx&astroContentModuleFlag=true")],
+["src/content/docs/reference/protobuf-spec.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Freference%2Fprotobuf-spec.mdx&astroContentModuleFlag=true")],
+["src/content/docs/reference/typescript-api.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Freference%2Ftypescript-api.mdx&astroContentModuleFlag=true")]]);
+		

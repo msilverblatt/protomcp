@@ -1,0 +1,116 @@
+---
+draft: false
+title: How It Works
+description: Architecture overview of the three-layer protomcp system.
+---
+
+## Three Layers
+
+protomcp connects an MCP host to a tool process through three distinct layers:
+
+```mermaid
+graph LR
+    A[MCP Host<br/>Claude Desktop] <-->|MCP protocol<br/>stdio / HTTP / SSE| B[protomcp<br/>Go binary]
+    B <-->|protobuf<br/>unix socket| C[Tool Process<br/>Python / TS / any]
+```
+
+**Layer 1 — MCP Host**: Your AI client (Claude Desktop, Cursor, etc.). Speaks the Model Context Protocol. protomcp is fully transparent to it.
+
+**Layer 2 — protomcp (Go binary)**: Bridges MCP and your tool process. Handles hot reload, tool list management, transport negotiation, and request routing. Stateless — restartable at any time.
+
+**Layer 3 — Tool Process**: Your code. Registers tool handlers using the SDK. Communicates with protomcp over a unix socket using a simple length-prefixed protobuf protocol.
+
+---
+
+## Startup Sequence
+
+```mermaid
+sequenceDiagram
+    participant H as MCP Host
+    participant G as protomcp
+    participant T as Tool Process
+
+    G->>T: spawn process
+    G->>T: ListToolsRequest
+    T->>G: ToolListResponse [add, greet]
+    H->>G: tools/list
+    G->>H: [add, greet]
+    H->>G: tools/call add {a:1, b:2}
+    G->>T: CallToolRequest {name:"add", arguments_json:...}
+    T->>G: CallToolResponse {result_json:"3"}
+    G->>H: result "3"
+```
+
+---
+
+## Hot Reload
+
+When you save your tool file, protomcp detects the change (via file watch) and:
+
+1. Sends a `ReloadRequest` to the tool process
+2. Tool process re-registers all tools and responds with `ReloadResponse`
+3. protomcp sends `notifications/tools/list_changed` to the MCP host
+4. Host re-fetches the tool list
+
+In-flight calls complete before reload takes effect. With `--hot-reload immediate`, the process is restarted instead of asked to reload — useful for languages without dynamic reload support.
+
+```mermaid
+sequenceDiagram
+    participant W as File Watcher
+    participant G as protomcp
+    participant T as Tool Process
+    participant H as MCP Host
+
+    W->>G: file changed
+    G->>T: ReloadRequest
+    T->>G: ReloadResponse {success: true}
+    G->>H: notifications/tools/list_changed
+    H->>G: tools/list
+    G->>H: [updated tool list]
+```
+
+---
+
+## Dynamic Tool Lists
+
+Tool processes can change their own tool list at runtime, without a file change. This lets tools enable or disable each other based on context:
+
+```mermaid
+graph TD
+    A[Tool call returns] -->|ToolResult.enable_tools| B[protomcp enables tools]
+    A -->|ToolResult.disable_tools| C[protomcp disables tools]
+    D[Tool calls tool_manager.enable] --> B
+    D2[Tool calls tool_manager.disable] --> C
+    B --> E[notifications/tools/list_changed sent to host]
+    C --> E
+```
+
+Tools can also use `tool_manager` (Python) or `toolManager` (TypeScript) to modify the tool list mid-call, or set an explicit allowlist/blocklist.
+
+---
+
+## Wire Protocol
+
+All communication between protomcp and the tool process uses a simple framing:
+
+```
+[4 bytes: uint32 big-endian length][N bytes: serialized protobuf Envelope]
+```
+
+The `Envelope` message wraps all request and response types in a `oneof` field. See the [Protobuf Spec](/reference/protobuf-spec/) for full details.
+
+---
+
+## Transports
+
+protomcp supports five transports for the MCP host side:
+
+| Transport | Flag | Use case |
+|-----------|------|----------|
+| stdio | `--transport stdio` | MCP clients that spawn subprocesses (default) |
+| HTTP SSE | `--transport sse` | Web-based or remote MCP clients |
+| Streamable HTTP | `--transport http` | Modern HTTP clients |
+| WebSocket | `--transport ws` | Real-time bidirectional clients |
+| In-process | `--transport inproc` | Testing and embedding |
+
+See [Transports](/concepts/transports/) for details.

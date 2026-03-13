@@ -1,0 +1,194 @@
+---
+draft: false
+title: Python API Reference
+description: Complete API reference for the protomcp Python SDK.
+---
+
+## Installation
+
+```sh
+pip install protomcp
+```
+
+## Imports
+
+```python
+from protomcp import tool, ToolResult, tool_manager
+```
+
+---
+
+## `@tool(description)`
+
+Registers a function as an MCP tool.
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `description` | `str` | Human-readable description of what the tool does |
+
+**Returns:** The original function (unmodified).
+
+The function name becomes the tool name. Type hints on parameters are used to generate the JSON Schema for tool inputs.
+
+```python
+from protomcp import tool, ToolResult
+
+@tool("Multiply two numbers")
+def multiply(a: float, b: float) -> ToolResult:
+    return ToolResult(result=str(a * b))
+```
+
+### Supported parameter types
+
+| Python type | JSON Schema |
+|-------------|-------------|
+| `str` | `{"type": "string"}` |
+| `int` | `{"type": "integer"}` |
+| `float` | `{"type": "number"}` |
+| `bool` | `{"type": "boolean"}` |
+| `list` | `{"type": "array"}` |
+| `dict` | `{"type": "object"}` |
+| `Optional[T]` | type of `T`, not required |
+
+Parameters without defaults and without `Optional` are added to the `required` array. Parameters with `Optional[T]` or a default value are optional.
+
+### Skipped parameters
+
+Parameters named `self`, `cls`, or `ctx` are skipped during schema generation. Parameters with type `ToolContext` (if present) are also skipped.
+
+---
+
+## `ToolResult`
+
+Returned by every tool handler.
+
+```python
+from dataclasses import dataclass
+from typing import Optional
+
+@dataclass
+class ToolResult:
+    result: str = ""
+    is_error: bool = False
+    enable_tools: Optional[list[str]] = None
+    disable_tools: Optional[list[str]] = None
+    error_code: Optional[str] = None
+    message: Optional[str] = None
+    suggestion: Optional[str] = None
+    retryable: bool = False
+```
+
+### Fields
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `result` | `str` | `""` | The result string returned to the MCP host |
+| `is_error` | `bool` | `False` | Set to `True` to indicate an error |
+| `enable_tools` | `list[str] \| None` | `None` | Tool names to enable after this call |
+| `disable_tools` | `list[str] \| None` | `None` | Tool names to disable after this call |
+| `error_code` | `str \| None` | `None` | Machine-readable error code |
+| `message` | `str \| None` | `None` | Human-readable error message |
+| `suggestion` | `str \| None` | `None` | Recovery suggestion for the AI or user |
+| `retryable` | `bool` | `False` | Whether retrying this call might succeed |
+
+---
+
+## `tool_manager`
+
+Module-level object for programmatic tool list control. Only available when running under protomcp (raises `RuntimeError` if called outside protomcp).
+
+```python
+from protomcp import tool_manager
+```
+
+### `tool_manager.enable(tool_names)`
+
+Enable the specified tools. Returns the updated list of active tool names.
+
+```python
+active: list[str] = tool_manager.enable(["write_file", "delete_file"])
+```
+
+### `tool_manager.disable(tool_names)`
+
+Disable the specified tools. Returns the updated list of active tool names.
+
+```python
+active: list[str] = tool_manager.disable(["write_file", "delete_file"])
+```
+
+### `tool_manager.set_allowed(tool_names)`
+
+Switch to allowlist mode. Only the specified tools are active. Returns the updated list of active tool names.
+
+```python
+active: list[str] = tool_manager.set_allowed(["read_file", "search"])
+```
+
+### `tool_manager.set_blocked(tool_names)`
+
+Switch to blocklist mode. All tools except the specified ones are active. Returns the updated list of active tool names.
+
+```python
+active: list[str] = tool_manager.set_blocked(["delete_database"])
+```
+
+### `tool_manager.get_active_tools()`
+
+Get the current list of active tool names.
+
+```python
+active: list[str] = tool_manager.get_active_tools()
+```
+
+### `tool_manager.batch(enable, disable, allow, block)`
+
+Perform multiple operations atomically. All parameters are optional lists of tool names.
+
+```python
+active: list[str] = tool_manager.batch(
+    enable=["write_file"],
+    disable=["read_only_mode"],
+    allow=None,
+    block=None,
+)
+```
+
+---
+
+## Internal API (for testing)
+
+These are not part of the public API but are useful in tests:
+
+### `get_registered_tools()`
+
+Returns a copy of the current tool registry.
+
+```python
+from protomcp.tool import get_registered_tools, ToolDef
+
+tools: list[ToolDef] = get_registered_tools()
+```
+
+### `clear_registry()`
+
+Clears the tool registry. Call this in test setup to avoid cross-test contamination.
+
+```python
+from protomcp.tool import clear_registry
+
+clear_registry()
+```
+
+### `ToolDef`
+
+```python
+@dataclass
+class ToolDef:
+    name: str
+    description: str
+    input_schema_json: str  # JSON string
+    handler: Callable
+```

@@ -1,0 +1,280 @@
+---
+draft: false
+title: Protobuf Spec
+description: The annotated protomcp.proto wire protocol specification.
+---
+
+## Wire format
+
+All communication between protomcp and the tool process uses length-prefixed protobuf frames:
+
+```
+[4 bytes: uint32 big-endian length][N bytes: serialized Envelope]
+```
+
+Every message is an `Envelope`. The `oneof msg` field identifies the message type.
+
+---
+
+## `Envelope`
+
+```protobuf
+message Envelope {
+  oneof msg {
+    // Go -> Tool Process
+    ReloadRequest reload = 1;
+    ListToolsRequest list_tools = 2;
+    CallToolRequest call_tool = 3;
+
+    // Tool Process -> Go
+    ReloadResponse reload_response = 4;
+    ToolListResponse tool_list = 5;
+    CallToolResponse call_result = 6;
+    EnableToolsRequest enable_tools = 7;
+    DisableToolsRequest disable_tools = 8;
+    SetAllowedRequest set_allowed = 9;
+    SetBlockedRequest set_blocked = 10;
+    GetActiveToolsRequest get_active_tools = 11;
+    BatchUpdateRequest batch = 12;
+    ActiveToolsResponse active_tools = 13;
+
+    // Progress, cancellation, logging, tasks
+    ProgressNotification progress = 16;
+    CancelRequest cancel = 17;
+    LogMessage log = 18;
+    CreateTaskResponse create_task = 19;
+    TaskStatusRequest task_status = 20;
+    TaskStatusResponse task_status_response = 21;
+    TaskResultRequest task_result = 22;
+    TaskCancelRequest task_cancel = 23;
+  }
+
+  // Correlation ID for matching requests to responses.
+  string request_id = 14;
+
+  // Namespace for future multi-process support. Ignored in v1.
+  string namespace = 15;
+}
+```
+
+---
+
+## Go → Tool Process
+
+### `ReloadRequest`
+
+Sent when the tool file changes (dev mode). The tool process should re-register all tools and respond with `ReloadResponse`.
+
+```protobuf
+message ReloadRequest {}
+```
+
+### `ListToolsRequest`
+
+Sent at startup to discover all registered tools.
+
+```protobuf
+message ListToolsRequest {}
+```
+
+### `CallToolRequest`
+
+Sent when the MCP host calls a tool.
+
+```protobuf
+message CallToolRequest {
+  string name = 1;           // Tool name to call
+  string arguments_json = 2; // JSON-encoded arguments object
+  string progress_token = 3; // Token for progress notifications (optional)
+}
+```
+
+---
+
+## Tool Process → Go
+
+### `ReloadResponse`
+
+```protobuf
+message ReloadResponse {
+  bool success = 1;
+  string error = 2; // Error message if success is false
+}
+```
+
+### `ToolListResponse`
+
+```protobuf
+message ToolListResponse {
+  repeated ToolDefinition tools = 1;
+}
+
+message ToolDefinition {
+  string name = 1;
+  string description = 2;
+  string input_schema_json = 3;  // JSON Schema for tool inputs
+  string output_schema_json = 4; // JSON Schema for tool outputs (optional)
+  string title = 5;              // Human-readable title (optional)
+  bool read_only_hint = 6;       // Tool does not modify state
+  bool destructive_hint = 7;     // Tool may have irreversible effects
+  bool idempotent_hint = 8;      // Calling multiple times is safe
+  bool open_world_hint = 9;      // Tool interacts with external systems
+  bool task_support = 10;        // Tool supports async task lifecycle
+}
+```
+
+### `CallToolResponse`
+
+```protobuf
+message CallToolResponse {
+  bool is_error = 1;
+  string result_json = 2;           // JSON-encoded result string
+  repeated string enable_tools = 3; // Tools to enable after this call
+  repeated string disable_tools = 4; // Tools to disable after this call
+  ToolError error = 5;              // Structured error (if is_error)
+  string structured_content_json = 6; // Structured content (optional)
+}
+
+message ToolError {
+  string error_code = 1;  // Machine-readable code
+  string message = 2;     // Human-readable description
+  string suggestion = 3;  // Recovery suggestion
+  bool retryable = 4;     // Whether retrying might succeed
+}
+```
+
+---
+
+## Tool List Control
+
+These messages are sent from the tool process to modify the active tool list at runtime.
+
+### `EnableToolsRequest` / `DisableToolsRequest`
+
+```protobuf
+message EnableToolsRequest {
+  repeated string tool_names = 1;
+}
+
+message DisableToolsRequest {
+  repeated string tool_names = 1;
+}
+```
+
+### `SetAllowedRequest` / `SetBlockedRequest`
+
+Switch to allowlist or blocklist mode.
+
+```protobuf
+message SetAllowedRequest {
+  repeated string tool_names = 1;
+}
+
+message SetBlockedRequest {
+  repeated string tool_names = 1;
+}
+```
+
+### `GetActiveToolsRequest`
+
+```protobuf
+message GetActiveToolsRequest {}
+```
+
+### `BatchUpdateRequest`
+
+Perform multiple enable/disable/allow/block operations atomically.
+
+```protobuf
+message BatchUpdateRequest {
+  repeated string enable = 1;
+  repeated string disable = 2;
+  repeated string allow = 3;
+  repeated string block = 4;
+}
+```
+
+### `ActiveToolsResponse`
+
+Sent in response to any tool list control message.
+
+```protobuf
+message ActiveToolsResponse {
+  repeated string tool_names = 1;
+}
+```
+
+---
+
+## Progress, Cancellation, Logging
+
+### `ProgressNotification`
+
+```protobuf
+message ProgressNotification {
+  string progress_token = 1;
+  int64 progress = 2;
+  int64 total = 3;
+  string message = 4;
+}
+```
+
+### `CancelRequest`
+
+```protobuf
+message CancelRequest {
+  string request_id = 1;
+}
+```
+
+### `LogMessage`
+
+```protobuf
+message LogMessage {
+  string level = 1;     // debug, info, warn, error
+  string logger = 2;    // Logger name
+  string data_json = 3; // JSON payload
+}
+```
+
+---
+
+## Task (Async) Lifecycle
+
+### `CreateTaskResponse`
+
+Returned when a tool handler initiates an async task.
+
+```protobuf
+message CreateTaskResponse {
+  string task_id = 1;
+}
+```
+
+### `TaskStatusRequest` / `TaskStatusResponse`
+
+```protobuf
+message TaskStatusRequest {
+  string task_id = 1;
+}
+
+message TaskStatusResponse {
+  string task_id = 1;
+  string state = 2;    // pending, running, completed, failed, cancelled
+  int64 progress = 3;
+  int64 total = 4;
+  string message = 5;
+}
+```
+
+### `TaskResultRequest` / `TaskCancelRequest`
+
+```protobuf
+message TaskResultRequest {
+  string task_id = 1;
+}
+
+message TaskCancelRequest {
+  string task_id = 1;
+}
+```

@@ -1,0 +1,191 @@
+---
+draft: false
+title: Writing Tools (Python)
+description: Use the @tool() decorator, ToolResult, and tool_manager in Python.
+---
+
+## Installation
+
+```sh
+pip install protomcp
+```
+
+---
+
+## The `@tool()` decorator
+
+Decorate any function with `@tool("description")` to register it as an MCP tool. The function name becomes the tool name.
+
+```python
+from protomcp import tool, ToolResult
+
+@tool("Add two integers")
+def add(a: int, b: int) -> ToolResult:
+    return ToolResult(result=str(a + b))
+```
+
+### Type hints and schema generation
+
+protomcp reads Python type hints to generate the JSON Schema for tool inputs automatically.
+
+| Python type | JSON Schema type |
+|-------------|-----------------|
+| `str`       | `"string"` |
+| `int`       | `"integer"` |
+| `float`     | `"number"` |
+| `bool`      | `"boolean"` |
+| `list`      | `"array"` |
+| `dict`      | `"object"` |
+
+```python
+@tool("Search for documents")
+def search(query: str, limit: int = 10, include_archived: bool = False) -> ToolResult:
+    # limit and include_archived are optional because they have defaults
+    results = do_search(query, limit, include_archived)
+    return ToolResult(result=str(results))
+```
+
+### Optional parameters
+
+Use `Optional[T]` or a default value to mark a parameter as optional:
+
+```python
+from typing import Optional
+
+@tool("Send a notification")
+def notify(message: str, channel: Optional[str] = None) -> ToolResult:
+    ch = channel or "default"
+    send(ch, message)
+    return ToolResult(result=f"Sent to {ch}")
+```
+
+Parameters with `Optional[T]` or a default are not added to the `required` array in the JSON Schema.
+
+---
+
+## `ToolResult`
+
+All tool handlers must return a `ToolResult`.
+
+```python
+from dataclasses import dataclass
+from typing import Optional
+
+@dataclass
+class ToolResult:
+    result: str = ""
+    is_error: bool = False
+    enable_tools: Optional[list[str]] = None
+    disable_tools: Optional[list[str]] = None
+    error_code: Optional[str] = None
+    message: Optional[str] = None
+    suggestion: Optional[str] = None
+    retryable: bool = False
+```
+
+### Success
+
+```python
+return ToolResult(result="done")
+```
+
+### Structured error
+
+```python
+return ToolResult(
+    is_error=True,
+    error_code="NOT_FOUND",
+    message="The file /tmp/data.csv does not exist",
+    suggestion="Check the path and try again",
+    retryable=False,
+)
+```
+
+### Enabling / disabling tools from a result
+
+Return `enable_tools` or `disable_tools` to change the active tool list after this call completes:
+
+```python
+@tool("Log in and unlock tools")
+def login(username: str, password: str) -> ToolResult:
+    if not authenticate(username, password):
+        return ToolResult(is_error=True, message="Authentication failed")
+    return ToolResult(
+        result="Logged in",
+        enable_tools=["delete_file", "write_file"],
+    )
+```
+
+---
+
+## `tool_manager`
+
+Use `tool_manager` to modify the active tool list during a tool call (not just at return time).
+
+```python
+from protomcp import tool, ToolResult, tool_manager
+
+@tool("Enable debug tools")
+def enable_debug() -> ToolResult:
+    active = tool_manager.enable(["debug_dump", "trace_calls"])
+    return ToolResult(result=f"Active tools: {active}")
+
+@tool("Disable debug tools")
+def disable_debug() -> ToolResult:
+    active = tool_manager.disable(["debug_dump", "trace_calls"])
+    return ToolResult(result=f"Active tools: {active}")
+```
+
+### `tool_manager` API
+
+All functions return a `list[str]` of the currently active tool names after the operation.
+
+```python
+tool_manager.enable(tool_names: list[str]) -> list[str]
+tool_manager.disable(tool_names: list[str]) -> list[str]
+tool_manager.set_allowed(tool_names: list[str]) -> list[str]
+tool_manager.set_blocked(tool_names: list[str]) -> list[str]
+tool_manager.get_active_tools() -> list[str]
+tool_manager.batch(enable=None, disable=None, allow=None, block=None) -> list[str]
+```
+
+`set_allowed` and `set_blocked` switch the tool list to allowlist/blocklist mode respectively. See [Tool List Modes](/concepts/tool-list-modes/).
+
+### Batch operations
+
+Use `batch` to perform multiple operations atomically:
+
+```python
+active = tool_manager.batch(
+    enable=["write_file"],
+    disable=["read_only_mode"],
+)
+```
+
+---
+
+## Testing tools
+
+Since `@tool()` registers handlers in a global registry, test files should use `clear_registry()` between tests:
+
+```python
+from protomcp.tool import clear_registry, get_registered_tools
+from protomcp import tool, ToolResult
+
+def test_add():
+    clear_registry()
+
+    @tool("Add two numbers")
+    def add(a: int, b: int) -> ToolResult:
+        return ToolResult(result=str(a + b))
+
+    tools = get_registered_tools()
+    assert len(tools) == 1
+    assert tools[0].name == "add"
+
+    result = tools[0].handler(a=2, b=3)
+    assert result.result == "5"
+    assert not result.is_error
+```
+
+Call the handler directly — no need to run protomcp for unit tests.

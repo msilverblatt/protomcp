@@ -1,0 +1,218 @@
+---
+draft: false
+title: TypeScript API Reference
+description: Complete API reference for the protomcp TypeScript SDK.
+---
+
+## Installation
+
+```sh
+npm install protomcp zod
+```
+
+## Imports
+
+```typescript
+import { tool, ToolResult, toolManager } from 'protomcp';
+import { z } from 'zod';
+```
+
+---
+
+## `tool(options)`
+
+Registers a tool and returns its `ToolDef`.
+
+### Options
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `description` | `string` | Yes | Human-readable description |
+| `args` | `z.ZodObject<any>` | Yes | Zod schema for input arguments |
+| `handler` | `(args) => any` | Yes | Function to call when the tool is invoked |
+| `name` | `string` | No | Explicit tool name (defaults to handler function name) |
+
+### Name inference
+
+The tool name is derived from the handler function name. Arrow functions assigned to the `handler` property get the name `"handler"`, which is ignored. To use a specific name, use a named function or pass `name` explicitly.
+
+```typescript
+import { tool, ToolResult } from 'protomcp';
+import { z } from 'zod';
+
+// Name inferred from function name: "multiply"
+tool({
+  description: 'Multiply two numbers',
+  args: z.object({ a: z.number(), b: z.number() }),
+  handler: function multiply({ a, b }) {
+    return new ToolResult({ result: String(a * b) });
+  },
+});
+
+// Name set explicitly
+tool({
+  name: 'my_tool',
+  description: 'A tool',
+  args: z.object({ input: z.string() }),
+  handler({ input }) {
+    return new ToolResult({ result: input });
+  },
+});
+```
+
+### Return value
+
+Returns a `ToolDef<T>` object (also added to the global registry).
+
+---
+
+## `ToolResult`
+
+```typescript
+class ToolResult {
+  result: string;        // default: ""
+  isError: boolean;      // default: false
+  enableTools?: string[];
+  disableTools?: string[];
+  errorCode?: string;
+  message?: string;
+  suggestion?: string;
+  retryable: boolean;    // default: false
+
+  constructor(options?: ToolResultOptions);
+}
+```
+
+### `ToolResultOptions`
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `result` | `string` | `""` | Result string returned to the MCP host |
+| `isError` | `boolean` | `false` | Set to `true` to indicate an error |
+| `enableTools` | `string[]` | — | Tools to enable after this call |
+| `disableTools` | `string[]` | — | Tools to disable after this call |
+| `errorCode` | `string` | — | Machine-readable error code |
+| `message` | `string` | — | Human-readable error message |
+| `suggestion` | `string` | — | Recovery suggestion |
+| `retryable` | `boolean` | `false` | Whether retrying might succeed |
+
+```typescript
+// Success
+new ToolResult({ result: 'done' })
+
+// Error
+new ToolResult({
+  isError: true,
+  errorCode: 'NOT_FOUND',
+  message: 'File not found',
+  suggestion: 'Check the path',
+  retryable: false,
+})
+
+// Enable tools after call
+new ToolResult({
+  result: 'Authenticated',
+  enableTools: ['write_file', 'delete_file'],
+})
+```
+
+---
+
+## `toolManager`
+
+Singleton instance for programmatic tool list control. All methods are `async` and return `Promise<string[]>` — the updated list of active tool names.
+
+```typescript
+import { toolManager } from 'protomcp';
+```
+
+### `toolManager.enable(toolNames)`
+
+```typescript
+const active: string[] = await toolManager.enable(['write_file', 'delete_file']);
+```
+
+### `toolManager.disable(toolNames)`
+
+```typescript
+const active: string[] = await toolManager.disable(['write_file', 'delete_file']);
+```
+
+### `toolManager.setAllowed(toolNames)`
+
+Switch to allowlist mode. Only the specified tools are active.
+
+```typescript
+const active: string[] = await toolManager.setAllowed(['read_file', 'search']);
+```
+
+### `toolManager.setBlocked(toolNames)`
+
+Switch to blocklist mode. All tools except the specified ones are active.
+
+```typescript
+const active: string[] = await toolManager.setBlocked(['delete_database']);
+```
+
+### `toolManager.getActiveTools()`
+
+```typescript
+const active: string[] = await toolManager.getActiveTools();
+```
+
+### `toolManager.batch(options)`
+
+```typescript
+const active: string[] = await toolManager.batch({
+  enable: ['write_file'],
+  disable: ['read_only_mode'],
+  allow: [],
+  block: [],
+});
+```
+
+**`BatchOptions`:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `enable` | `string[]` | Tool names to enable |
+| `disable` | `string[]` | Tool names to disable |
+| `allow` | `string[]` | Set allowlist |
+| `block` | `string[]` | Set blocklist |
+
+All fields are optional.
+
+---
+
+## Internal API (for testing)
+
+### `getRegisteredTools()`
+
+Returns a shallow copy of the current tool registry.
+
+```typescript
+import { getRegisteredTools } from 'protomcp';
+
+const tools = getRegisteredTools(); // ToolDef[]
+```
+
+### `clearRegistry()`
+
+Clears the tool registry. Use in test `beforeEach` to avoid cross-test contamination.
+
+```typescript
+import { clearRegistry } from 'protomcp';
+
+beforeEach(() => clearRegistry());
+```
+
+### `ToolDef<T>`
+
+```typescript
+interface ToolDef<T extends z.ZodType = z.ZodType> {
+  name: string;
+  description: string;
+  inputSchemaJson: string;           // JSON string
+  handler: (args: z.infer<T>) => any;
+}
+```

@@ -1,0 +1,94 @@
+---
+draft: false
+title: Installation
+description: Install protomcp and the Python or TypeScript SDK.
+---
+
+## protomcp binary
+
+### Homebrew (macOS / Linux)
+
+```sh
+brew install protomcp/tap/protomcp
+```
+
+### Binary download
+
+Download the latest release from [GitHub Releases](https://github.com/protomcp/protomcp/releases) and place the binary on your `PATH`:
+
+```sh
+# macOS (Apple Silicon)
+curl -L https://github.com/protomcp/protomcp/releases/latest/download/protomcp_darwin_arm64.tar.gz | tar xz
+sudo mv protomcp /usr/local/bin/
+
+# Linux (amd64)
+curl -L https://github.com/protomcp/protomcp/releases/latest/download/protomcp_linux_amd64.tar.gz | tar xz
+sudo mv protomcp /usr/local/bin/
+```
+
+### From source
+
+Requires Go 1.22+.
+
+```sh
+git clone https://github.com/protomcp/protomcp.git
+cd protomcp
+go build -o protomcp ./cmd/protomcp
+sudo mv protomcp /usr/local/bin/
+```
+
+### Verify
+
+```sh
+protomcp --version
+```
+
+---
+
+## Python SDK
+
+Requires Python 3.10+.
+
+```sh
+pip install protomcp
+```
+
+Or with a virtual environment:
+
+```sh
+python -m venv .venv
+source .venv/bin/activate
+pip install protomcp
+```
+
+---
+
+## TypeScript SDK
+
+Requires Node.js 18+.
+
+```sh
+npm install protomcp
+```
+
+Or with yarn / pnpm:
+
+```sh
+yarn add protomcp
+pnpm add protomcp
+```
+
+---
+
+## Runtime detection
+
+protomcp detects the runtime from the file extension automatically:
+
+| Extension | Runtime |
+|-----------|---------|
+| `.py`     | `python3` (or `$PROTOMCP_PYTHON`) |
+| `.ts`     | `npx tsx` (or `$PROTOMCP_NODE`) |
+| `.js`     | `node` (or `$PROTOMCP_NODE`) |
+| `.go`     | `go run` |
+
+Use `--runtime` to override: `protomcp dev tools.py --runtime python3.12`

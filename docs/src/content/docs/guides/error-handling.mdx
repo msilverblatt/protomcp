@@ -1,0 +1,129 @@
+---
+draft: false
+title: Error Handling
+description: Return structured errors from tools using ToolResult.
+---
+
+## Structured errors
+
+Instead of raising exceptions or returning plain strings, return a `ToolResult` with `is_error=True` and structured error fields. This gives the MCP host — and the AI — enough context to understand and potentially recover from errors.
+
+**Python:**
+
+```python
+from protomcp import tool, ToolResult
+
+@tool("Read a file")
+def read_file(path: str) -> ToolResult:
+    try:
+        with open(path) as f:
+            return ToolResult(result=f.read())
+    except FileNotFoundError:
+        return ToolResult(
+            is_error=True,
+            error_code="NOT_FOUND",
+            message=f"File not found: {path}",
+            suggestion="Check that the path is correct and the file exists",
+            retryable=False,
+        )
+    except PermissionError:
+        return ToolResult(
+            is_error=True,
+            error_code="PERMISSION_DENIED",
+            message=f"Cannot read {path}: permission denied",
+            suggestion="Check file permissions or run with elevated privileges",
+            retryable=False,
+        )
+```
+
+**TypeScript:**
+
+```typescript
+import { tool, ToolResult } from 'protomcp';
+import { z } from 'zod';
+import { readFile } from 'fs/promises';
+
+tool({
+  description: 'Read a file',
+  args: z.object({ path: z.string() }),
+  async handler({ path }) {
+    try {
+      const content = await readFile(path, 'utf-8');
+      return new ToolResult({ result: content });
+    } catch (err: any) {
+      if (err.code === 'ENOENT') {
+        return new ToolResult({
+          isError: true,
+          errorCode: 'NOT_FOUND',
+          message: `File not found: ${path}`,
+          suggestion: 'Check that the path is correct and the file exists',
+          retryable: false,
+        });
+      }
+      return new ToolResult({
+        isError: true,
+        errorCode: 'READ_ERROR',
+        message: err.message,
+        retryable: false,
+      });
+    }
+  },
+});
+```
+
+---
+
+## Error fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `is_error` / `isError` | `bool` | Set to `True` to indicate an error |
+| `error_code` / `errorCode` | `str` | Machine-readable code (e.g. `NOT_FOUND`, `TIMEOUT`) |
+| `message` | `str` | Human-readable description of the error |
+| `suggestion` | `str` | What the AI or user should try next |
+| `retryable` | `bool` | Whether retrying the same call might succeed |
+
+---
+
+## Best practices
+
+**Use `error_code` consistently**: Define a set of codes for your tool suite (e.g. `NOT_FOUND`, `INVALID_INPUT`, `TIMEOUT`, `PERMISSION_DENIED`). This lets the AI learn to handle them.
+
+**Always include `message`**: The message is shown to the AI and should explain what went wrong in plain language.
+
+**Use `suggestion` for recovery**: If there's a clear next step, put it in `suggestion`. The AI can act on this directly.
+
+**Set `retryable` accurately**: If the error is transient (network timeout, rate limit), set `retryable=True`. If it's deterministic (wrong input, missing file), set `retryable=False`.
+
+**Don't raise exceptions**: Unhandled exceptions in a tool handler will cause protomcp to return a generic error. Catch exceptions and convert them to structured `ToolResult` errors.
+
+---
+
+## Retryable errors
+
+```python
+import httpx
+
+@tool("Fetch a URL")
+def fetch(url: str) -> ToolResult:
+    try:
+        resp = httpx.get(url, timeout=10)
+        resp.raise_for_status()
+        return ToolResult(result=resp.text)
+    except httpx.TimeoutException:
+        return ToolResult(
+            is_error=True,
+            error_code="TIMEOUT",
+            message=f"Request to {url} timed out after 10s",
+            suggestion="Try again or increase the timeout",
+            retryable=True,
+        )
+    except httpx.HTTPStatusError as e:
+        retryable = e.response.status_code in (429, 502, 503, 504)
+        return ToolResult(
+            is_error=True,
+            error_code=f"HTTP_{e.response.status_code}",
+            message=str(e),
+            retryable=retryable,
+        )
+```

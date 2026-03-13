@@ -1,0 +1,153 @@
+---
+draft: false
+title: CLI Reference
+description: All protomcp commands and flags.
+---
+
+## Commands
+
+### `protomcp dev <file> [flags]`
+
+Start protomcp in development mode with hot reload.
+
+```sh
+protomcp dev tools.py
+protomcp dev tools.py --transport sse --port 8080
+```
+
+Hot reload is enabled: when `<file>` changes on disk, protomcp reloads the tool process and notifies the MCP host.
+
+### `protomcp run <file> [flags]`
+
+Start protomcp in production mode without hot reload.
+
+```sh
+protomcp run tools.py
+protomcp run tools.py --transport sse --host 0.0.0.0 --port 8080
+```
+
+---
+
+## Flags
+
+### `--transport <value>`
+
+**Default:** `stdio`
+
+The transport to use for the MCP host connection.
+
+| Value | Description |
+|-------|-------------|
+| `stdio` | Read/write on stdin/stdout. Used when the MCP client spawns protomcp as a subprocess. |
+| `sse` | HTTP server with Server-Sent Events. MCP client connects over HTTP. |
+| `http` | Streamable HTTP transport. |
+| `ws` | WebSocket transport. |
+| `inproc` | In-process transport for testing and embedding. |
+
+```sh
+protomcp dev tools.py --transport sse
+```
+
+### `--host <value>`
+
+**Default:** `localhost`
+
+Host/address to bind the HTTP server to. Used with `--transport sse`, `http`, or `ws`.
+
+```sh
+protomcp run tools.py --transport sse --host 0.0.0.0
+```
+
+### `--port <value>`
+
+**Default:** `8080`
+
+Port to bind the HTTP server to. Used with `--transport sse`, `http`, or `ws`.
+
+```sh
+protomcp run tools.py --transport sse --port 9000
+```
+
+### `--hot-reload <value>`
+
+**Default:** *(graceful reload)*
+
+Controls the hot reload strategy. Only applies in `dev` mode.
+
+| Value | Description |
+|-------|-------------|
+| `immediate` | Kill and restart the tool process on every file change. |
+| *(omitted)* | Send a `ReloadRequest` to the running process (graceful). |
+
+```sh
+protomcp dev tools.py --hot-reload immediate
+```
+
+### `--call-timeout <duration>`
+
+**Default:** `5m`
+
+Maximum time to wait for a tool call to complete. Uses Go duration syntax.
+
+```sh
+protomcp run tools.py --call-timeout 30s
+protomcp run tools.py --call-timeout 10m
+```
+
+### `--log-level <value>`
+
+**Default:** `info`
+
+Logging verbosity.
+
+| Value | Description |
+|-------|-------------|
+| `debug` | All log messages including internal state |
+| `info` | Normal operational messages |
+| `warn` | Warnings and errors only |
+| `error` | Errors only |
+
+```sh
+protomcp dev tools.py --log-level debug
+```
+
+### `--socket <path>`
+
+**Default:** `$XDG_RUNTIME_DIR/protomcp/<pid>.sock` or `$TMPDIR/protomcp/<pid>.sock`
+
+Path for the unix socket used to communicate with the tool process.
+
+```sh
+protomcp dev tools.py --socket /tmp/mytools.sock
+```
+
+### `--runtime <command>`
+
+Override the runtime used to execute the tool file. By default, protomcp detects the runtime from the file extension.
+
+```sh
+protomcp dev tools.py --runtime python3.12
+```
+
+---
+
+## Runtime detection
+
+When `--runtime` is not set, protomcp picks the runtime based on file extension:
+
+| Extension | Default command | Override env var |
+|-----------|----------------|-----------------|
+| `.py` | `python3` | `PROTOMCP_PYTHON` |
+| `.ts` | `npx tsx` | `PROTOMCP_NODE` |
+| `.js` | `node` | `PROTOMCP_NODE` |
+| `.go` | `go run` | — |
+| `.rs` | `cargo run` | — |
+| other | run directly | — |
+
+```sh
+# Use a specific Python version
+PROTOMCP_PYTHON=python3.12 protomcp dev tools.py
+
+# Use bun instead of node for TypeScript
+PROTOMCP_NODE=bun protomcp dev tools.ts
+```

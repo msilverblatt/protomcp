@@ -1,0 +1,87 @@
+---
+draft: false
+title: Quick Start
+description: Build and run your first MCP tool in 5 minutes.
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+<Steps>
+
+1. **Install protomcp**
+
+   ```sh
+   brew install protomcp/tap/protomcp
+   ```
+
+2. **Install the Python SDK**
+
+   ```sh
+   pip install protomcp
+   ```
+
+3. **Write a tool file**
+
+   Create `tools.py`:
+
+   ```python
+   from protomcp import tool, ToolResult
+
+   @tool("Add two numbers together")
+   def add(a: int, b: int) -> ToolResult:
+       return ToolResult(result=str(a + b))
+
+   @tool("Greet a user by name")
+   def greet(name: str) -> ToolResult:
+       return ToolResult(result=f"Hello, {name}!")
+   ```
+
+4. **Run in dev mode**
+
+   ```sh
+   protomcp dev tools.py
+   ```
+
+   You should see:
+
+   ```
+   [protomcp] listening on stdio
+   [protomcp] loaded 2 tools: add, greet
+   ```
+
+5. **Configure your MCP client**
+
+   Add to your MCP client config (e.g. Claude Desktop `claude_desktop_config.json`):
+
+   ```json
+   {
+     "mcpServers": {
+       "mytools": {
+         "command": "protomcp",
+         "args": ["dev", "/absolute/path/to/tools.py"]
+       }
+     }
+   }
+   ```
+
+   Restart your MCP client. The tools `add` and `greet` will appear.
+
+6. **Try hot reload**
+
+   While the MCP client is running, add a new tool to `tools.py`:
+
+   ```python
+   @tool("Reverse a string")
+   def reverse(text: str) -> ToolResult:
+       return ToolResult(result=text[::-1])
+   ```
+
+   Save the file. protomcp reloads automatically — no restart needed. The new tool appears in your client within seconds.
+
+</Steps>
+
+## Next steps
+
+- [Writing Tools (Python)](/guides/writing-tools-python/) — type hints, optional params, error handling
+- [Dynamic Tool Lists](/guides/dynamic-tool-lists/) — enable/disable tools at runtime
+- [CLI Reference](/reference/cli/) — all flags and options

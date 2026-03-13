@@ -1,0 +1,75 @@
+---
+draft: false
+title: protomcp
+description: Language-agnostic MCP runtime — proxy MCP protocol to any tool process via protobuf over unix socket.
+template: splash
+hero:
+  tagline: Write MCP tools in any language. Hot-reload without restarting your AI host.
+  actions:
+    - text: Quick Start
+      link: /getting-started/quick-start/
+      icon: right-arrow
+      variant: primary
+    - text: How It Works
+      link: /getting-started/how-it-works/
+      icon: open-book
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Why protomcp?
+
+<CardGrid>
+  <Card title="Any Language" icon="puzzle">
+    Write tools in Python, TypeScript, Go, Rust, or any language that can speak protobuf over a unix socket.
+  </Card>
+  <Card title="Hot Reload" icon="refresh">
+    Save your file and tools reload instantly — no need to restart Claude Desktop or your MCP host.
+  </Card>
+  <Card title="Dynamic Tool Lists" icon="list-format">
+    Tools can enable or disable themselves at runtime. Show only what's relevant based on context.
+  </Card>
+  <Card title="Single Binary" icon="rocket">
+    One Go binary. No daemon, no registry, no config files. Just `protomcp dev server.py`.
+  </Card>
+</CardGrid>
+
+## How It Works
+
+protomcp sits between your MCP host (Claude Desktop, etc.) and your tool process. It speaks MCP on one side and a simple protobuf protocol on the other.
+
+```
+MCP Host ←── MCP protocol ──→ protomcp (Go) ←── protobuf/unix socket ──→ tool process
+```
+
+Your tool process registers handlers using a decorator or function, and protomcp handles everything else: listing tools, routing calls, hot reload, and dynamic tool list management.
+
+## Get Started
+
+```sh
+# Install
+brew install protomcp/tap/protomcp
+
+# Write a tool
+cat > tools.py << 'EOF'
+from protomcp import tool, ToolResult
+
+@tool("Add two numbers")
+def add(a: int, b: int) -> ToolResult:
+    return ToolResult(result=str(a + b))
+EOF
+
+# Run
+protomcp dev tools.py
+```
+
+Then add `protomcp dev tools.py` to your MCP client config. That's it.
+
+## Quick Links
+
+- [Installation](/getting-started/installation/) — Homebrew, binary, from source
+- [Quick Start](/getting-started/quick-start/) — 5-minute tutorial
+- [Python Guide](/guides/writing-tools-python/) — `@tool()` decorator, `ToolResult`, `tool_manager`
+- [TypeScript Guide](/guides/writing-tools-typescript/) — `tool()`, Zod schemas, `toolManager`
+- [CLI Reference](/reference/cli/) — all commands and flags
+- [Protobuf Spec](/reference/protobuf-spec/) — wire protocol

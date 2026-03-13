@@ -1,0 +1,103 @@
+---
+draft: false
+title: Hot Reload
+description: How protomcp reloads tool processes when source files change.
+---
+
+## How it works
+
+protomcp watches your tool file for changes. When a change is detected:
+
+1. A `ReloadRequest` is sent to the tool process over the unix socket
+2. The tool process handles the reload (re-registers tools, re-reads config, etc.)
+3. The tool process replies with `ReloadResponse { success: true }`
+4. protomcp sends `notifications/tools/list_changed` to the MCP host
+5. The MCP host re-fetches the tool list
+
+The file is the same process — no restart, no re-connection.
+
+---
+
+## Triggering reload
+
+Hot reload is only active in `dev` mode:
+
+```sh
+protomcp dev tools.py
+```
+
+It is disabled in `run` mode, which is intended for production.
+
+The file watcher monitors the tool file path specified on the command line. Changes to imported modules are not automatically detected — only the entry file.
+
+---
+
+## Reload modes
+
+### Default: graceful reload
+
+```sh
+protomcp dev tools.py
+```
+
+Sends `ReloadRequest` to the running process. The SDK handles this by re-executing the module-level code and re-registering all tools.
+
+### Immediate: process restart
+
+```sh
+protomcp dev tools.py --hot-reload immediate
+```
+
+Kills and restarts the tool process. Useful when:
+- The language or runtime doesn't support graceful reload
+- You want a clean slate every time (no stale module cache)
+- You're using `.go` or `.rs` files that need recompilation
+
+---
+
+## In-flight calls
+
+Calls that are in flight when a reload is triggered are not interrupted. protomcp waits for in-flight calls to complete before applying the reload. If a reload is requested while calls are running, it is queued.
+
+---
+
+## SDK behavior on reload
+
+The Python and TypeScript SDKs re-run the tool registration code automatically. Since `@tool()` and `tool()` append to a global registry, the SDK clears the registry before re-running.
+
+If you have initialization code that should only run once (e.g. loading a model, connecting to a database), gate it with a module-level flag:
+
+```python
+from protomcp import tool, ToolResult
+
+_db = None
+
+def _get_db():
+    global _db
+    if _db is None:
+        _db = connect_to_db()
+    return _db
+
+@tool("Query the database")
+def query(sql: str) -> ToolResult:
+    results = _get_db().execute(sql)
+    return ToolResult(result=str(results))
+```
+
+The database connection is created on first use and reused across reloads.
+
+---
+
+## Gotchas
+
+**Module-level side effects**: Code at module level runs on every reload. Avoid expensive operations (network calls, model loading) at module level without caching.
+
+**File-level watch only**: Only the entry file is watched. If you change an imported module, touch the entry file to trigger reload:
+
+```sh
+touch tools.py
+```
+
+**Immediate mode loses state**: With `--hot-reload immediate`, the process is killed and restarted. Any in-memory state (caches, sessions, etc.) is lost.
+
+**Syntax errors**: If the tool file has a syntax error after reload, the `ReloadResponse` will contain `success: false` and an error message. The previous tool list remains active.

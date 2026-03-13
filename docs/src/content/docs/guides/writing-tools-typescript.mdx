@@ -1,0 +1,224 @@
+---
+draft: false
+title: Writing Tools (TypeScript)
+description: Use tool(), Zod schemas, ToolResult, and toolManager in TypeScript.
+---
+
+## Installation
+
+```sh
+npm install protomcp zod
+```
+
+---
+
+## The `tool()` function
+
+Register a tool by calling `tool()` with a description, Zod schema for arguments, and a handler.
+
+```typescript
+import { tool, ToolResult } from 'protomcp';
+import { z } from 'zod';
+
+tool({
+  description: 'Add two numbers',
+  args: z.object({
+    a: z.number().describe('First number'),
+    b: z.number().describe('Second number'),
+  }),
+  handler({ a, b }) {
+    return new ToolResult({ result: String(a + b) });
+  },
+});
+```
+
+The tool name is inferred from the handler function name. Use `name` to set it explicitly:
+
+```typescript
+tool({
+  name: 'my_tool',
+  description: 'A tool with an explicit name',
+  args: z.object({ input: z.string() }),
+  handler({ input }) {
+    return new ToolResult({ result: input.toUpperCase() });
+  },
+});
+```
+
+### Zod schemas for input validation
+
+All argument types are defined using Zod. protomcp converts the Zod schema to JSON Schema automatically using `zod-to-json-schema`.
+
+```typescript
+tool({
+  description: 'Search documents',
+  args: z.object({
+    query: z.string().describe('Search query'),
+    limit: z.number().int().min(1).max(100).default(10),
+    includeArchived: z.boolean().default(false),
+  }),
+  async handler({ query, limit, includeArchived }) {
+    const results = await search(query, { limit, includeArchived });
+    return new ToolResult({ result: JSON.stringify(results) });
+  },
+});
+```
+
+### Async handlers
+
+Handlers can be `async`:
+
+```typescript
+tool({
+  description: 'Fetch a URL',
+  args: z.object({ url: z.string().url() }),
+  async handler({ url }) {
+    const resp = await fetch(url);
+    const text = await resp.text();
+    return new ToolResult({ result: text });
+  },
+});
+```
+
+---
+
+## `ToolResult`
+
+```typescript
+class ToolResult {
+  result: string;
+  isError: boolean;
+  enableTools?: string[];
+  disableTools?: string[];
+  errorCode?: string;
+  message?: string;
+  suggestion?: string;
+  retryable: boolean;
+
+  constructor(options?: {
+    result?: string;
+    isError?: boolean;
+    enableTools?: string[];
+    disableTools?: string[];
+    errorCode?: string;
+    message?: string;
+    suggestion?: string;
+    retryable?: boolean;
+  });
+}
+```
+
+### Success
+
+```typescript
+return new ToolResult({ result: 'done' });
+```
+
+### Structured error
+
+```typescript
+return new ToolResult({
+  isError: true,
+  errorCode: 'NOT_FOUND',
+  message: 'The file /tmp/data.csv does not exist',
+  suggestion: 'Check the path and try again',
+  retryable: false,
+});
+```
+
+### Enabling / disabling tools from a result
+
+```typescript
+tool({
+  description: 'Log in and unlock tools',
+  args: z.object({ username: z.string(), password: z.string() }),
+  async handler({ username, password }) {
+    if (!await authenticate(username, password)) {
+      return new ToolResult({ isError: true, message: 'Authentication failed' });
+    }
+    return new ToolResult({
+      result: 'Logged in',
+      enableTools: ['delete_file', 'write_file'],
+    });
+  },
+});
+```
+
+---
+
+## `toolManager`
+
+Use `toolManager` to modify the active tool list during a tool call.
+
+```typescript
+import { tool, ToolResult, toolManager } from 'protomcp';
+import { z } from 'zod';
+
+tool({
+  description: 'Enable debug tools',
+  args: z.object({}),
+  async handler() {
+    const active = await toolManager.enable(['debug_dump', 'trace_calls']);
+    return new ToolResult({ result: `Active: ${active.join(', ')}` });
+  },
+});
+```
+
+### `toolManager` API
+
+All methods return `Promise<string[]>` — the list of currently active tool names.
+
+```typescript
+toolManager.enable(toolNames: string[]): Promise<string[]>
+toolManager.disable(toolNames: string[]): Promise<string[]>
+toolManager.setAllowed(toolNames: string[]): Promise<string[]>
+toolManager.setBlocked(toolNames: string[]): Promise<string[]>
+toolManager.getActiveTools(): Promise<string[]>
+toolManager.batch(options: {
+  enable?: string[];
+  disable?: string[];
+  allow?: string[];
+  block?: string[];
+}): Promise<string[]>
+```
+
+### Batch operations
+
+```typescript
+const active = await toolManager.batch({
+  enable: ['write_file'],
+  disable: ['read_only_mode'],
+});
+```
+
+---
+
+## Testing tools
+
+Use `clearRegistry()` between tests to avoid cross-test contamination:
+
+```typescript
+import { tool, ToolResult, clearRegistry, getRegisteredTools } from 'protomcp';
+import { z } from 'zod';
+
+beforeEach(() => clearRegistry());
+
+test('add tool returns sum', async () => {
+  tool({
+    name: 'add',
+    description: 'Add two numbers',
+    args: z.object({ a: z.number(), b: z.number() }),
+    handler({ a, b }) {
+      return new ToolResult({ result: String(a + b) });
+    },
+  });
+
+  const tools = getRegisteredTools();
+  expect(tools).toHaveLength(1);
+  expect(tools[0].name).toBe('add');
+
+  const result = await tools[0].handler({ a: 2, b: 3 });
+  expect(result.result).toBe('5');
+  expect(result.isError).toBe(false);
+});
+```

@@ -1,0 +1,206 @@
+---
+draft: false
+title: Dynamic Tool Lists
+description: Enable and disable tools at runtime using tool results or tool_manager.
+---
+
+## Overview
+
+protomcp lets tool processes change which tools are visible to the MCP host at runtime. This enables patterns like:
+
+- Showing only login tools until authenticated
+- Enabling destructive tools only after confirmation
+- Hiding debug tools in production
+- Progressively revealing tools based on workflow state
+
+There are two ways to modify the tool list: **inline from a ToolResult** and **programmatically via tool_manager**.
+
+---
+
+## Inline: from ToolResult
+
+Return `enable_tools` or `disable_tools` in your `ToolResult`. The changes take effect after the call returns.
+
+**Python:**
+
+```python
+from protomcp import tool, ToolResult
+
+@tool("Authenticate and unlock tools")
+def login(username: str, password: str) -> ToolResult:
+    if not authenticate(username, password):
+        return ToolResult(is_error=True, message="Bad credentials")
+    return ToolResult(
+        result="Authenticated",
+        enable_tools=["create_record", "delete_record"],
+        disable_tools=["login"],
+    )
+```
+
+**TypeScript:**
+
+```typescript
+import { tool, ToolResult } from 'protomcp';
+import { z } from 'zod';
+
+tool({
+  description: 'Authenticate and unlock tools',
+  args: z.object({ username: z.string(), password: z.string() }),
+  async handler({ username, password }) {
+    if (!await authenticate(username, password)) {
+      return new ToolResult({ isError: true, message: 'Bad credentials' });
+    }
+    return new ToolResult({
+      result: 'Authenticated',
+      enableTools: ['create_record', 'delete_record'],
+      disableTools: ['login'],
+    });
+  },
+});
+```
+
+---
+
+## Programmatic: tool_manager / toolManager
+
+Call `tool_manager` (Python) or `toolManager` (TypeScript) inside a handler to modify the tool list mid-call. Useful when the modification is a side effect, not the primary action.
+
+**Python:**
+
+```python
+from protomcp import tool, ToolResult, tool_manager
+
+@tool("Run in safe mode")
+def enable_safe_mode() -> ToolResult:
+    tool_manager.disable(["delete_database", "drop_table"])
+    return ToolResult(result="Safe mode enabled")
+
+@tool("Get the current active tool list")
+def list_active_tools() -> ToolResult:
+    active = tool_manager.get_active_tools()
+    return ToolResult(result=", ".join(active))
+```
+
+**TypeScript:**
+
+```typescript
+import { tool, ToolResult, toolManager } from 'protomcp';
+import { z } from 'zod';
+
+tool({
+  description: 'Enable safe mode',
+  args: z.object({}),
+  async handler() {
+    await toolManager.disable(['delete_database', 'drop_table']);
+    return new ToolResult({ result: 'Safe mode enabled' });
+  },
+});
+```
+
+---
+
+## Modes
+
+There are three tool list modes:
+
+| Mode | Description |
+|------|-------------|
+| **Open** | All registered tools are active. Enable/disable mutations are tracked as deltas. |
+| **Allowlist** | Only explicitly allowed tools are active. Call `set_allowed` to enter this mode. |
+| **Blocklist** | All tools except explicitly blocked ones are active. Call `set_blocked` to enter. |
+
+See [Tool List Modes](/concepts/tool-list-modes/) for the full state machine.
+
+### Switching to allowlist mode
+
+**Python:**
+
+```python
+# Only read_file and search are now visible
+active = tool_manager.set_allowed(["read_file", "search"])
+```
+
+**TypeScript:**
+
+```typescript
+const active = await toolManager.setAllowed(['read_file', 'search']);
+```
+
+### Switching to blocklist mode
+
+**Python:**
+
+```python
+# Everything except delete_file is visible
+active = tool_manager.set_blocked(["delete_file"])
+```
+
+**TypeScript:**
+
+```typescript
+const active = await toolManager.setBlocked(['delete_file']);
+```
+
+---
+
+## Batch operations
+
+Use `batch` to perform multiple enable/disable/allow/block operations in a single round-trip:
+
+**Python:**
+
+```python
+active = tool_manager.batch(
+    enable=["write_file", "rename_file"],
+    disable=["read_only_hint"],
+    allow=None,
+    block=None,
+)
+```
+
+**TypeScript:**
+
+```typescript
+const active = await toolManager.batch({
+  enable: ['write_file', 'rename_file'],
+  disable: ['read_only_hint'],
+});
+```
+
+---
+
+## Example: workflow-gated tools
+
+```python
+from protomcp import tool, ToolResult, tool_manager
+
+@tool("Start a write session")
+def begin_write() -> ToolResult:
+    tool_manager.batch(
+        enable=["write_file", "delete_file"],
+        disable=["begin_write"],
+    )
+    return ToolResult(result="Write session started")
+
+@tool("End a write session")
+def end_write() -> ToolResult:
+    tool_manager.batch(
+        disable=["write_file", "delete_file"],
+        enable=["begin_write"],
+    )
+    return ToolResult(result="Write session ended")
+
+@tool("Write content to a file")
+def write_file(path: str, content: str) -> ToolResult:
+    with open(path, "w") as f:
+        f.write(content)
+    return ToolResult(result=f"Wrote {len(content)} bytes to {path}")
+
+@tool("Delete a file")
+def delete_file(path: str) -> ToolResult:
+    import os
+    os.remove(path)
+    return ToolResult(result=f"Deleted {path}")
+```
+
+On startup, only `begin_write` is active. Calling it enables `write_file` and `delete_file`, and disables itself. Calling `end_write` reverses this.
