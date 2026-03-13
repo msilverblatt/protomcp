@@ -54,23 +54,60 @@ type ToolsListResult struct {
 	Tools []MCPTool `json:"tools"`
 }
 
+type MCPToolAnnotations struct {
+	Title           string `json:"title,omitempty"`
+	ReadOnlyHint    bool   `json:"readOnlyHint,omitempty"`
+	DestructiveHint bool   `json:"destructiveHint,omitempty"`
+	IdempotentHint  bool   `json:"idempotentHint,omitempty"`
+	OpenWorldHint   bool   `json:"openWorldHint,omitempty"`
+}
+
 type MCPTool struct {
-	Name        string          `json:"name"`
-	Description string          `json:"description,omitempty"`
-	InputSchema json.RawMessage `json:"inputSchema"`
+	Name         string              `json:"name"`
+	Description  string              `json:"description,omitempty"`
+	InputSchema  json.RawMessage     `json:"inputSchema"`
+	OutputSchema json.RawMessage     `json:"outputSchema,omitempty"`
+	Annotations  *MCPToolAnnotations `json:"annotations,omitempty"`
 }
 
 type ToolsCallParams struct {
 	Name      string          `json:"name"`
 	Arguments json.RawMessage `json:"arguments,omitempty"`
+	Meta      *ToolsCallMeta  `json:"_meta,omitempty"`
+}
+
+type ToolsCallMeta struct {
+	ProgressToken string `json:"progressToken,omitempty"`
 }
 
 type ToolsCallResult struct {
-	Content []ContentItem `json:"content"`
-	IsError bool          `json:"isError,omitempty"`
+	Content          []ContentItem   `json:"content"`
+	IsError          bool            `json:"isError,omitempty"`
+	StructuredContent json.RawMessage `json:"structuredContent,omitempty"`
 }
 
 type ContentItem struct {
 	Type string `json:"type"`
 	Text string `json:"text,omitempty"`
+}
+
+// Tasks
+type TasksGetParams struct {
+	TaskID string `json:"taskId"`
+}
+
+type TasksGetResult struct {
+	TaskID  string `json:"taskId"`
+	State   string `json:"state"`
+	Message string `json:"message,omitempty"`
+}
+
+type TasksCancelParams struct {
+	TaskID string `json:"taskId"`
+}
+
+// Cancellation notification params
+type CancelledParams struct {
+	RequestID string `json:"requestId"`
+	Reason    string `json:"reason,omitempty"`
 }
