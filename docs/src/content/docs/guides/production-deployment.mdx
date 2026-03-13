@@ -12,11 +12,17 @@ description: Deploy protomcp in production using run mode, systemd, Docker, and 
 | Intended for | Local development | Production |
 
 ```sh
-# Development
+# Development (Python)
 pmcp dev tools.py
 
-# Production
+# Development (TypeScript)
+pmcp dev tools.ts
+
+# Production (Python)
 pmcp run tools.py
+
+# Production (TypeScript)
+pmcp run tools.ts
 ```
 
 In `run` mode, protomcp starts the tool process and does not watch for file changes. Reload requires restarting the protomcp process.
@@ -37,8 +43,11 @@ For production, choose the transport that matches your deployment topology:
 For Claude Desktop (local), stdio is the correct choice. For a remote server, use `sse` or `http`.
 
 ```sh
-# Remote HTTP server
+# Remote HTTP server (Python)
 pmcp run tools.py --transport sse --host 0.0.0.0 --port 8080
+
+# Remote HTTP server (TypeScript)
+pmcp run tools.ts --transport sse --host 0.0.0.0 --port 8080
 ```
 
 ---
@@ -50,9 +59,11 @@ The default call timeout is 5 minutes. Adjust for your workload:
 ```sh
 # Long-running tasks
 pmcp run tools.py --call-timeout 30m
+pmcp run tools.ts --call-timeout 30m
 
 # Fast tools only
 pmcp run tools.py --call-timeout 30s
+pmcp run tools.ts --call-timeout 30s
 ```
 
 ---
@@ -61,6 +72,7 @@ pmcp run tools.py --call-timeout 30s
 
 ```sh
 pmcp run tools.py --log-level debug   # debug, info, warn, error
+pmcp run tools.ts --log-level debug
 ```
 
 Logs are written to stderr in structured format.
@@ -79,6 +91,7 @@ After=network.target
 [Service]
 Type=simple
 ExecStart=/usr/local/bin/pmcp run /opt/mytools/tools.py --transport sse --host 127.0.0.1 --port 8080
+# For TypeScript: ExecStart=/usr/local/bin/pmcp run /opt/mytools/tools.ts --transport sse --host 127.0.0.1 --port 8080
 WorkingDirectory=/opt/mytools
 User=protomcp
 Restart=on-failure
@@ -152,8 +165,13 @@ This is useful when you have multiple tool processes and want predictable socket
 Run separate protomcp instances for each tool file:
 
 ```sh
+# Python
 pmcp run auth_tools.py --transport sse --port 8081 &
 pmcp run data_tools.py --transport sse --port 8082 &
+
+# TypeScript
+pmcp run auth_tools.ts --transport sse --port 8081 &
+pmcp run data_tools.ts --transport sse --port 8082 &
 ```
 
 Configure each as a separate MCP server in your client.

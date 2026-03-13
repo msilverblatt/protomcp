@@ -1,7 +1,7 @@
 ---
 draft: false
 title: Writing Tools (TypeScript)
-description: Use tool(), Zod schemas, ToolResult, and toolManager in TypeScript.
+description: Use tool(), Zod schemas, ToolResult, ToolContext, ServerLogger, and toolManager in TypeScript.
 ---
 
 ## Installation
@@ -44,6 +44,41 @@ tool({
   },
 });
 ```
+
+### Tool metadata
+
+Pass additional options to provide metadata hints to the MCP host:
+
+```typescript
+tool({
+  description: 'Delete a file from disk',
+  title: 'Delete File',
+  destructiveHint: true,
+  idempotentHint: false,
+  readOnlyHint: false,
+  openWorldHint: false,
+  taskSupport: false,
+  args: z.object({ path: z.string() }),
+  async handler({ path }) {
+    await fs.unlink(path);
+    return new ToolResult({ result: `Deleted ${path}` });
+  },
+});
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `description` | `string` | required | Human-readable description |
+| `args` | `z.ZodObject<any>` | required | Zod schema for input arguments |
+| `handler` | `(args) => any` | required | Function called when the tool is invoked |
+| `name` | `string` | inferred | Explicit tool name |
+| `title` | `string` | `""` | Display name shown in the MCP host UI |
+| `destructiveHint` | `boolean` | `false` | Hint: the tool has destructive side effects |
+| `idempotentHint` | `boolean` | `false` | Hint: calling the tool multiple times has the same effect as once |
+| `readOnlyHint` | `boolean` | `false` | Hint: the tool does not modify state |
+| `openWorldHint` | `boolean` | `false` | Hint: the tool may access resources outside the current context |
+| `taskSupport` | `boolean` | `false` | Hint: the tool supports long-running async task semantics |
+| `output` | `z.ZodObject<any>` | — | Zod schema for structured output |
 
 ### Zod schemas for input validation
 
@@ -190,6 +225,143 @@ const active = await toolManager.batch({
   disable: ['read_only_mode'],
 });
 ```
+
+---
+
+## Progress Reporting
+
+Use `ToolContext` to report progress during a long-running tool call. protomcp injects it — access it via the second argument to `handler`.
+
+```typescript
+import { tool, ToolResult, ToolContext } from 'protomcp';
+import { z } from 'zod';
+
+tool({
+  description: 'Process a large dataset',
+  args: z.object({ filePath: z.string() }),
+  async handler({ filePath }, ctx: ToolContext) {
+    const rows = await loadRows(filePath);
+    const total = rows.length;
+    for (let i = 0; i < rows.length; i++) {
+      if (ctx.isCancelled()) {
+        return new ToolResult({ isError: true, message: 'Cancelled' });
+      }
+      await processRow(rows[i]);
+      ctx.reportProgress(i + 1, total, `Processing row ${i + 1}/${total}`);
+    }
+    return new ToolResult({ result: `Processed ${total} rows` });
+  },
+});
+```
+
+### `ToolContext` API
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `reportProgress` | `(progress: number, total?: number, message?: string) => void` | Send a progress notification to the MCP host |
+| `isCancelled` | `() => boolean` | Returns `true` if the MCP host has cancelled this call |
+
+`reportProgress` is a no-op if no `progressToken` was provided by the host.
+
+---
+
+## Server Logging
+
+Use `ServerLogger` to send structured log messages back to the MCP host.
+
+```typescript
+import { tool, ToolResult, ServerLogger } from 'protomcp';
+import { z } from 'zod';
+
+const logger = new ServerLogger(/* injected by protomcp */);
+
+tool({
+  description: 'Fetch remote data',
+  args: z.object({ url: z.string().url() }),
+  async handler({ url }) {
+    logger.info('Fetching URL', { url });
+    try {
+      const resp = await fetch(url);
+      const text = await resp.text();
+      logger.debug('Fetch complete', { bytes: text.length });
+      return new ToolResult({ result: text });
+    } catch (e) {
+      logger.error('Fetch failed', { url, error: String(e) });
+      return new ToolResult({ isError: true, message: String(e) });
+    }
+  },
+});
+```
+
+### `ServerLogger` API
+
+All methods accept a message string and an optional data object (serialized to JSON).
+
+| Method | Level |
+|--------|-------|
+| `debug(msg, data?)` | `debug` |
+| `info(msg, data?)` | `info` |
+| `notice(msg, data?)` | `notice` |
+| `warning(msg, data?)` | `warning` |
+| `error(msg, data?)` | `error` |
+| `critical(msg, data?)` | `critical` |
+| `alert(msg, data?)` | `alert` |
+| `emergency(msg, data?)` | `emergency` |
+
+---
+
+## Structured Output
+
+Use `output` in `tool()` to declare a structured output schema using Zod. protomcp converts it to JSON Schema automatically.
+
+```typescript
+import { tool, ToolResult } from 'protomcp';
+import { z } from 'zod';
+
+const SearchResult = z.object({
+  title: z.string(),
+  url: z.string(),
+  score: z.number(),
+});
+
+tool({
+  description: 'Search the web',
+  output: SearchResult,
+  args: z.object({ query: z.string() }),
+  async handler({ query }) {
+    const results = await runSearch(query);
+    return new ToolResult({ result: JSON.stringify(results) });
+  },
+});
+```
+
+---
+
+## Cancellation
+
+Check `ctx.isCancelled()` periodically in long-running tools to stop early when the MCP host cancels the request.
+
+```typescript
+import { tool, ToolResult, ToolContext } from 'protomcp';
+import { z } from 'zod';
+
+tool({
+  description: 'Run a slow computation',
+  args: z.object({ n: z.number().int() }),
+  async handler({ n }, ctx: ToolContext) {
+    let result = 0;
+    for (let i = 0; i < n; i++) {
+      if (ctx.isCancelled()) {
+        return new ToolResult({ isError: true, message: 'Cancelled by host' });
+      }
+      result += await expensiveStep(i);
+    }
+    return new ToolResult({ result: String(result) });
+  },
+});
+```
+
+Cancellation is cooperative — protomcp sets the cancelled flag and your tool is responsible for checking it.
 
 ---
 

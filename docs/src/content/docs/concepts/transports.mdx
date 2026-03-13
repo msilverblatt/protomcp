@@ -6,12 +6,16 @@ description: All five protomcp transports — when to use each and compatibility
 
 ## Overview
 
-protomcp supports five transports for the MCP host connection. The transport determines how your MCP client connects to protomcp. Your tool code is unaffected — it always communicates with protomcp via the same unix socket protocol.
+protomcp supports five transports for the MCP host connection. All five are fully implemented. The transport determines how your MCP client connects to protomcp. Your tool code is unaffected — it always communicates with protomcp via the same unix socket protocol.
 
 Set the transport with `--transport`:
 
 ```sh
+# Python
 pmcp dev tools.py --transport sse --port 8080
+
+# TypeScript
+pmcp dev tools.ts --transport sse --port 8080
 ```
 
 ---
@@ -37,6 +41,19 @@ Reads MCP requests from stdin, writes responses to stdout. The MCP client spawns
 }
 ```
 
+TypeScript works the same way — just use the `.ts` file:
+
+```json
+{
+  "mcpServers": {
+    "mytools": {
+      "command": "pmcp",
+      "args": ["dev", "/path/to/tools.ts"]
+    }
+  }
+}
+```
+
 No `--host` or `--port` needed. stdio is the simplest and most compatible option.
 
 ---
@@ -55,7 +72,11 @@ Runs an HTTP server. MCP clients connect to `/sse` for a persistent Server-Sent 
 **Config:**
 
 ```sh
+# Python
 pmcp run tools.py --transport sse --host 0.0.0.0 --port 8080
+
+# TypeScript
+pmcp run tools.ts --transport sse --host 0.0.0.0 --port 8080
 ```
 
 MCP client config (remote):
@@ -84,7 +105,11 @@ Modern HTTP transport. Handles MCP requests as HTTP requests with chunked/stream
 - Load balancers or proxies are in the path (no long-lived connections needed)
 
 ```sh
+# Python
 pmcp run tools.py --transport http --host 0.0.0.0 --port 8080
+
+# TypeScript
+pmcp run tools.ts --transport http --host 0.0.0.0 --port 8080
 ```
 
 ---
@@ -101,7 +126,11 @@ Full-duplex WebSocket connection. The MCP client connects via WebSocket for bidi
 - You're building a browser-based MCP integration
 
 ```sh
+# Python
 pmcp run tools.py --transport ws --host 0.0.0.0 --port 8080
+
+# TypeScript
+pmcp run tools.ts --transport ws --host 0.0.0.0 --port 8080
 ```
 
 ---
@@ -117,7 +146,11 @@ No network I/O. The transport is connected directly in memory. Intended for test
 - Embedding protomcp in a Go application without a network boundary
 
 ```sh
+# Python
 pmcp dev tools.py --transport inproc
+
+# TypeScript
+pmcp dev tools.ts --transport inproc
 ```
 
 ---
@@ -146,5 +179,9 @@ pmcp dev tools.py --transport inproc
 For local-only access, use the default `localhost`. For external access:
 
 ```sh
+# Python
 pmcp run tools.py --transport sse --host 0.0.0.0 --port 8080
+
+# TypeScript
+pmcp run tools.ts --transport sse --host 0.0.0.0 --port 8080
 ```

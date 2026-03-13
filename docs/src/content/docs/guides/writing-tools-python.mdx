@@ -1,7 +1,7 @@
 ---
 draft: false
 title: Writing Tools (Python)
-description: Use the @tool() decorator, ToolResult, and tool_manager in Python.
+description: Use the @tool() decorator, ToolResult, ToolContext, ServerLogger, and tool_manager in Python.
 ---
 
 ## Installation
@@ -23,6 +23,36 @@ from protomcp import tool, ToolResult
 def add(a: int, b: int) -> ToolResult:
     return ToolResult(result=str(a + b))
 ```
+
+### Tool metadata
+
+Pass additional keyword arguments to `@tool()` to provide metadata hints to the MCP host:
+
+```python
+@tool(
+    "Delete a file from disk",
+    title="Delete File",
+    destructive=True,
+    idempotent=False,
+    read_only=False,
+    open_world=False,
+    task_support=False,
+)
+def delete_file(path: str) -> ToolResult:
+    os.remove(path)
+    return ToolResult(result=f"Deleted {path}")
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `description` | `str` | required | Human-readable description of what the tool does |
+| `title` | `str` | `""` | Display name shown in the MCP host UI |
+| `destructive` | `bool` | `False` | Hint: the tool has destructive side effects |
+| `idempotent` | `bool` | `False` | Hint: calling the tool multiple times has the same effect as once |
+| `read_only` | `bool` | `False` | Hint: the tool does not modify state |
+| `open_world` | `bool` | `False` | Hint: the tool may access resources outside the current context |
+| `task_support` | `bool` | `False` | Hint: the tool supports long-running async task semantics |
+| `output_type` | dataclass type | `None` | Dataclass type for structured output schema generation |
 
 ### Type hints and schema generation
 
@@ -161,6 +191,124 @@ active = tool_manager.batch(
     disable=["read_only_mode"],
 )
 ```
+
+---
+
+## Progress Reporting
+
+Use `ToolContext` to report progress during a long-running tool call. Declare a `ctx: ToolContext` parameter in your handler — protomcp injects it automatically and skips it during schema generation.
+
+```python
+from protomcp import tool, ToolResult
+from protomcp.context import ToolContext
+
+@tool("Process a large dataset")
+def process_data(file_path: str, ctx: ToolContext) -> ToolResult:
+    rows = load_rows(file_path)
+    total = len(rows)
+    for i, row in enumerate(rows):
+        if ctx.is_cancelled():
+            return ToolResult(is_error=True, message="Cancelled")
+        process_row(row)
+        ctx.report_progress(i + 1, total, f"Processing row {i + 1}/{total}")
+    return ToolResult(result=f"Processed {total} rows")
+```
+
+### `ToolContext` API
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `report_progress` | `(progress: int, total: int = 0, message: str = "") -> None` | Send a progress notification to the MCP host |
+| `is_cancelled` | `() -> bool` | Returns `True` if the MCP host has cancelled this call |
+
+`report_progress` is a no-op if no `progress_token` was provided by the host (i.e. the host does not support progress notifications).
+
+---
+
+## Server Logging
+
+Use `ServerLogger` to send structured log messages back to the MCP host (not to stderr). The host can display or filter these messages.
+
+```python
+from protomcp import tool, ToolResult
+from protomcp.log import ServerLogger
+
+logger = ServerLogger(send_fn=None)  # send_fn is injected by protomcp at runtime
+
+@tool("Fetch remote data")
+def fetch_data(url: str) -> ToolResult:
+    logger.info("Fetching URL", data={"url": url})
+    try:
+        data = download(url)
+        logger.debug("Fetch complete", data={"bytes": len(data)})
+        return ToolResult(result=data)
+    except Exception as e:
+        logger.error("Fetch failed", data={"url": url, "error": str(e)})
+        return ToolResult(is_error=True, message=str(e))
+```
+
+### `ServerLogger` API
+
+All methods accept a `message` string and an optional `data` keyword argument (a dict serialized to JSON).
+
+| Method | Level |
+|--------|-------|
+| `debug(message, *, data=None)` | `debug` |
+| `info(message, *, data=None)` | `info` |
+| `notice(message, *, data=None)` | `notice` |
+| `warning(message, *, data=None)` | `warning` |
+| `error(message, *, data=None)` | `error` |
+| `critical(message, *, data=None)` | `critical` |
+| `alert(message, *, data=None)` | `alert` |
+| `emergency(message, *, data=None)` | `emergency` |
+
+---
+
+## Structured Output
+
+Use `output_type` in `@tool()` to declare a structured output schema. Pass a dataclass type — protomcp generates the JSON Schema automatically.
+
+```python
+from dataclasses import dataclass
+from protomcp import tool, ToolResult
+
+@dataclass
+class SearchResult:
+    title: str
+    url: str
+    score: float
+
+@tool("Search the web", output_type=SearchResult)
+def search(query: str) -> ToolResult:
+    results = run_search(query)
+    # Return the structured result serialized to JSON
+    import json, dataclasses
+    return ToolResult(result=json.dumps([dataclasses.asdict(r) for r in results]))
+```
+
+The `output_type` dataclass must use field types that map to JSON Schema primitives (`str`, `int`, `float`, `bool`, `list`, `dict`, `Optional[T]`).
+
+---
+
+## Cancellation
+
+Check `ctx.is_cancelled()` periodically in long-running tools to stop early when the MCP host cancels the request.
+
+```python
+from protomcp import tool, ToolResult
+from protomcp.context import ToolContext
+
+@tool("Run a slow computation")
+def slow_compute(n: int, ctx: ToolContext) -> ToolResult:
+    result = 0
+    for i in range(n):
+        if ctx.is_cancelled():
+            return ToolResult(is_error=True, message="Cancelled by host")
+        result += expensive_step(i)
+    return ToolResult(result=str(result))
+```
+
+Cancellation is cooperative — protomcp sets the cancelled flag and your tool is responsible for checking it. In-flight calls are not interrupted forcibly.
 
 ---
 

@@ -14,15 +14,19 @@ import { Steps } from '@astrojs/starlight/components';
    brew install protomcp/tap/protomcp
    ```
 
-2. **Install the Python SDK**
+2. **Install the SDK**
 
    ```sh
+   # Python
    pip install protomcp
+
+   # TypeScript
+   npm install protomcp zod
    ```
 
 3. **Write a tool file**
 
-   Create `tools.py`:
+   Create `tools.py` (Python):
 
    ```python
    from protomcp import tool, ToolResult
@@ -36,10 +40,37 @@ import { Steps } from '@astrojs/starlight/components';
        return ToolResult(result=f"Hello, {name}!")
    ```
 
+   Or create `tools.ts` (TypeScript):
+
+   ```typescript
+   import { tool, ToolResult } from 'protomcp';
+   import { z } from 'zod';
+
+   tool({
+     description: 'Add two numbers together',
+     args: z.object({ a: z.number(), b: z.number() }),
+     handler: function add({ a, b }) {
+       return new ToolResult({ result: String(a + b) });
+     },
+   });
+
+   tool({
+     description: 'Greet a user by name',
+     args: z.object({ name: z.string() }),
+     handler: function greet({ name }) {
+       return new ToolResult({ result: `Hello, ${name}!` });
+     },
+   });
+   ```
+
 4. **Run in dev mode**
 
    ```sh
+   # Python
    pmcp dev tools.py
+
+   # TypeScript
+   pmcp dev tools.ts
    ```
 
    You should see:
@@ -64,16 +95,28 @@ import { Steps } from '@astrojs/starlight/components';
    }
    ```
 
-   Restart your MCP client. The tools `add` and `greet` will appear.
+   Use the full path to your tool file (`.py` or `.ts`). Restart your MCP client. The tools `add` and `greet` will appear.
 
 6. **Try hot reload**
 
-   While the MCP client is running, add a new tool to `tools.py`:
+   While the MCP client is running, add a new tool to your file:
 
    ```python
+   # Python
    @tool("Reverse a string")
    def reverse(text: str) -> ToolResult:
        return ToolResult(result=text[::-1])
+   ```
+
+   ```typescript
+   // TypeScript
+   tool({
+     description: 'Reverse a string',
+     args: z.object({ text: z.string() }),
+     handler: function reverse({ text }) {
+       return new ToolResult({ result: text.split('').reverse().join('') });
+     },
+   });
    ```
 
    Save the file. protomcp reloads automatically — no restart needed. The new tool appears in your client within seconds.
@@ -82,6 +125,7 @@ import { Steps } from '@astrojs/starlight/components';
 
 ## Next steps
 
-- [Writing Tools (Python)](/guides/writing-tools-python/) — type hints, optional params, error handling
+- [Writing Tools (Python)](/guides/writing-tools-python/) — type hints, optional params, progress, logging
+- [Writing Tools (TypeScript)](/guides/writing-tools-typescript/) — Zod schemas, async handlers, progress, logging
 - [Dynamic Tool Lists](/guides/dynamic-tool-lists/) — enable/disable tools at runtime
 - [CLI Reference](/reference/cli/) — all flags and options

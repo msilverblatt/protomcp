@@ -49,21 +49,40 @@ Your tool process registers handlers using a decorator or function, and protomcp
 ```sh
 # Install
 brew install protomcp/tap/protomcp
+```
 
-# Write a tool
-cat > tools.py << 'EOF'
+```python
+# tools.py (Python)
 from protomcp import tool, ToolResult
 
 @tool("Add two numbers")
 def add(a: int, b: int) -> ToolResult:
     return ToolResult(result=str(a + b))
-EOF
-
-# Run
-pmcp dev tools.py
 ```
 
-Then add `pmcp dev tools.py` to your MCP client config. That's it.
+```typescript
+// tools.ts (TypeScript)
+import { tool, ToolResult } from 'protomcp';
+import { z } from 'zod';
+
+tool({
+  description: 'Add two numbers',
+  args: z.object({ a: z.number(), b: z.number() }),
+  handler({ a, b }) {
+    return new ToolResult({ result: String(a + b) });
+  },
+});
+```
+
+```sh
+# Python
+pmcp dev tools.py
+
+# TypeScript
+pmcp dev tools.ts
+```
+
+Then add either command to your MCP client config. That's it.
 
 ## Quick Links
 

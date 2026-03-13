@@ -14,19 +14,28 @@ pip install protomcp
 
 ```python
 from protomcp import tool, ToolResult, tool_manager
+from protomcp.context import ToolContext
+from protomcp.log import ServerLogger
 ```
 
 ---
 
-## `@tool(description)`
+## `@tool(...)`
 
 Registers a function as an MCP tool.
 
 **Parameters:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `description` | `str` | Human-readable description of what the tool does |
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `description` | `str` | required | Human-readable description of what the tool does |
+| `output_type` | dataclass type | `None` | Dataclass type used to generate the structured output JSON Schema |
+| `title` | `str` | `""` | Display name shown in the MCP host UI |
+| `destructive` | `bool` | `False` | Hint: the tool has destructive side effects |
+| `idempotent` | `bool` | `False` | Hint: calling the tool multiple times has the same effect as once |
+| `read_only` | `bool` | `False` | Hint: the tool does not modify state |
+| `open_world` | `bool` | `False` | Hint: the tool may access resources outside the current context |
+| `task_support` | `bool` | `False` | Hint: the tool supports long-running async task semantics |
 
 **Returns:** The original function (unmodified).
 
@@ -35,7 +44,7 @@ The function name becomes the tool name. Type hints on parameters are used to ge
 ```python
 from protomcp import tool, ToolResult
 
-@tool("Multiply two numbers")
+@tool("Multiply two numbers", title="Multiply", read_only=True)
 def multiply(a: float, b: float) -> ToolResult:
     return ToolResult(result=str(a * b))
 ```
@@ -92,6 +101,95 @@ class ToolResult:
 | `message` | `str \| None` | `None` | Human-readable error message |
 | `suggestion` | `str \| None` | `None` | Recovery suggestion for the AI or user |
 | `retryable` | `bool` | `False` | Whether retrying this call might succeed |
+
+---
+
+## `ToolContext`
+
+Injected by protomcp into tool handlers that declare a `ctx: ToolContext` parameter. Provides progress reporting and cancellation detection.
+
+```python
+from protomcp.context import ToolContext
+```
+
+### Constructor
+
+```python
+ToolContext(progress_token: str, send_fn: Callable)
+```
+
+Not constructed directly — protomcp creates and injects it.
+
+### Methods
+
+#### `report_progress(progress, total=0, message="")`
+
+Send a progress notification to the MCP host.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `progress` | `int` | required | Current progress value |
+| `total` | `int` | `0` | Total expected value (0 means unknown) |
+| `message` | `str` | `""` | Optional human-readable status message |
+
+No-op if the host did not supply a `progress_token` for this call.
+
+```python
+ctx.report_progress(50, 100, "Halfway done")
+```
+
+#### `is_cancelled() -> bool`
+
+Returns `True` if the MCP host has sent a cancellation for this call. Thread-safe.
+
+```python
+if ctx.is_cancelled():
+    return ToolResult(is_error=True, message="Cancelled")
+```
+
+---
+
+## `ServerLogger`
+
+Sends structured log messages to the MCP host over the protomcp protocol.
+
+```python
+from protomcp.log import ServerLogger
+```
+
+### Constructor
+
+```python
+ServerLogger(send_fn: Callable, name: str = "")
+```
+
+Not constructed directly — protomcp creates and injects it. The `name` field identifies the logger source in log messages.
+
+### Methods
+
+All log methods have the same signature:
+
+```python
+method(message: str, *, data=None)
+```
+
+`data` is an optional value that is serialized to JSON and included in the log envelope. If `data` is `None`, the message string is used as the data payload.
+
+| Method | MCP log level |
+|--------|---------------|
+| `debug(message, *, data=None)` | `debug` |
+| `info(message, *, data=None)` | `info` |
+| `notice(message, *, data=None)` | `notice` |
+| `warning(message, *, data=None)` | `warning` |
+| `error(message, *, data=None)` | `error` |
+| `critical(message, *, data=None)` | `critical` |
+| `alert(message, *, data=None)` | `alert` |
+| `emergency(message, *, data=None)` | `emergency` |
+
+```python
+logger.info("Starting job", data={"job_id": "abc123"})
+logger.error("Job failed", data={"error": "timeout"})
+```
 
 ---
 
@@ -189,6 +287,13 @@ clear_registry()
 class ToolDef:
     name: str
     description: str
-    input_schema_json: str  # JSON string
+    input_schema_json: str        # JSON string
     handler: Callable
+    output_schema_json: str = ""  # JSON string, empty if no output_type
+    title: str = ""
+    destructive_hint: bool = False
+    idempotent_hint: bool = False
+    read_only_hint: bool = False
+    open_world_hint: bool = False
+    task_support: bool = False
 ```

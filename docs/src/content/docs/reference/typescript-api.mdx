@@ -13,7 +13,7 @@ npm install protomcp zod
 ## Imports
 
 ```typescript
-import { tool, ToolResult, toolManager } from 'protomcp';
+import { tool, ToolResult, toolManager, ToolContext, ServerLogger } from 'protomcp';
 import { z } from 'zod';
 ```
 
@@ -31,6 +31,13 @@ Registers a tool and returns its `ToolDef`.
 | `args` | `z.ZodObject<any>` | Yes | Zod schema for input arguments |
 | `handler` | `(args) => any` | Yes | Function to call when the tool is invoked |
 | `name` | `string` | No | Explicit tool name (defaults to handler function name) |
+| `output` | `z.ZodObject<any>` | No | Zod schema for structured output |
+| `title` | `string` | No | Display name shown in the MCP host UI |
+| `destructiveHint` | `boolean` | No | Hint: the tool has destructive side effects |
+| `idempotentHint` | `boolean` | No | Hint: calling the tool multiple times has the same effect as once |
+| `readOnlyHint` | `boolean` | No | Hint: the tool does not modify state |
+| `openWorldHint` | `boolean` | No | Hint: the tool may access resources outside the current context |
+| `taskSupport` | `boolean` | No | Hint: the tool supports long-running async task semantics |
 
 ### Name inference
 
@@ -114,6 +121,96 @@ new ToolResult({
   result: 'Authenticated',
   enableTools: ['write_file', 'delete_file'],
 })
+```
+
+---
+
+## `ToolContext`
+
+Injected by protomcp as the second argument to tool handlers. Provides progress reporting and cancellation detection.
+
+```typescript
+import { ToolContext } from 'protomcp';
+```
+
+### Constructor
+
+```typescript
+new ToolContext(progressToken: string, sendFn: (msg: any) => void)
+```
+
+Not constructed directly — protomcp creates and injects it.
+
+### Methods
+
+#### `reportProgress(progress, total?, message?)`
+
+Send a progress notification to the MCP host.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `progress` | `number` | Current progress value |
+| `total` | `number` (optional) | Total expected value |
+| `message` | `string` (optional) | Human-readable status message |
+
+No-op if the host did not supply a `progressToken` for this call.
+
+```typescript
+ctx.reportProgress(50, 100, 'Halfway done');
+```
+
+#### `isCancelled() -> boolean`
+
+Returns `true` if the MCP host has sent a cancellation for this call.
+
+```typescript
+if (ctx.isCancelled()) {
+  return new ToolResult({ isError: true, message: 'Cancelled' });
+}
+```
+
+---
+
+## `ServerLogger`
+
+Sends structured log messages to the MCP host over the protomcp protocol.
+
+```typescript
+import { ServerLogger } from 'protomcp';
+```
+
+### Constructor
+
+```typescript
+new ServerLogger(sendFn: (msg: any) => void, name?: string)
+```
+
+Not constructed directly — protomcp creates and injects it. The optional `name` field identifies the logger source in log messages.
+
+### Methods
+
+All log methods accept a message string and an optional data object:
+
+```typescript
+method(msg: string, data?: Record<string, unknown>): void
+```
+
+`data` is serialized to JSON and included in the log envelope. If `data` is omitted, the message string is used as the payload.
+
+| Method | MCP log level |
+|--------|---------------|
+| `debug(msg, data?)` | `debug` |
+| `info(msg, data?)` | `info` |
+| `notice(msg, data?)` | `notice` |
+| `warning(msg, data?)` | `warning` |
+| `error(msg, data?)` | `error` |
+| `critical(msg, data?)` | `critical` |
+| `alert(msg, data?)` | `alert` |
+| `emergency(msg, data?)` | `emergency` |
+
+```typescript
+logger.info('Starting job', { jobId: 'abc123' });
+logger.error('Job failed', { error: 'timeout' });
 ```
 
 ---
@@ -213,6 +310,13 @@ interface ToolDef<T extends z.ZodType = z.ZodType> {
   name: string;
   description: string;
   inputSchemaJson: string;           // JSON string
+  outputSchemaJson: string;          // JSON string, empty if no output schema
+  title: string;
+  destructiveHint: boolean;
+  idempotentHint: boolean;
+  readOnlyHint: boolean;
+  openWorldHint: boolean;
+  taskSupport: boolean;
   handler: (args: z.infer<T>) => any;
 }
 ```
