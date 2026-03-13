@@ -1,0 +1,9 @@
+{
+  "name": "protomcp-examples",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "protomcp": "file:../../sdk/typescript",
+    "zod": "^3.22.0"
+  }
+}
