@@ -90,12 +90,29 @@ func main() {
 	})
 
 	// 6. Apply middleware
+	middlewares := []middleware.Middleware{
+		middleware.Logging(logger),
+		middleware.ErrorFormatting(),
+	}
+
+	if len(cfg.Auth) > 0 {
+		if cfg.Transport == "stdio" {
+			slog.Warn("--auth ignored for stdio transport")
+		} else {
+			authMw, err := middleware.NewAuth(cfg.Auth)
+			if err != nil {
+				slog.Error("invalid --auth configuration", "error", err)
+				os.Exit(1)
+			}
+			middlewares = append([]middleware.Middleware{authMw}, middlewares...)
+		}
+	}
+
 	chain := middleware.Chain(
 		func(ctx context.Context, req mcp.JSONRPCRequest) (*mcp.JSONRPCResponse, error) {
 			return handler.Handle(ctx, req)
 		},
-		middleware.Logging(logger),
-		middleware.ErrorFormatting(),
+		middlewares...,
 	)
 
 	// 7. Create transport
