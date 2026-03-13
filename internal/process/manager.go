@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	pb "github.com/protomcp/protomcp/gen/proto/protomcp"
-	"github.com/protomcp/protomcp/internal/envelope"
+	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
+	"github.com/msilverblatt/protomcp/internal/envelope"
 )
 
 // ManagerConfig configures how the process manager spawns and communicates

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	pb "github.com/protomcp/protomcp/gen/proto/protomcp"
+	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
 	"google.golang.org/protobuf/proto"
 )
 

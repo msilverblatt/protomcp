@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/protomcp/protomcp/internal/envelope"
-	pb "github.com/protomcp/protomcp/gen/proto/protomcp"
+	"github.com/msilverblatt/protomcp/internal/envelope"
+	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
 )
 
 func TestWriteAndReadEnvelope(t *testing.T) {

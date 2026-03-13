@@ -74,7 +74,7 @@ sequenceDiagram
     participant W as File Watcher
     participant T as Tool Process
 
-    CLI->>G: protomcp dev tools.py
+    CLI->>G: pmcp dev tools.py
     G->>T: spawn tools.py
     G->>T: ListToolsRequest
     T->>G: ToolListResponse [add, greet]

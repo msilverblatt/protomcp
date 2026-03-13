@@ -7,13 +7,13 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/protomcp/protomcp/internal/mcp"
+	"github.com/msilverblatt/protomcp/internal/mcp"
 )
 
 // StartProtomcp starts the protomcp binary with the given args.
 func StartProtomcp(t *testing.T, args ...string) (io.Writer, *bufio.Scanner, func()) {
 	t.Helper()
-	cmd := exec.Command("../../bin/protomcp", args...)
+	cmd := exec.Command("../../bin/pmcp", args...)
 	stdin, _ := cmd.StdinPipe()
 	stdout, _ := cmd.StdoutPipe()
 	cmd.Stderr = nil

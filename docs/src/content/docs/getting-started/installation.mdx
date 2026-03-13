@@ -14,15 +14,15 @@ brew install protomcp/tap/protomcp
 
 ### Binary download
 
-Download the latest release from [GitHub Releases](https://github.com/protomcp/protomcp/releases) and place the binary on your `PATH`:
+Download the latest release from [GitHub Releases](https://github.com/msilverblatt/protomcp/releases) and place the binary on your `PATH`:
 
 ```sh
 # macOS (Apple Silicon)
-curl -L https://github.com/protomcp/protomcp/releases/latest/download/protomcp_darwin_arm64.tar.gz | tar xz
+curl -L https://github.com/msilverblatt/protomcp/releases/latest/download/protomcp_darwin_arm64.tar.gz | tar xz
 sudo mv protomcp /usr/local/bin/
 
 # Linux (amd64)
-curl -L https://github.com/protomcp/protomcp/releases/latest/download/protomcp_linux_amd64.tar.gz | tar xz
+curl -L https://github.com/msilverblatt/protomcp/releases/latest/download/protomcp_linux_amd64.tar.gz | tar xz
 sudo mv protomcp /usr/local/bin/
 ```
 
@@ -31,7 +31,7 @@ sudo mv protomcp /usr/local/bin/
 Requires Go 1.22+.
 
 ```sh
-git clone https://github.com/protomcp/protomcp.git
+git clone https://github.com/msilverblatt/protomcp.git
 cd protomcp
 go build -o protomcp ./cmd/protomcp
 sudo mv protomcp /usr/local/bin/
@@ -91,4 +91,4 @@ protomcp detects the runtime from the file extension automatically:
 | `.js`     | `node` (or `$PROTOMCP_NODE`) |
 | `.go`     | `go run` |
 
-Use `--runtime` to override: `protomcp dev tools.py --runtime python3.12`
+Use `--runtime` to override: `pmcp dev tools.py --runtime python3.12`

@@ -3,7 +3,7 @@ package toollist_test
 import (
 	"testing"
 
-	"github.com/protomcp/protomcp/internal/toollist"
+	"github.com/msilverblatt/protomcp/internal/toollist"
 )
 
 func TestNewManager_AllToolsActive(t *testing.T) {

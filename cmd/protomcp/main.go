@@ -7,14 +7,14 @@ import (
 	"os"
 	"os/signal"
 
-	pb "github.com/protomcp/protomcp/gen/proto/protomcp"
-	"github.com/protomcp/protomcp/internal/config"
-	"github.com/protomcp/protomcp/internal/mcp"
-	"github.com/protomcp/protomcp/internal/middleware"
-	"github.com/protomcp/protomcp/internal/process"
-	"github.com/protomcp/protomcp/internal/reload"
-	"github.com/protomcp/protomcp/internal/toollist"
-	"github.com/protomcp/protomcp/internal/transport"
+	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
+	"github.com/msilverblatt/protomcp/internal/config"
+	"github.com/msilverblatt/protomcp/internal/mcp"
+	"github.com/msilverblatt/protomcp/internal/middleware"
+	"github.com/msilverblatt/protomcp/internal/process"
+	"github.com/msilverblatt/protomcp/internal/reload"
+	"github.com/msilverblatt/protomcp/internal/toollist"
+	"github.com/msilverblatt/protomcp/internal/transport"
 )
 
 func main() {

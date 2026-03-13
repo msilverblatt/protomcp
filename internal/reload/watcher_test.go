@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/protomcp/protomcp/internal/reload"
+	"github.com/msilverblatt/protomcp/internal/reload"
 )
 
 func TestWatcherFileChange(t *testing.T) {

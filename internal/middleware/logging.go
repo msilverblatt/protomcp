@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/protomcp/protomcp/internal/mcp"
+	"github.com/msilverblatt/protomcp/internal/mcp"
 )
 
 // Logging returns middleware that logs each request and response.

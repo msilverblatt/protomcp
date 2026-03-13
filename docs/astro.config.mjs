@@ -7,7 +7,7 @@ export default defineConfig({
       title: 'protomcp',
       description: 'Language-agnostic MCP runtime',
       social: {
-        github: 'https://github.com/protomcp/protomcp',
+        github: 'https://github.com/msilverblatt/protomcp',
       },
       sidebar: [
         {

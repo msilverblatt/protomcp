@@ -1,4 +1,4 @@
-module github.com/protomcp/protomcp
+module github.com/msilverblatt/protomcp
 
 go 1.25.6
 

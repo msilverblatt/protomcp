@@ -13,10 +13,10 @@ description: Deploy protomcp in production using run mode, systemd, Docker, and 
 
 ```sh
 # Development
-protomcp dev tools.py
+pmcp dev tools.py
 
 # Production
-protomcp run tools.py
+pmcp run tools.py
 ```
 
 In `run` mode, protomcp starts the tool process and does not watch for file changes. Reload requires restarting the protomcp process.
@@ -38,7 +38,7 @@ For Claude Desktop (local), stdio is the correct choice. For a remote server, us
 
 ```sh
 # Remote HTTP server
-protomcp run tools.py --transport sse --host 0.0.0.0 --port 8080
+pmcp run tools.py --transport sse --host 0.0.0.0 --port 8080
 ```
 
 ---
@@ -49,10 +49,10 @@ The default call timeout is 5 minutes. Adjust for your workload:
 
 ```sh
 # Long-running tasks
-protomcp run tools.py --call-timeout 30m
+pmcp run tools.py --call-timeout 30m
 
 # Fast tools only
-protomcp run tools.py --call-timeout 30s
+pmcp run tools.py --call-timeout 30s
 ```
 
 ---
@@ -60,7 +60,7 @@ protomcp run tools.py --call-timeout 30s
 ## Logging
 
 ```sh
-protomcp run tools.py --log-level debug   # debug, info, warn, error
+pmcp run tools.py --log-level debug   # debug, info, warn, error
 ```
 
 Logs are written to stderr in structured format.
@@ -78,7 +78,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/protomcp run /opt/mytools/tools.py --transport sse --host 127.0.0.1 --port 8080
+ExecStart=/usr/local/bin/pmcp run /opt/mytools/tools.py --transport sse --host 127.0.0.1 --port 8080
 WorkingDirectory=/opt/mytools
 User=protomcp
 Restart=on-failure
@@ -106,7 +106,7 @@ sudo systemctl start protomcp
 FROM python:3.12-slim
 
 # Install protomcp binary
-RUN curl -L https://github.com/protomcp/protomcp/releases/latest/download/protomcp_linux_amd64.tar.gz \
+RUN curl -L https://github.com/msilverblatt/protomcp/releases/latest/download/protomcp_linux_amd64.tar.gz \
     | tar xz -C /usr/local/bin/
 
 # Install Python SDK and tool dependencies
@@ -117,7 +117,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY tools.py .
 
 EXPOSE 8080
-CMD ["protomcp", "run", "tools.py", "--transport", "sse", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["pmcp", "run", "tools.py", "--transport", "sse", "--host", "0.0.0.0", "--port", "8080"]
 ```
 
 `requirements.txt`:
@@ -140,7 +140,7 @@ docker run -p 8080:8080 mytools
 By default, protomcp creates the unix socket at `$XDG_RUNTIME_DIR/protomcp/<pid>.sock`. Override with `--socket`:
 
 ```sh
-protomcp run tools.py --socket /tmp/mytools.sock
+pmcp run tools.py --socket /tmp/mytools.sock
 ```
 
 This is useful when you have multiple tool processes and want predictable socket paths.
@@ -152,8 +152,8 @@ This is useful when you have multiple tool processes and want predictable socket
 Run separate protomcp instances for each tool file:
 
 ```sh
-protomcp run auth_tools.py --transport sse --port 8081 &
-protomcp run data_tools.py --transport sse --port 8082 &
+pmcp run auth_tools.py --transport sse --port 8081 &
+pmcp run data_tools.py --transport sse --port 8082 &
 ```
 
 Configure each as a separate MCP server in your client.

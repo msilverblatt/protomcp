@@ -23,7 +23,7 @@ The file is the same process — no restart, no re-connection.
 Hot reload is only active in `dev` mode:
 
 ```sh
-protomcp dev tools.py
+pmcp dev tools.py
 ```
 
 It is disabled in `run` mode, which is intended for production.
@@ -37,7 +37,7 @@ The file watcher monitors the tool file path specified on the command line. Chan
 ### Default: graceful reload
 
 ```sh
-protomcp dev tools.py
+pmcp dev tools.py
 ```
 
 Sends `ReloadRequest` to the running process. The SDK handles this by re-executing the module-level code and re-registering all tools.
@@ -45,7 +45,7 @@ Sends `ReloadRequest` to the running process. The SDK handles this by re-executi
 ### Immediate: process restart
 
 ```sh
-protomcp dev tools.py --hot-reload immediate
+pmcp dev tools.py --hot-reload immediate
 ```
 
 Kills and restarts the tool process. Useful when:

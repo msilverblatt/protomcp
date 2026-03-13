@@ -11,7 +11,7 @@ protomcp supports five transports for the MCP host connection. The transport det
 Set the transport with `--transport`:
 
 ```sh
-protomcp dev tools.py --transport sse --port 8080
+pmcp dev tools.py --transport sse --port 8080
 ```
 
 ---
@@ -30,7 +30,7 @@ Reads MCP requests from stdin, writes responses to stdout. The MCP client spawns
 {
   "mcpServers": {
     "mytools": {
-      "command": "protomcp",
+      "command": "pmcp",
       "args": ["dev", "/path/to/tools.py"]
     }
   }
@@ -55,7 +55,7 @@ Runs an HTTP server. MCP clients connect to `/sse` for a persistent Server-Sent 
 **Config:**
 
 ```sh
-protomcp run tools.py --transport sse --host 0.0.0.0 --port 8080
+pmcp run tools.py --transport sse --host 0.0.0.0 --port 8080
 ```
 
 MCP client config (remote):
@@ -84,7 +84,7 @@ Modern HTTP transport. Handles MCP requests as HTTP requests with chunked/stream
 - Load balancers or proxies are in the path (no long-lived connections needed)
 
 ```sh
-protomcp run tools.py --transport http --host 0.0.0.0 --port 8080
+pmcp run tools.py --transport http --host 0.0.0.0 --port 8080
 ```
 
 ---
@@ -101,7 +101,7 @@ Full-duplex WebSocket connection. The MCP client connects via WebSocket for bidi
 - You're building a browser-based MCP integration
 
 ```sh
-protomcp run tools.py --transport ws --host 0.0.0.0 --port 8080
+pmcp run tools.py --transport ws --host 0.0.0.0 --port 8080
 ```
 
 ---
@@ -117,7 +117,7 @@ No network I/O. The transport is connected directly in memory. Intended for test
 - Embedding protomcp in a Go application without a network boundary
 
 ```sh
-protomcp dev tools.py --transport inproc
+pmcp dev tools.py --transport inproc
 ```
 
 ---
@@ -146,5 +146,5 @@ protomcp dev tools.py --transport inproc
 For local-only access, use the default `localhost`. For external access:
 
 ```sh
-protomcp run tools.py --transport sse --host 0.0.0.0 --port 8080
+pmcp run tools.py --transport sse --host 0.0.0.0 --port 8080
 ```

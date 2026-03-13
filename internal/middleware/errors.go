@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/protomcp/protomcp/internal/mcp"
+	"github.com/msilverblatt/protomcp/internal/mcp"
 )
 
 // ErrorFormatting returns middleware that catches panics and formats errors.

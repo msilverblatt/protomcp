@@ -8,7 +8,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/protomcp/protomcp/internal/mcp"
+	"github.com/msilverblatt/protomcp/internal/mcp"
 )
 
 // StdioTransport reads newline-delimited JSON-RPC messages from a reader

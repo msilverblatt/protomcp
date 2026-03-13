@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/protomcp/protomcp/internal/mcp"
+	"github.com/msilverblatt/protomcp/internal/mcp"
 )
 
 // HTTPTransport is a stub implementation of the Transport interface for HTTP.

@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/protomcp/protomcp/internal/mcp"
+	"github.com/msilverblatt/protomcp/internal/mcp"
 )
 
 func init() {

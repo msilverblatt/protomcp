@@ -3,7 +3,7 @@ package middleware
 import (
 	"context"
 
-	"github.com/protomcp/protomcp/internal/mcp"
+	"github.com/msilverblatt/protomcp/internal/mcp"
 )
 
 // Handler processes an MCP request and returns a response.

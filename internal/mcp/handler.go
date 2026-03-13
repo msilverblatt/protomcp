@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	pb "github.com/protomcp/protomcp/gen/proto/protomcp"
+	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
 )
 
 // ToolBackend is the interface the handler uses to communicate with the tool process.

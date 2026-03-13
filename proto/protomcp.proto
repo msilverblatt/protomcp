@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package protomcp;
 
-option go_package = "github.com/protomcp/protomcp/gen/proto/protomcp";
+option go_package = "github.com/msilverblatt/protomcp/gen/proto/protomcp";
 
 // Envelope wraps all messages with length-prefixed framing.
 // Wire format: 4-byte big-endian uint32 length prefix, then serialized Envelope.

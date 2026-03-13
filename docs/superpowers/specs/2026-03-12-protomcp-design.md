@@ -740,7 +740,7 @@ Documentation is built with **Starlight** (Astro) — the emerging standard for 
 ### Site Structure
 
 ```
-docs.protomcp.dev/
+docs/
 ├── Getting Started
 │   ├── Installation
 │   ├── Quick Start (5-minute tutorial: install, write a tool, run)

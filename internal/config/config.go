@@ -23,7 +23,7 @@ type Config struct {
 
 func Parse(args []string) (*Config, error) {
 	if len(args) < 1 {
-		return nil, fmt.Errorf("usage: protomcp <dev|run> <file> [flags]")
+		return nil, fmt.Errorf("usage: pmcp <dev|run> <file> [flags]")
 	}
 
 	cmd := args[0]
@@ -122,7 +122,7 @@ func Parse(args []string) (*Config, error) {
 		if dir == "" {
 			dir = os.TempDir()
 		}
-		cfg.SocketPath = filepath.Join(dir, "protomcp", fmt.Sprintf("%d.sock", os.Getpid()))
+		cfg.SocketPath = filepath.Join(dir, "pmcp", fmt.Sprintf("%d.sock", os.Getpid()))
 	}
 
 	return cfg, nil

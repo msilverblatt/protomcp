@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/protomcp/protomcp/internal/mcp"
-	"github.com/protomcp/protomcp/internal/transport"
+	"github.com/msilverblatt/protomcp/internal/mcp"
+	"github.com/msilverblatt/protomcp/internal/transport"
 )
 
 func TestStdioTransport(t *testing.T) {

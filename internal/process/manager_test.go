@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/protomcp/protomcp/internal/process"
+	"github.com/msilverblatt/protomcp/internal/process"
 )
 
 func TestStartAndHandshake(t *testing.T) {

@@ -1,7 +1,7 @@
 version: 2
 builds:
   - main: ./cmd/protomcp
-    binary: protomcp
+    binary: pmcp
     goos:
       - linux
       - darwin
@@ -14,11 +14,11 @@ builds:
 
 archives:
   - format: tar.gz
-    name_template: "protomcp_{{ .Os }}_{{ .Arch }}"
+    name_template: "pmcp_{{ .Os }}_{{ .Arch }}"
 
 brews:
   - repository:
-      owner: protomcp
+      owner: msilverblatt
       name: homebrew-tap
-    homepage: "https://protomcp.dev"
+    homepage: "https://github.com/msilverblatt/protomcp"
     description: "Language-agnostic MCP runtime"

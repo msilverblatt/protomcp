@@ -17,7 +17,7 @@ proto:
 		-I$(PROTO_DIR) $(PROTO_DIR)/protomcp.proto
 
 build:
-	go build -o bin/protomcp ./cmd/protomcp
+	go build -o bin/pmcp ./cmd/protomcp
 
 test:
 	go test ./...

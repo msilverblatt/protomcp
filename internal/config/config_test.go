@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/protomcp/protomcp/internal/config"
+	"github.com/msilverblatt/protomcp/internal/config"
 )
 
 func TestParseDefaults(t *testing.T) {

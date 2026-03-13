@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/protomcp/protomcp/internal/mcp"
+	"github.com/msilverblatt/protomcp/internal/mcp"
 
-	pb "github.com/protomcp/protomcp/gen/proto/protomcp"
+	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
 )
 
 type mockToolBackend struct {

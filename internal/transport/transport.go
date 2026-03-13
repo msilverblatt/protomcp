@@ -3,7 +3,7 @@ package transport
 import (
 	"context"
 
-	"github.com/protomcp/protomcp/internal/mcp"
+	"github.com/msilverblatt/protomcp/internal/mcp"
 )
 
 // RequestHandler processes a JSON-RPC request and returns a response.

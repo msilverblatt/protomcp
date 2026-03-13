@@ -7,7 +7,7 @@ import { toolManager } from './manager.js';
 export async function run(): Promise<void> {
   const socketPath = process.env['PROTOMCP_SOCKET'];
   if (!socketPath) {
-    process.stderr.write("PROTOMCP_SOCKET not set — run via 'protomcp dev'\n");
+    process.stderr.write("PROTOMCP_SOCKET not set — run via 'pmcp dev'\n");
     process.exit(1);
   }
 

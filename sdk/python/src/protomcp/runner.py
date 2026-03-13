@@ -13,7 +13,7 @@ from protomcp import manager
 def run():
     socket_path = os.environ.get("PROTOMCP_SOCKET")
     if not socket_path:
-        print("PROTOMCP_SOCKET not set — run via 'protomcp dev'", file=sys.stderr)
+        print("PROTOMCP_SOCKET not set — run via 'pmcp dev'", file=sys.stderr)
         sys.exit(1)
 
     transport = Transport(socket_path)
