@@ -107,6 +107,8 @@ export async function run(): Promise<void> {
       const resp = Envelope.create({ callResult: respMsg, requestId });
       await transport.send(resp);
     } else if (env['msg'] === 'reload') {
+      // Full ESM module cache invalidation is deferred — same as Python SDK.
+      // For now, acknowledge reload and re-send current tool list.
       const reloadResp = Envelope.create({
         reloadResponse: ReloadResponse.create({ success: true }),
         requestId,
