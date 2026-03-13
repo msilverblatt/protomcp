@@ -6,7 +6,7 @@
 import * as pb_1 from "google-protobuf";
 export namespace protomcp {
     export class Envelope extends pb_1.Message {
-        #one_of_decls: number[][] = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]];
+        #one_of_decls: number[][] = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]];
         constructor(data?: any[] | ({
             request_id?: string;
             namespace?: string;
@@ -38,6 +38,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: ListToolsRequest;
@@ -66,6 +67,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -94,6 +96,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -122,6 +125,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -150,6 +154,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -178,6 +183,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -206,6 +212,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -234,6 +241,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -262,6 +270,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -290,6 +299,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -318,6 +328,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -346,6 +357,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -374,6 +386,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -402,6 +415,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -430,6 +444,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -458,6 +473,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -486,6 +502,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -514,6 +531,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -542,6 +560,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -570,6 +589,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -598,6 +618,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -626,6 +647,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -654,6 +676,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -682,6 +705,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -710,6 +734,7 @@ export namespace protomcp {
             middleware_intercept_response?: MiddlewareInterceptResponse;
             stream_header?: never;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -738,6 +763,7 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: StreamHeader;
             stream_chunk?: never;
+            raw_header?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -766,6 +792,36 @@ export namespace protomcp {
             middleware_intercept_response?: never;
             stream_header?: never;
             stream_chunk?: StreamChunk;
+            raw_header?: never;
+        } | {
+            reload?: never;
+            list_tools?: never;
+            call_tool?: never;
+            reload_response?: never;
+            tool_list?: never;
+            call_result?: never;
+            enable_tools?: never;
+            disable_tools?: never;
+            set_allowed?: never;
+            set_blocked?: never;
+            get_active_tools?: never;
+            batch?: never;
+            active_tools?: never;
+            progress?: never;
+            cancel?: never;
+            log?: never;
+            create_task?: never;
+            task_status?: never;
+            task_status_response?: never;
+            task_result?: never;
+            task_cancel?: never;
+            register_middleware?: never;
+            register_middleware_response?: never;
+            middleware_intercept?: never;
+            middleware_intercept_response?: never;
+            stream_header?: never;
+            stream_chunk?: never;
+            raw_header?: RawHeader;
         })))) {
             super();
             pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
@@ -850,6 +906,9 @@ export namespace protomcp {
                 }
                 if ("stream_chunk" in data && data.stream_chunk != undefined) {
                     this.stream_chunk = data.stream_chunk;
+                }
+                if ("raw_header" in data && data.raw_header != undefined) {
+                    this.raw_header = data.raw_header;
                 }
                 if ("request_id" in data && data.request_id != undefined) {
                     this.request_id = data.request_id;
@@ -1102,6 +1161,15 @@ export namespace protomcp {
         get has_stream_chunk() {
             return pb_1.Message.getField(this, 29) != null;
         }
+        get raw_header() {
+            return pb_1.Message.getWrapperField(this, RawHeader, 30) as RawHeader;
+        }
+        set raw_header(value: RawHeader) {
+            pb_1.Message.setOneofWrapperField(this, 30, this.#one_of_decls[0], value);
+        }
+        get has_raw_header() {
+            return pb_1.Message.getField(this, 30) != null;
+        }
         get request_id() {
             return pb_1.Message.getFieldWithDefault(this, 14, "") as string;
         }
@@ -1116,7 +1184,7 @@ export namespace protomcp {
         }
         get msg() {
             const cases: {
-                [index: number]: "none" | "reload" | "list_tools" | "call_tool" | "reload_response" | "tool_list" | "call_result" | "enable_tools" | "disable_tools" | "set_allowed" | "set_blocked" | "get_active_tools" | "batch" | "active_tools" | "progress" | "cancel" | "log" | "create_task" | "task_status" | "task_status_response" | "task_result" | "task_cancel" | "register_middleware" | "register_middleware_response" | "middleware_intercept" | "middleware_intercept_response" | "stream_header" | "stream_chunk";
+                [index: number]: "none" | "reload" | "list_tools" | "call_tool" | "reload_response" | "tool_list" | "call_result" | "enable_tools" | "disable_tools" | "set_allowed" | "set_blocked" | "get_active_tools" | "batch" | "active_tools" | "progress" | "cancel" | "log" | "create_task" | "task_status" | "task_status_response" | "task_result" | "task_cancel" | "register_middleware" | "register_middleware_response" | "middleware_intercept" | "middleware_intercept_response" | "stream_header" | "stream_chunk" | "raw_header";
             } = {
                 0: "none",
                 1: "reload",
@@ -1145,9 +1213,10 @@ export namespace protomcp {
                 26: "middleware_intercept",
                 27: "middleware_intercept_response",
                 28: "stream_header",
-                29: "stream_chunk"
+                29: "stream_chunk",
+                30: "raw_header"
             };
-            return cases[pb_1.Message.computeOneofCase(this, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29])];
+            return cases[pb_1.Message.computeOneofCase(this, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30])];
         }
         static fromObject(data: {
             reload?: ReturnType<typeof ReloadRequest.prototype.toObject>;
@@ -1177,6 +1246,7 @@ export namespace protomcp {
             middleware_intercept_response?: ReturnType<typeof MiddlewareInterceptResponse.prototype.toObject>;
             stream_header?: ReturnType<typeof StreamHeader.prototype.toObject>;
             stream_chunk?: ReturnType<typeof StreamChunk.prototype.toObject>;
+            raw_header?: ReturnType<typeof RawHeader.prototype.toObject>;
             request_id?: string;
             namespace?: string;
         }): Envelope {
@@ -1262,6 +1332,9 @@ export namespace protomcp {
             if (data.stream_chunk != null) {
                 message.stream_chunk = StreamChunk.fromObject(data.stream_chunk);
             }
+            if (data.raw_header != null) {
+                message.raw_header = RawHeader.fromObject(data.raw_header);
+            }
             if (data.request_id != null) {
                 message.request_id = data.request_id;
             }
@@ -1299,6 +1372,7 @@ export namespace protomcp {
                 middleware_intercept_response?: ReturnType<typeof MiddlewareInterceptResponse.prototype.toObject>;
                 stream_header?: ReturnType<typeof StreamHeader.prototype.toObject>;
                 stream_chunk?: ReturnType<typeof StreamChunk.prototype.toObject>;
+                raw_header?: ReturnType<typeof RawHeader.prototype.toObject>;
                 request_id?: string;
                 namespace?: string;
             } = {};
@@ -1383,6 +1457,9 @@ export namespace protomcp {
             if (this.stream_chunk != null) {
                 data.stream_chunk = this.stream_chunk.toObject();
             }
+            if (this.raw_header != null) {
+                data.raw_header = this.raw_header.toObject();
+            }
             if (this.request_id != null) {
                 data.request_id = this.request_id;
             }
@@ -1449,6 +1526,8 @@ export namespace protomcp {
                 writer.writeMessage(28, this.stream_header, () => this.stream_header.serialize(writer));
             if (this.has_stream_chunk)
                 writer.writeMessage(29, this.stream_chunk, () => this.stream_chunk.serialize(writer));
+            if (this.has_raw_header)
+                writer.writeMessage(30, this.raw_header, () => this.raw_header.serialize(writer));
             if (this.request_id.length)
                 writer.writeString(14, this.request_id);
             if (this.namespace.length)
@@ -1542,6 +1621,9 @@ export namespace protomcp {
                         break;
                     case 29:
                         reader.readMessage(message.stream_chunk, () => message.stream_chunk = StreamChunk.deserialize(reader));
+                        break;
+                    case 30:
+                        reader.readMessage(message.raw_header, () => message.raw_header = RawHeader.deserialize(reader));
                         break;
                     case 14:
                         message.request_id = reader.readString();
@@ -4436,6 +4518,119 @@ export namespace protomcp {
         }
         static deserializeBinary(bytes: Uint8Array): StreamChunk {
             return StreamChunk.deserialize(bytes);
+        }
+    }
+    export class RawHeader extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            request_id?: string;
+            field_name?: string;
+            size?: number;
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                if ("request_id" in data && data.request_id != undefined) {
+                    this.request_id = data.request_id;
+                }
+                if ("field_name" in data && data.field_name != undefined) {
+                    this.field_name = data.field_name;
+                }
+                if ("size" in data && data.size != undefined) {
+                    this.size = data.size;
+                }
+            }
+        }
+        get request_id() {
+            return pb_1.Message.getFieldWithDefault(this, 1, "") as string;
+        }
+        set request_id(value: string) {
+            pb_1.Message.setField(this, 1, value);
+        }
+        get field_name() {
+            return pb_1.Message.getFieldWithDefault(this, 2, "") as string;
+        }
+        set field_name(value: string) {
+            pb_1.Message.setField(this, 2, value);
+        }
+        get size() {
+            return pb_1.Message.getFieldWithDefault(this, 3, 0) as number;
+        }
+        set size(value: number) {
+            pb_1.Message.setField(this, 3, value);
+        }
+        static fromObject(data: {
+            request_id?: string;
+            field_name?: string;
+            size?: number;
+        }): RawHeader {
+            const message = new RawHeader({});
+            if (data.request_id != null) {
+                message.request_id = data.request_id;
+            }
+            if (data.field_name != null) {
+                message.field_name = data.field_name;
+            }
+            if (data.size != null) {
+                message.size = data.size;
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                request_id?: string;
+                field_name?: string;
+                size?: number;
+            } = {};
+            if (this.request_id != null) {
+                data.request_id = this.request_id;
+            }
+            if (this.field_name != null) {
+                data.field_name = this.field_name;
+            }
+            if (this.size != null) {
+                data.size = this.size;
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.request_id.length)
+                writer.writeString(1, this.request_id);
+            if (this.field_name.length)
+                writer.writeString(2, this.field_name);
+            if (this.size != 0)
+                writer.writeUint64(3, this.size);
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): RawHeader {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new RawHeader();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        message.request_id = reader.readString();
+                        break;
+                    case 2:
+                        message.field_name = reader.readString();
+                        break;
+                    case 3:
+                        message.size = reader.readUint64();
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): RawHeader {
+            return RawHeader.deserialize(bytes);
         }
     }
 }

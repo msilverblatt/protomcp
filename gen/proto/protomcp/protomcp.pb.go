@@ -54,6 +54,7 @@ type Envelope struct {
 	//	*Envelope_MiddlewareInterceptResponse
 	//	*Envelope_StreamHeader
 	//	*Envelope_StreamChunk
+	//	*Envelope_RawHeader
 	Msg isEnvelope_Msg `protobuf_oneof:"msg"`
 	// Correlation ID for matching requests to responses.
 	RequestId string `protobuf:"bytes,14,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
@@ -343,6 +344,15 @@ func (x *Envelope) GetStreamChunk() *StreamChunk {
 	return nil
 }
 
+func (x *Envelope) GetRawHeader() *RawHeader {
+	if x != nil {
+		if x, ok := x.Msg.(*Envelope_RawHeader); ok {
+			return x.RawHeader
+		}
+	}
+	return nil
+}
+
 func (x *Envelope) GetRequestId() string {
 	if x != nil {
 		return x.RequestId
@@ -474,6 +484,11 @@ type Envelope_StreamChunk struct {
 	StreamChunk *StreamChunk `protobuf:"bytes,29,opt,name=stream_chunk,json=streamChunk,proto3,oneof"`
 }
 
+type Envelope_RawHeader struct {
+	// Raw sideband transfer
+	RawHeader *RawHeader `protobuf:"bytes,30,opt,name=raw_header,json=rawHeader,proto3,oneof"`
+}
+
 func (*Envelope_Reload) isEnvelope_Msg() {}
 
 func (*Envelope_ListTools) isEnvelope_Msg() {}
@@ -527,6 +542,8 @@ func (*Envelope_MiddlewareInterceptResponse) isEnvelope_Msg() {}
 func (*Envelope_StreamHeader) isEnvelope_Msg() {}
 
 func (*Envelope_StreamChunk) isEnvelope_Msg() {}
+
+func (*Envelope_RawHeader) isEnvelope_Msg() {}
 
 type ReloadRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -2134,11 +2151,73 @@ func (x *StreamChunk) GetFinal() bool {
 	return false
 }
 
+// RawHeader signals that the next N bytes on the socket are raw (not protobuf-wrapped).
+// This avoids protobuf serialization overhead for large payloads.
+type RawHeader struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"` // which request this payload belongs to
+	FieldName     string                 `protobuf:"bytes,2,opt,name=field_name,json=fieldName,proto3" json:"field_name,omitempty"` // which field, e.g. "result_json"
+	Size          uint64                 `protobuf:"varint,3,opt,name=size,proto3" json:"size,omitempty"`                           // exact byte count that follows
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RawHeader) Reset() {
+	*x = RawHeader{}
+	mi := &file_protomcp_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RawHeader) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RawHeader) ProtoMessage() {}
+
+func (x *RawHeader) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RawHeader.ProtoReflect.Descriptor instead.
+func (*RawHeader) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *RawHeader) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *RawHeader) GetFieldName() string {
+	if x != nil {
+		return x.FieldName
+	}
+	return ""
+}
+
+func (x *RawHeader) GetSize() uint64 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
 var File_protomcp_proto protoreflect.FileDescriptor
 
 const file_protomcp_proto_rawDesc = "" +
 	"\n" +
-	"\x0eprotomcp.proto\x12\bprotomcp\"\xfa\x0e\n" +
+	"\x0eprotomcp.proto\x12\bprotomcp\"\xb0\x0f\n" +
 	"\bEnvelope\x121\n" +
 	"\x06reload\x18\x01 \x01(\v2\x17.protomcp.ReloadRequestH\x00R\x06reload\x12;\n" +
 	"\n" +
@@ -2175,7 +2254,9 @@ const file_protomcp_proto_rawDesc = "" +
 	"\x14middleware_intercept\x18\x1a \x01(\v2$.protomcp.MiddlewareInterceptRequestH\x00R\x13middlewareIntercept\x12k\n" +
 	"\x1dmiddleware_intercept_response\x18\x1b \x01(\v2%.protomcp.MiddlewareInterceptResponseH\x00R\x1bmiddlewareInterceptResponse\x12=\n" +
 	"\rstream_header\x18\x1c \x01(\v2\x16.protomcp.StreamHeaderH\x00R\fstreamHeader\x12:\n" +
-	"\fstream_chunk\x18\x1d \x01(\v2\x15.protomcp.StreamChunkH\x00R\vstreamChunk\x12\x1d\n" +
+	"\fstream_chunk\x18\x1d \x01(\v2\x15.protomcp.StreamChunkH\x00R\vstreamChunk\x124\n" +
+	"\n" +
+	"raw_header\x18\x1e \x01(\v2\x13.protomcp.RawHeaderH\x00R\trawHeader\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x0e \x01(\tR\trequestId\x12\x1c\n" +
 	"\tnamespace\x18\x0f \x01(\tR\tnamespaceB\x05\n" +
@@ -2295,7 +2376,13 @@ const file_protomcp_proto_rawDesc = "" +
 	"chunk_size\x18\x03 \x01(\rR\tchunkSize\"7\n" +
 	"\vStreamChunk\x12\x12\n" +
 	"\x04data\x18\x01 \x01(\fR\x04data\x12\x14\n" +
-	"\x05final\x18\x02 \x01(\bR\x05finalB5Z3github.com/msilverblatt/protomcp/gen/proto/protomcpb\x06proto3"
+	"\x05final\x18\x02 \x01(\bR\x05final\"]\n" +
+	"\tRawHeader\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\x12\x1d\n" +
+	"\n" +
+	"field_name\x18\x02 \x01(\tR\tfieldName\x12\x12\n" +
+	"\x04size\x18\x03 \x01(\x04R\x04sizeB5Z3github.com/msilverblatt/protomcp/gen/proto/protomcpb\x06proto3"
 
 var (
 	file_protomcp_proto_rawDescOnce sync.Once
@@ -2309,7 +2396,7 @@ func file_protomcp_proto_rawDescGZIP() []byte {
 	return file_protomcp_proto_rawDescData
 }
 
-var file_protomcp_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
+var file_protomcp_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
 var file_protomcp_proto_goTypes = []any{
 	(*Envelope)(nil),                    // 0: protomcp.Envelope
 	(*ReloadRequest)(nil),               // 1: protomcp.ReloadRequest
@@ -2341,6 +2428,7 @@ var file_protomcp_proto_goTypes = []any{
 	(*MiddlewareInterceptResponse)(nil), // 27: protomcp.MiddlewareInterceptResponse
 	(*StreamHeader)(nil),                // 28: protomcp.StreamHeader
 	(*StreamChunk)(nil),                 // 29: protomcp.StreamChunk
+	(*RawHeader)(nil),                   // 30: protomcp.RawHeader
 }
 var file_protomcp_proto_depIdxs = []int32{
 	1,  // 0: protomcp.Envelope.reload:type_name -> protomcp.ReloadRequest
@@ -2370,13 +2458,14 @@ var file_protomcp_proto_depIdxs = []int32{
 	27, // 24: protomcp.Envelope.middleware_intercept_response:type_name -> protomcp.MiddlewareInterceptResponse
 	28, // 25: protomcp.Envelope.stream_header:type_name -> protomcp.StreamHeader
 	29, // 26: protomcp.Envelope.stream_chunk:type_name -> protomcp.StreamChunk
-	6,  // 27: protomcp.ToolListResponse.tools:type_name -> protomcp.ToolDefinition
-	8,  // 28: protomcp.CallToolResponse.error:type_name -> protomcp.ToolError
-	29, // [29:29] is the sub-list for method output_type
-	29, // [29:29] is the sub-list for method input_type
-	29, // [29:29] is the sub-list for extension type_name
-	29, // [29:29] is the sub-list for extension extendee
-	0,  // [0:29] is the sub-list for field type_name
+	30, // 27: protomcp.Envelope.raw_header:type_name -> protomcp.RawHeader
+	6,  // 28: protomcp.ToolListResponse.tools:type_name -> protomcp.ToolDefinition
+	8,  // 29: protomcp.CallToolResponse.error:type_name -> protomcp.ToolError
+	30, // [30:30] is the sub-list for method output_type
+	30, // [30:30] is the sub-list for method input_type
+	30, // [30:30] is the sub-list for extension type_name
+	30, // [30:30] is the sub-list for extension extendee
+	0,  // [0:30] is the sub-list for field type_name
 }
 
 func init() { file_protomcp_proto_init() }
@@ -2412,6 +2501,7 @@ func file_protomcp_proto_init() {
 		(*Envelope_MiddlewareInterceptResponse)(nil),
 		(*Envelope_StreamHeader)(nil),
 		(*Envelope_StreamChunk)(nil),
+		(*Envelope_RawHeader)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -2419,7 +2509,7 @@ func file_protomcp_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_protomcp_proto_rawDesc), len(file_protomcp_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   30,
+			NumMessages:   31,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -44,6 +44,9 @@ message Envelope {
     // Streaming
     StreamHeader stream_header = 28;
     StreamChunk stream_chunk = 29;
+
+    // Raw sideband transfer
+    RawHeader raw_header = 30;
   }
   // Correlation ID for matching requests to responses.
   string request_id = 14;
@@ -217,4 +220,12 @@ message StreamHeader {
 message StreamChunk {
   bytes data = 1;            // chunk payload
   bool final = 2;            // true on last chunk
+}
+
+// RawHeader signals that the next N bytes on the socket are raw (not protobuf-wrapped).
+// This avoids protobuf serialization overhead for large payloads.
+message RawHeader {
+  string request_id = 1;   // which request this payload belongs to
+  string field_name = 2;   // which field, e.g. "result_json"
+  uint64 size = 3;          // exact byte count that follows
 }
