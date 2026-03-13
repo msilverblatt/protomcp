@@ -183,7 +183,7 @@ export async function run(): Promise<void> {
       const resultBytes = Buffer.from(resultJson, 'utf-8');
 
       if (resultBytes.length > chunkThreshold) {
-        await transport.sendChunked(requestId, 'result_json', resultBytes);
+        await transport.sendRaw(requestId, 'result_json', resultBytes);
       } else {
         const resp = Envelope.create({ callResult: respMsg, requestId });
         await transport.send(resp);

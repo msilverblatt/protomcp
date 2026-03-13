@@ -141,6 +141,34 @@ export class Transport {
     }
   }
 
+  async sendRaw(requestId: string, fieldName: string, data: Buffer): Promise<void> {
+    const root = await this.getRoot();
+    const Envelope = root.lookupType('protomcp.Envelope');
+    const RawHeader = root.lookupType('protomcp.RawHeader');
+
+    const header = Envelope.create({
+      rawHeader: RawHeader.create({
+        requestId,
+        fieldName,
+        size: data.length,
+      }),
+    });
+
+    // Encode the protobuf header
+    const headerBytes = Buffer.from(Envelope.encode(header).finish());
+    const lengthBuf = Buffer.alloc(4);
+    lengthBuf.writeUInt32BE(headerBytes.length, 0);
+
+    // Write header frame + raw payload in one call
+    const frame = Buffer.concat([lengthBuf, headerBytes, data]);
+    await new Promise<void>((resolve, reject) => {
+      this.socket!.write(frame, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  }
+
   async recv(): Promise<Record<string, any>> {
     const root = await this.getRoot();
     const Envelope = root.lookupType('protomcp.Envelope');
