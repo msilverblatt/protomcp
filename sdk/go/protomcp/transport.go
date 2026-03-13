@@ -42,6 +42,34 @@ func (t *Transport) Send(env *pb.Envelope) error {
 	return err
 }
 
+// SendRaw sends a RawHeader envelope followed by raw payload bytes.
+// This avoids protobuf serialization overhead for large payloads.
+func (t *Transport) SendRaw(requestID, fieldName string, data []byte) error {
+	header := &pb.Envelope{
+		Msg: &pb.Envelope_RawHeader{
+			RawHeader: &pb.RawHeader{
+				RequestId: requestID,
+				FieldName: fieldName,
+				Size:      uint64(len(data)),
+			},
+		},
+	}
+	headerBytes, err := proto.Marshal(header)
+	if err != nil {
+		return fmt.Errorf("marshal raw header: %w", err)
+	}
+	length := make([]byte, 4)
+	binary.BigEndian.PutUint32(length, uint32(len(headerBytes)))
+
+	// Write length-prefixed header + raw payload
+	buf := make([]byte, 0, 4+len(headerBytes)+len(data))
+	buf = append(buf, length...)
+	buf = append(buf, headerBytes...)
+	buf = append(buf, data...)
+	_, err = t.conn.Write(buf)
+	return err
+}
+
 func (t *Transport) Recv() (*pb.Envelope, error) {
 	lengthBuf := make([]byte, 4)
 	if _, err := io.ReadFull(t.conn, lengthBuf); err != nil {

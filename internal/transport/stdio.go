@@ -34,7 +34,7 @@ func NewStdioWithIO(r io.Reader, w io.Writer) *StdioTransport {
 // is exhausted or the context is cancelled.
 func (s *StdioTransport) Start(ctx context.Context, handler RequestHandler) error {
 	scanner := bufio.NewScanner(s.reader)
-	scanner.Buffer(make([]byte, 0, 1024*1024), 1024*1024)
+	scanner.Buffer(make([]byte, 0, 32*1024*1024), 32*1024*1024)
 
 	for scanner.Scan() {
 		select {
@@ -98,6 +98,42 @@ func (s *StdioTransport) SendNotification(notification mcp.JSONRPCNotification) 
 	data = append(data, '\n')
 	_, err = s.writer.Write(data)
 	return err
+}
+
+// NewStreamWriter returns a StreamWriter for the stdio transport.
+func (s *StdioTransport) NewStreamWriter() mcp.StreamWriter {
+	return &stdioStreamWriter{s: s}
+}
+
+type stdioStreamWriter struct {
+	s *StdioTransport
+}
+
+func (w *stdioStreamWriter) WriteNotification(method string, params interface{}) error {
+	p, err := json.Marshal(params)
+	if err != nil {
+		return err
+	}
+	return w.s.SendNotification(mcp.JSONRPCNotification{
+		JSONRPC: "2.0",
+		Method:  method,
+		Params:  p,
+	})
+}
+
+func (w *stdioStreamWriter) WriteResponse(resp *mcp.JSONRPCResponse) error {
+	w.s.mu.Lock()
+	defer w.s.mu.Unlock()
+	data, err := json.Marshal(resp)
+	if err != nil {
+		return err
+	}
+	_, err = w.s.writer.Write(append(data, '\n'))
+	return err
+}
+
+func (w *stdioStreamWriter) Flush() error {
+	return nil // stdio is unbuffered
 }
 
 // Close is a no-op for stdio transport.

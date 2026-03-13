@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"sync"
 
 	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
@@ -116,6 +117,15 @@ func sendMiddlewareRegistrations(tp *Transport) {
 	sendHandshakeComplete(tp)
 }
 
+func buildResultJSON(text string) string {
+	content := []map[string]string{{"type": "text", "text": text}}
+	data, err := json.Marshal(content)
+	if err != nil {
+		return `[{"type":"text","text":""}]`
+	}
+	return string(data)
+}
+
 func handleCallTool(tp *Transport, req *pb.CallToolRequest, reqID string) {
 	tools := GetRegisteredTools()
 	var handler func(ToolContext, map[string]interface{}) ToolResult
@@ -132,7 +142,7 @@ func handleCallTool(tp *Transport, req *pb.CallToolRequest, reqID string) {
 			Msg: &pb.Envelope_CallResult{
 				CallResult: &pb.CallToolResponse{
 					IsError:    true,
-					ResultJson: fmt.Sprintf(`[{"type":"text","text":"Tool not found: %s"}]`, req.Name),
+					ResultJson: buildResultJSON("Tool not found: " + req.Name),
 				},
 			},
 		})
@@ -147,7 +157,7 @@ func handleCallTool(tp *Transport, req *pb.CallToolRequest, reqID string) {
 				Msg: &pb.Envelope_CallResult{
 					CallResult: &pb.CallToolResponse{
 						IsError:    true,
-						ResultJson: fmt.Sprintf(`[{"type":"text","text":"Invalid arguments JSON: %s"}]`, err.Error()),
+						ResultJson: buildResultJSON("Invalid arguments JSON: " + err.Error()),
 						Error: &pb.ToolError{
 							ErrorCode:  "INVALID_INPUT",
 							Message:    fmt.Sprintf("Failed to parse arguments: %s", err.Error()),
@@ -184,7 +194,7 @@ func handleCallTool(tp *Transport, req *pb.CallToolRequest, reqID string) {
 
 	resp := &pb.CallToolResponse{
 		IsError:      result.IsError,
-		ResultJson:   fmt.Sprintf(`[{"type":"text","text":"%s"}]`, result.ResultText),
+		ResultJson:   buildResultJSON(result.ResultText),
 		EnableTools:  result.EnableTools,
 		DisableTools: result.DisableTools,
 	}
@@ -197,10 +207,23 @@ func handleCallTool(tp *Transport, req *pb.CallToolRequest, reqID string) {
 		}
 	}
 
-	tp.Send(&pb.Envelope{
-		RequestId: reqID,
-		Msg:       &pb.Envelope_CallResult{CallResult: resp},
-	})
+	// Use raw sideband for large payloads to avoid protobuf overhead.
+	chunkThreshold := 65536
+	if v := os.Getenv("PROTOMCP_CHUNK_THRESHOLD"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			chunkThreshold = n
+		}
+	}
+
+	resultBytes := []byte(resp.ResultJson)
+	if len(resultBytes) > chunkThreshold {
+		tp.SendRaw(reqID, "result_json", resultBytes)
+	} else {
+		tp.Send(&pb.Envelope{
+			RequestId: reqID,
+			Msg:       &pb.Envelope_CallResult{CallResult: resp},
+		})
+	}
 }
 
 func handleReload(tp *Transport, reqID string) {
