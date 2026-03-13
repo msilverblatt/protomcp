@@ -11,6 +11,9 @@ import (
 
 var Log *ServerLogger
 
+// mwHandlers maps middleware name to handler during runtime.
+var mwHandlers map[string]func(phase, toolName, argsJSON, resultJSON string, isError bool) map[string]interface{}
+
 func Run() {
 	socketPath := os.Getenv("PROTOMCP_SOCKET")
 	if socketPath == "" {
@@ -26,6 +29,7 @@ func Run() {
 	defer tp.Close()
 
 	Log = NewServerLogger(func(env *pb.Envelope) error { return tp.Send(env) }, "protomcp-go")
+	mwHandlers = make(map[string]func(phase, toolName, argsJSON, resultJSON string, isError bool) map[string]interface{})
 
 	for {
 		env, err := tp.Recv()
@@ -38,7 +42,7 @@ func Run() {
 		switch {
 		case env.GetListTools() != nil:
 			handleListTools(tp, reqID)
-			sendHandshakeComplete(tp)
+			sendMiddlewareRegistrations(tp)
 		case env.GetCallTool() != nil:
 			handleCallTool(tp, env.GetCallTool(), reqID)
 		case env.GetReload() != nil:
@@ -78,6 +82,26 @@ func sendHandshakeComplete(tp *Transport) {
 			ReloadResponse: &pb.ReloadResponse{Success: true},
 		},
 	})
+}
+
+func sendMiddlewareRegistrations(tp *Transport) {
+	mws := GetRegisteredMiddleware()
+	for _, mw := range mws {
+		mwHandlers[mw.Name] = mw.Handler
+		tp.Send(&pb.Envelope{
+			Msg: &pb.Envelope_RegisterMiddleware{
+				RegisterMiddleware: &pb.RegisterMiddlewareRequest{
+					Name:     mw.Name,
+					Priority: mw.Priority,
+				},
+			},
+		})
+		// Wait for acknowledgment
+		if _, err := tp.Recv(); err != nil {
+			return
+		}
+	}
+	sendHandshakeComplete(tp)
 }
 
 func handleCallTool(tp *Transport, req *pb.CallToolRequest, reqID string) {
@@ -148,17 +172,36 @@ func handleReload(tp *Transport, reqID string) {
 		},
 	})
 	handleListTools(tp, "")
-	sendHandshakeComplete(tp)
+	sendMiddlewareRegistrations(tp)
 }
 
 func handleMiddlewareIntercept(tp *Transport, req *pb.MiddlewareInterceptRequest, reqID string) {
+	resp := &pb.MiddlewareInterceptResponse{
+		ArgumentsJson: req.ArgumentsJson,
+		ResultJson:    req.ResultJson,
+	}
+
+	handler, ok := mwHandlers[req.MiddlewareName]
+	if ok && handler != nil {
+		result := handler(req.Phase, req.ToolName, req.ArgumentsJson, req.ResultJson, req.IsError)
+		if result != nil {
+			if v, ok := result["reject"].(bool); ok && v {
+				resp.Reject = true
+				if r, ok := result["reject_reason"].(string); ok {
+					resp.RejectReason = r
+				}
+			}
+			if v, ok := result["arguments_json"].(string); ok {
+				resp.ArgumentsJson = v
+			}
+			if v, ok := result["result_json"].(string); ok {
+				resp.ResultJson = v
+			}
+		}
+	}
+
 	tp.Send(&pb.Envelope{
 		RequestId: reqID,
-		Msg: &pb.Envelope_MiddlewareInterceptResponse{
-			MiddlewareInterceptResponse: &pb.MiddlewareInterceptResponse{
-				ArgumentsJson: req.ArgumentsJson,
-				ResultJson:    req.ResultJson,
-			},
-		},
+		Msg:       &pb.Envelope_MiddlewareInterceptResponse{MiddlewareInterceptResponse: resp},
 	})
 }
