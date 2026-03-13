@@ -111,12 +111,6 @@ impl ToolBuilder {
     }
 }
 
-pub fn get_registered_tools() -> Vec<&'static ToolDef> {
-    // Return references — we need to leak for 'static, but for SDK use this is fine
-    // Actually, let's just clone the names/descriptions we need
-    unimplemented!("use get_registry_snapshot instead")
-}
-
 pub(crate) fn with_registry<F, R>(f: F) -> R
 where
     F: FnOnce(&[ToolDef]) -> R,

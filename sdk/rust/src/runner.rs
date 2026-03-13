@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
 use crate::proto;
 use crate::transport::Transport;
 use crate::tool::with_registry;

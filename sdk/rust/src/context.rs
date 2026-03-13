@@ -19,6 +19,24 @@ impl ToolContext {
     pub fn is_cancelled(&self) -> bool {
         self.cancelled.load(Ordering::Relaxed)
     }
+
+    pub fn report_progress(&self, progress: i64, total: i64) {
+        if self.progress_token.is_empty() {
+            return;
+        }
+        use crate::proto;
+        use prost::Message;
+        let env = proto::Envelope {
+            msg: Some(proto::envelope::Msg::Progress(proto::ProgressNotification {
+                progress_token: self.progress_token.clone(),
+                progress,
+                total,
+                message: String::new(),
+            })),
+            ..Default::default()
+        };
+        (self.send_fn)(env.encode_to_vec());
+    }
 }
 
 #[cfg(test)]
