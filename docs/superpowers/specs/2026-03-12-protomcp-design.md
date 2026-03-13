@@ -36,6 +36,10 @@ The key architectural insight: the MCP protocol layer (JSON-RPC, transport negot
 - Spawns and manages the tool process lifecycle (see Tool Process Lifecycle below)
 - Handles middleware/hooks (auth, logging, rate limiting, custom interceptors)
 - Structured error handling with agent-friendly error types
+- Proxies progress notifications (`notifications/progress`) between tool process and host
+- Manages async task lifecycle (`tasks/get`, `tasks/result`, `tasks/cancel`, `tasks/list`)
+- Forwards cancellation requests (`notifications/cancelled`) to tool process
+- Exposes server logging via MCP `notifications/message` (structured log forwarding)
 - Graceful degradation — survives client disconnects, transport errors, tool process crashes
 - On reload: waits for in-flight calls by default, immediate reload opt-in via `--hot-reload immediate`
 
@@ -52,6 +56,8 @@ The key architectural insight: the MCP protocol layer (JSON-RPC, transport negot
   - Rust: generated via derive macros
 - `ToolResult` type with optional `enable_tools` / `disable_tools` fields
 - `tool_manager` client for programmatic list control
+- Progress reporting API (`report_progress(progress, total?, message?)`)
+- Support for async tools via `task_support` parameter on `@tool()` decorator
 - Module reload handler (language-specific mechanism)
 - Unix socket client (generated from protobuf)
 
@@ -84,6 +90,16 @@ message Envelope {
     GetActiveToolsRequest get_active_tools = 11;
     BatchUpdateRequest batch = 12;
     ActiveToolsResponse active_tools = 13;
+
+    // Progress, cancellation, logging, tasks
+    ProgressNotification progress = 16;
+    CancelRequest cancel = 17;
+    LogMessage log = 18;
+    CreateTaskResponse create_task = 19;
+    TaskStatusRequest task_status = 20;
+    TaskStatusResponse task_status_response = 21;
+    TaskResultRequest task_result = 22;
+    TaskCancelRequest task_cancel = 23;
   }
   // Correlation ID for matching requests to responses.
   // Required for CallToolRequest/CallToolResponse to support concurrent calls.
@@ -112,6 +128,20 @@ This gives both sides a single deserialization path: read 4 bytes for length, re
 - `GetActiveToolsRequest()` — query current active tool set
 - `BatchUpdateRequest(enable?, disable?, allow?, block?)` — atomic multi-operation update, single `list_changed` notification
 - `ActiveToolsResponse(tool_names[])` — response to any tool list control command
+
+### Messages: Bidirectional (Progress, Cancellation, Logging)
+
+- `ProgressNotification(progress_token, progress, total?, message?)` — tool process reports progress on a long-running call; Go binary proxies as MCP `notifications/progress`
+- `CancelRequest(request_id)` — Go binary forwards MCP `notifications/cancelled` to tool process; tool process should abort the in-flight call and return a cancellation error
+- `LogMessage(level, logger?, data)` — tool process emits a structured log; Go binary forwards as MCP `notifications/message` with RFC 5424 severity level
+
+### Messages: Task (Async) Lifecycle
+
+- `CreateTaskResponse(task_id)` — tool process returns a task ID instead of a result for async tools; Go binary responds to client with `CreateTaskResult`
+- `TaskStatusRequest(task_id)` — Go binary forwards client `tasks/get` poll to tool process
+- `TaskStatusResponse(task_id, state, progress?, message?)` — tool process reports current task state (`running`, `completed`, `failed`, `cancelled`)
+- `TaskResultRequest(task_id)` — Go binary forwards client `tasks/result` to tool process
+- `TaskCancelRequest(task_id)` — Go binary forwards client `tasks/cancel` to tool process
 
 ## Tool Process Lifecycle
 
@@ -288,6 +318,224 @@ Tool errors should be agent-friendly by default. The protobuf spec includes a st
 
 The Go binary formats these consistently before sending to the host, regardless of how the tool process reported the error.
 
+## Progress Notifications
+
+Long-running tools can report incremental progress to the client.
+
+### Protocol Flow
+
+1. Client sends `tools/call` with `_meta.progressToken`
+2. Go binary forwards `CallToolRequest` to tool process, including the `progress_token`
+3. Tool process sends `ProgressNotification` messages as work progresses
+4. Go binary proxies each as MCP `notifications/progress` to the client
+5. Tool process eventually returns `CallToolResponse` as normal
+
+### Language API
+
+```python
+@tool(description="Index all documents")
+def index_documents(directory: str, ctx: ToolContext) -> str:
+    files = list_files(directory)
+    for i, f in enumerate(files):
+        index(f)
+        ctx.report_progress(progress=i + 1, total=len(files), message=f"Indexing {f}")
+    return f"Indexed {len(files)} documents"
+```
+
+```typescript
+export const indexDocuments = tool({
+  description: "Index all documents",
+  args: z.object({ directory: z.string() }),
+  handler: async (args, ctx) => {
+    const files = listFiles(args.directory);
+    for (let i = 0; i < files.length; i++) {
+      await index(files[i]);
+      ctx.reportProgress(i + 1, files.length, `Indexing ${files[i]}`);
+    }
+    return `Indexed ${files.length} documents`;
+  }
+});
+```
+
+The `ToolContext` (or `ctx`) is injected by the runtime when the tool handler signature requests it. If a tool doesn't need progress, it simply omits the `ctx` parameter.
+
+### Behavior
+
+- If the client did not send a `progressToken`, the Go binary silently drops `ProgressNotification` messages (no error to tool process)
+- `total` is optional — omit for indeterminate progress
+- `message` is optional — human-readable status for display
+
+## Tasks (Async Execution)
+
+Some tools take too long for a synchronous response. Tasks allow a tool to return immediately with a task ID, then the client polls for status and retrieves the result when ready.
+
+### Declaring Async Tools
+
+```python
+@tool(description="Run full analysis", task_support=True)
+async def run_analysis(dataset: str) -> str:
+    # Long-running work happens here
+    result = await heavy_computation(dataset)
+    return result
+```
+
+When `task_support=True`, the tool's MCP definition includes `execution.taskSupport: true` in its metadata. The Go binary advertises `tasks` capability in its MCP `initialize` response.
+
+### Protocol Flow
+
+1. Client sends `tools/call` for an async-capable tool
+2. Go binary forwards `CallToolRequest` to tool process
+3. Tool process begins async work and immediately returns `CreateTaskResponse(task_id)`
+4. Go binary responds to client with `CreateTaskResult { taskId, state: "running" }`
+5. Client polls with `tasks/get(task_id)` → Go binary forwards `TaskStatusRequest` → tool process responds with `TaskStatusResponse`
+6. When complete, client sends `tasks/result(task_id)` → Go binary forwards `TaskResultRequest` → tool process responds with `CallToolResponse` containing the final result
+7. Client can cancel with `tasks/cancel(task_id)` → Go binary forwards `TaskCancelRequest` → tool process aborts and responds with cancellation acknowledgment
+
+### Task State Machine
+
+```
+running → completed
+running → failed
+running → cancelled (via tasks/cancel)
+```
+
+### Task Lifecycle
+
+- Task state lives in the tool process (it owns the computation)
+- The Go binary tracks task IDs for routing and can return cached status if the tool process has crashed
+- Tasks survive hot-reloads — in-flight tasks continue in the old module context (consistent with default reload behavior)
+- Tasks do NOT survive tool process crashes — pending tasks are moved to `failed` state with an error message
+
+## Cancellation
+
+### Protocol Flow
+
+1. Client sends MCP `notifications/cancelled` with `requestId`
+2. Go binary looks up the in-flight call by `request_id`
+3. Go binary sends `CancelRequest(request_id)` to tool process
+4. Tool process should abort the operation and return a `CallToolResponse` with `isError: true` and error code `cancelled`
+
+### Language API
+
+```python
+@tool(description="Long operation")
+def long_operation(data: str, ctx: ToolContext) -> str:
+    for chunk in process_chunks(data):
+        if ctx.is_cancelled():
+            raise CancelledError("Operation cancelled by client")
+        handle(chunk)
+    return "Done"
+```
+
+The `ctx.is_cancelled()` check is cooperative — the tool process must check periodically. The Go binary sets the cancellation flag when it receives the cancel request.
+
+### Behavior
+
+- If `request_id` doesn't match any in-flight call, the cancellation is silently ignored (per MCP spec)
+- Cancellation is best-effort — the tool may complete before checking the flag
+- For async tasks, cancellation goes through `tasks/cancel` instead
+
+## Server Logging
+
+Tool processes can emit structured logs that are forwarded to the MCP client as `notifications/message`.
+
+### Protocol Flow
+
+1. Tool process sends `LogMessage(level, logger?, data)` to Go binary
+2. Go binary forwards as MCP `notifications/message` with the specified severity level
+
+### Severity Levels (RFC 5424)
+
+`emergency` | `alert` | `critical` | `error` | `warning` | `notice` | `info` | `debug`
+
+### Language API
+
+```python
+from protomcp import log
+
+log.info("Processing started", data={"file_count": 42})
+log.warning("Rate limit approaching", data={"remaining": 5})
+log.debug("Cache hit", logger="cache_layer", data={"key": "user_123"})
+```
+
+### Behavior
+
+- The Go binary's `--log-level` flag filters which log messages are forwarded to the client
+- Logs below the configured level are dropped (not forwarded)
+- `logger` is optional — used to identify the source component
+- `data` can be any JSON-serializable value
+
+## Structured Output
+
+Tools can declare an output schema, and the Go binary validates that the result matches before returning to the client.
+
+### Declaring Output Schema
+
+```python
+from protomcp import tool
+from dataclasses import dataclass
+
+@dataclass
+class SearchResult:
+    title: str
+    url: str
+    score: float
+
+@tool(description="Search documents", output_type=SearchResult)
+def search(query: str) -> list[SearchResult]:
+    return [SearchResult(title="Doc", url="https://...", score=0.95)]
+```
+
+```typescript
+const SearchResult = z.object({
+  title: z.string(),
+  url: z.string(),
+  score: z.number(),
+});
+
+export const search = tool({
+  description: "Search documents",
+  args: z.object({ query: z.string() }),
+  output: z.array(SearchResult),
+  handler: (args) => {
+    return [{ title: "Doc", url: "https://...", score: 0.95 }];
+  }
+});
+```
+
+### Behavior
+
+- When `output_type` / `output` is specified, the tool's MCP definition includes `outputSchema`
+- The Go binary includes `structuredContent` in the `CallToolResponse` alongside the text `content`
+- Schema validation happens in the language library before sending the response — validation errors become tool errors
+
+## Tool Metadata
+
+Tools can declare additional metadata that enhances their discoverability and presentation in MCP clients.
+
+### Fields
+
+- `title`: Human-readable display name (distinct from the function name used as the tool ID)
+- `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`: Behavioral hints for the client (all optional booleans)
+
+```python
+@tool(
+    description="Delete a document permanently",
+    title="Delete Document",
+    destructive=True,
+    idempotent=True,
+)
+def delete_doc(doc_id: str) -> str:
+    db.delete(doc_id)
+    return f"Deleted {doc_id}"
+```
+
+### Behavior
+
+- Metadata is included in the tool's MCP definition under `annotations`
+- The Go binary passes through metadata from the tool process — it does not interpret or enforce hints
+- Hints are advisory — clients may use them to show confirmation dialogs, group tools, etc.
+
 ## CLI
 
 Minimal, hardened, no bloat.
@@ -305,6 +553,8 @@ Minimal, hardened, no bloat.
 - `--log-level debug|info|warn|error` — log verbosity (default: info)
 - `--socket <path>` — custom unix socket path (default: `$XDG_RUNTIME_DIR/protomcp/<pid>.sock`)
 - `--runtime <command>` — override language runtime detection (e.g., `--runtime "python3.12"`)
+- `--host <address>` — bind address for network transports (default: localhost)
+- `--port <number>` — port for network transports (default: 8080)
 
 ### Dev Logs
 
@@ -435,6 +685,52 @@ def connect_db(connection_string: str) -> ToolResult:
     )
 ```
 
+### Progress Reporting
+
+```python
+@tool(description="Process dataset")
+def process_dataset(path: str, ctx: ToolContext) -> str:
+    items = load(path)
+    for i, item in enumerate(items):
+        process(item)
+        ctx.report_progress(i + 1, len(items), f"Processing {item.name}")
+    return f"Processed {len(items)} items"
+```
+
+### Async Tools
+
+```python
+@tool(description="Train model", task_support=True)
+async def train_model(config: dict) -> str:
+    result = await run_training(config)
+    return f"Model trained: accuracy={result.accuracy}"
+```
+
+### Cancellation
+
+```python
+@tool(description="Batch process")
+def batch_process(items: list[str], ctx: ToolContext) -> str:
+    for item in items:
+        if ctx.is_cancelled():
+            raise CancelledError("Cancelled by client")
+        process(item)
+    return "Done"
+```
+
+### Server Logging
+
+```python
+from protomcp import log
+
+@tool(description="Sync data")
+def sync_data(source: str) -> str:
+    log.info("Starting sync", data={"source": source})
+    result = sync(source)
+    log.info("Sync complete", data={"records": result.count})
+    return f"Synced {result.count} records"
+```
+
 ## Documentation
 
 ### Framework
@@ -457,6 +753,11 @@ docs.protomcp.dev/
 │   ├── Writing Tools (Other Languages)
 │   ├── Dynamic Tool Lists
 │   ├── Hot Reload
+│   ├── Progress Notifications
+│   ├── Async Tasks
+│   ├── Cancellation
+│   ├── Server Logging
+│   ├── Structured Output
 │   ├── Error Handling
 │   └── Production Deployment
 ├── Reference
@@ -495,10 +796,16 @@ docs.protomcp.dev/
 3. Hot-reload with file watching and `list_changed` notifications
 4. Dynamic tool list management (enable/disable/allow/block/query/batch)
 5. Structured error handling with agent-friendly error types
-6. CLI: `protomcp dev` and `protomcp run`
-7. Python library (decorator API, schema generation, tool_manager)
-8. TypeScript library (same API surface)
-9. Documentation site (Starlight): Getting Started, Guides (Python, TS, Dynamic Tool Lists, Hot Reload), Reference (CLI, Protobuf Spec, Python API, TS API), Concepts (Architecture, Tool List Modes, Transports)
+6. Progress notifications (proxy `notifications/progress` between tool process and host)
+7. Async task support (task lifecycle: create, poll, result, cancel)
+8. Cancellation (cooperative cancellation via `notifications/cancelled`)
+9. Server logging (structured log forwarding via `notifications/message`)
+10. Structured output (`outputSchema` + `structuredContent` validation)
+11. Tool metadata (title, behavioral hints/annotations)
+12. CLI: `protomcp dev` and `protomcp run`
+13. Python library (decorator API, schema generation, tool_manager, progress, async tasks, logging)
+14. TypeScript library (same API surface)
+15. Documentation site (Starlight): Getting Started, Guides (Python, TS, Dynamic Tool Lists, Hot Reload, Progress, Async Tasks, Logging), Reference (CLI, Protobuf Spec, Python API, TS API), Concepts (Architecture, Tool List Modes, Transports)
 
 ### v1.1 — Expand
 
