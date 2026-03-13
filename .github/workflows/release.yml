@@ -45,7 +45,7 @@ jobs:
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
-      - run: cd sdk/typescript && npm ci && npm publish
+      - run: cd sdk/typescript && npm ci && npm run build && npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
