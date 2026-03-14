@@ -1,7 +1,6 @@
 import json
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'gen'))
-import protomcp_pb2 as pb
+
+from protomcp import protomcp_pb2 as pb
 
 class ServerLogger:
     def __init__(self, send_fn, name: str = ""):

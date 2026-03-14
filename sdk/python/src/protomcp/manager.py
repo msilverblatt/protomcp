@@ -1,7 +1,4 @@
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'gen'))
-import protomcp_pb2 as pb
+from protomcp import protomcp_pb2 as pb
 
 _transport = None
 
