@@ -20,5 +20,6 @@ brews:
   - repository:
       owner: msilverblatt
       name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     homepage: "https://github.com/msilverblatt/protomcp"
     description: "Language-agnostic MCP runtime"
