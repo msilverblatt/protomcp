@@ -12,6 +12,7 @@ from protomcp.server_context import server_context, get_registered_contexts, cle
 from protomcp.local_middleware import local_middleware, get_local_middleware, clear_local_middleware
 from protomcp.telemetry import telemetry_sink, ToolCallEvent, emit_telemetry, clear_telemetry_sinks
 from protomcp.sidecar import sidecar, get_registered_sidecars, clear_sidecar_registry
+from protomcp.workflow import workflow, step, StepResult, get_registered_workflows, clear_workflow_registry
 from protomcp.discovery import configure, discover_handlers
 
 # Module-level logger; replaced with a transport-connected instance when run() is called
@@ -53,6 +54,11 @@ __all__ = [
     "sidecar",
     "get_registered_sidecars",
     "clear_sidecar_registry",
+    "workflow",
+    "step",
+    "StepResult",
+    "get_registered_workflows",
+    "clear_workflow_registry",
     "configure",
     "discover_handlers",
 ]
