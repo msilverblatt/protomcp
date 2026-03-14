@@ -5,8 +5,18 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/msilverblatt/protomcp.git",
+    "directory": "sdk/typescript"
+  },
+  "homepage": "https://msilverblatt.github.io/protomcp/",
+  "keywords": ["mcp", "model-context-protocol", "ai", "tools", "protobuf"],
+  "files": ["dist/**/*", "proto/**/*"],
   "scripts": {
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest"
   },
