@@ -36,6 +36,9 @@ dev = [
     "pytest-asyncio>=0.21",
 ]
 
+[tool.hatch.build.targets.sdist.force-include]
+"src/protomcp/protomcp_pb2.py" = "src/protomcp/protomcp_pb2.py"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/protomcp"]
 
