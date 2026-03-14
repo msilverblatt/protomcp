@@ -54,7 +54,7 @@ Receives MCP requests from the transport and dispatches them to the tool process
 
 ### Tool List Manager
 
-Maintains the set of active tools and enforces the current mode (open, allowlist, or blocklist). See [Tool List Modes](/concepts/tool-list-modes/).
+Maintains the set of active tools and enforces the current mode (open, allowlist, or blocklist). See [Tool List Modes](/protomcp/concepts/tool-list-modes/).
 
 ### File Watcher
 
@@ -97,7 +97,7 @@ The unix socket is created by protomcp at startup. The tool process connects to 
 └─────────────────────────────────────────────────────┘
 ```
 
-The `Envelope` uses a `oneof msg` field to carry all message types. See the [Protobuf Spec](/reference/protobuf-spec/).
+The `Envelope` uses a `oneof msg` field to carry all message types. See the [Protobuf Spec](/protomcp/reference/protobuf-spec/).
 
 ---
 

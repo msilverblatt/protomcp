@@ -184,7 +184,7 @@ tool_manager.get_active_tools() -> list[str]
 tool_manager.batch(enable=None, disable=None, allow=None, block=None) -> list[str]
 ```
 
-`set_allowed` and `set_blocked` switch the tool list to allowlist/blocklist mode respectively. See [Tool List Modes](/concepts/tool-list-modes/).
+`set_allowed` and `set_blocked` switch the tool list to allowlist/blocklist mode respectively. See [Tool List Modes](/protomcp/concepts/tool-list-modes/).
 
 ### Batch operations
 
@@ -347,7 +347,7 @@ Call the handler directly — no need to run protomcp for unit tests.
 
 ## Resources
 
-Resources expose data that MCP clients can read. See the [Resources guide](/guides/resources/) for the full pattern.
+Resources expose data that MCP clients can read. See the [Resources guide](/protomcp/guides/resources/) for the full pattern.
 
 ```python
 from protomcp import resource, resource_template, ResourceContent
@@ -366,7 +366,7 @@ def read_user(uri: str) -> ResourceContent:
 
 ## Prompts
 
-Prompts define reusable message templates. See the [Prompts guide](/guides/prompts/) for the full pattern.
+Prompts define reusable message templates. See the [Prompts guide](/protomcp/guides/prompts/) for the full pattern.
 
 ```python
 from protomcp import prompt, PromptArg, PromptMessage
@@ -383,7 +383,7 @@ def summarize(topic: str) -> list[PromptMessage]:
 
 ## Completions
 
-Provide autocomplete for prompt and resource arguments. See [Prompts guide — Completions](/guides/prompts/#completions).
+Provide autocomplete for prompt and resource arguments. See [Prompts guide — Completions](/protomcp/guides/prompts/#completions).
 
 ```python
 from protomcp import completion, CompletionResult
@@ -398,7 +398,7 @@ def complete_topic(value: str) -> CompletionResult:
 
 ## Sampling
 
-Request LLM calls from the MCP client. See the [Sampling guide](/guides/sampling/).
+Request LLM calls from the MCP client. See the [Sampling guide](/protomcp/guides/sampling/).
 
 ```python
 @tool("Translate text")
