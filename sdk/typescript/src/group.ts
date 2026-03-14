@@ -2,6 +2,18 @@ import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import type { ToolContext } from './context.js';
 import { type ToolDef, _setGroupsToToolDefs } from './tool.js';
+import { ToolResult } from './result.js';
+import { resolveContexts } from './serverContext.js';
+
+export interface CrossRule {
+  condition: (args: Record<string, any>) => boolean;
+  message: string;
+}
+
+export interface HintDef {
+  condition: (args: Record<string, any>) => boolean;
+  message: string;
+}
 
 export interface ActionOptions<T extends z.ZodObject<any>> {
   description: string;
@@ -9,6 +21,8 @@ export interface ActionOptions<T extends z.ZodObject<any>> {
   handler: (args: z.infer<T>, ctx: ToolContext) => any;
   requires?: string[];
   enumFields?: Record<string, string[]>;
+  crossRules?: CrossRule[];
+  hints?: Record<string, HintDef>;
 }
 
 export interface GroupOptions {
@@ -46,22 +60,122 @@ export function clearGroupRegistry(): void {
   groupRegistry.length = 0;
 }
 
+function validateAction(actionDef: ActionOptions<any>, args: Record<string, any>): ToolResult | null {
+  // Check requires
+  if (actionDef.requires) {
+    for (const fieldName of actionDef.requires) {
+      const val = args[fieldName];
+      if (val === undefined || val === null || val === '') {
+        return new ToolResult({
+          result: `Missing required field: ${fieldName}`,
+          isError: true,
+          errorCode: 'MISSING_REQUIRED',
+          message: `Missing required field: ${fieldName}`,
+        });
+      }
+    }
+  }
+
+  // Check enumFields
+  if (actionDef.enumFields) {
+    for (const [fieldName, valid] of Object.entries(actionDef.enumFields)) {
+      const val = args[fieldName];
+      if (val !== undefined && val !== null && !valid.includes(val)) {
+        const suggestion = fuzzyMatch(String(val), valid.map(String));
+        const suggestionText = suggestion ? `Did you mean '${suggestion}'?` : undefined;
+        return new ToolResult({
+          result: `Invalid value '${val}' for field '${fieldName}'. Valid options: ${valid.join(', ')}`,
+          isError: true,
+          errorCode: 'INVALID_ENUM',
+          message: `Invalid value '${val}' for field '${fieldName}'.`,
+          suggestion: suggestionText,
+        });
+      }
+    }
+  }
+
+  // Check crossRules
+  if (actionDef.crossRules) {
+    for (const rule of actionDef.crossRules) {
+      if (rule.condition(args)) {
+        return new ToolResult({
+          result: rule.message,
+          isError: true,
+          errorCode: 'CROSS_PARAM_VIOLATION',
+          message: rule.message,
+        });
+      }
+    }
+  }
+
+  return null;
+}
+
+function collectHints(actionDef: ActionOptions<any>, args: Record<string, any>): string[] {
+  const messages: string[] = [];
+  if (actionDef.hints) {
+    for (const hintDef of Object.values(actionDef.hints)) {
+      if (hintDef.condition(args)) {
+        messages.push(hintDef.message);
+      }
+    }
+  }
+  return messages;
+}
+
 function dispatchGroupAction(group: GroupDef, args: Record<string, any>, ctx: ToolContext): any {
   const actionName = args.action;
   const actionNames = Object.keys(group.actions);
 
   if (!actionName) {
-    return {
+    return new ToolResult({
       result: `Missing 'action' field. Available actions: ${actionNames.join(', ')}`,
       isError: true,
       errorCode: 'MISSING_ACTION',
-    };
+    });
   }
 
   const actionDef = group.actions[actionName];
   if (actionDef) {
     const { action, ...rest } = args;
-    return actionDef.handler(rest, ctx);
+
+    // Resolve server contexts
+    const ctxValues = resolveContexts(rest);
+    for (const [paramName, value] of Object.entries(ctxValues)) {
+      rest[paramName] = value;
+    }
+
+    // Validate before calling handler
+    const validationError = validateAction(actionDef, rest);
+    if (validationError !== null) {
+      return validationError;
+    }
+
+    // Collect hints
+    const hints = collectHints(actionDef, rest);
+
+    const result = actionDef.handler(rest, ctx);
+
+    // Append hints if any
+    if (hints.length > 0) {
+      const hintText = '\n\n**Hints:**\n' + hints.map(m => `- ${m}`).join('\n');
+      if (result instanceof ToolResult) {
+        return new ToolResult({
+          result: result.result + hintText,
+          isError: result.isError,
+          enableTools: result.enableTools,
+          disableTools: result.disableTools,
+          errorCode: result.errorCode,
+          message: result.message,
+          suggestion: result.suggestion,
+          retryable: result.retryable,
+        });
+      } else {
+        return new ToolResult({ result: String(result) + hintText });
+      }
+    }
+
+    return result;
   }
 
   const suggestion = fuzzyMatch(actionName, actionNames);
@@ -70,11 +184,11 @@ function dispatchGroupAction(group: GroupDef, args: Record<string, any>, ctx: To
     msg += ` Did you mean '${suggestion}'?`;
   }
   msg += ` Available actions: ${actionNames.join(', ')}`;
-  return {
+  return new ToolResult({
     result: msg,
     isError: true,
     errorCode: 'UNKNOWN_ACTION',
-  };
+  });
 }
 
 function fuzzyMatch(input: string, candidates: string[]): string | null {

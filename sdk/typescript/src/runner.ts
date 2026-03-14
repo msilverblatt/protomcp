@@ -8,6 +8,11 @@ import { getRegisteredMiddleware, type MiddlewareDef } from './middleware.js';
 import { getRegisteredResources, getRegisteredResourceTemplates, type ResourceContent } from './resource.js';
 import { getRegisteredPrompts } from './prompt.js';
 import { getCompletionHandler } from './completion.js';
+import { resolveContexts } from './serverContext.js';
+import { buildMiddlewareChain } from './localMiddleware.js';
+import { emitTelemetry } from './telemetry.js';
+import { startSidecars } from './sidecar.js';
+import { discoverHandlers } from './discovery.js';
 
 export async function run(): Promise<void> {
   const socketPath = process.env['PROTOMCP_SOCKET'];
@@ -19,6 +24,10 @@ export async function run(): Promise<void> {
   const transport = new Transport(socketPath);
   await transport.connect();
   toolManager._init(transport as any);
+
+  // Discover handlers and start server_start sidecars
+  await discoverHandlers();
+  await startSidecars('server_start');
 
   const root = await transport.getRoot();
   const Envelope = root.lookupType('protomcp.Envelope');
@@ -147,10 +156,24 @@ export async function run(): Promise<void> {
 
       let respMsg;
       try {
-        const args = argumentsJson ? JSON.parse(argumentsJson) : {};
+        // Start first_tool_call sidecars
+        await startSidecars('first_tool_call');
+
+        let args = argumentsJson ? JSON.parse(argumentsJson) : {};
         const progressToken: string = req['progressToken'] ?? '';
         const ctx = new ToolContext(progressToken, (msg: any) => transport.send(Envelope.create(msg)));
-        const result = await toolDef.handler(args, ctx);
+
+        // Resolve server contexts
+        const ctxValues = resolveContexts(args);
+        args = { ...args, ...ctxValues };
+
+        // Emit telemetry start
+        const startTime = Date.now();
+        emitTelemetry({ toolName, action: '', phase: 'start', args });
+
+        // Build local middleware chain around the handler
+        const chain = buildMiddlewareChain(toolName, toolDef.handler);
+        const result = await chain(ctx, args);
 
         if (result instanceof ToolResult) {
           const callResp: Record<string, any> = {
@@ -173,11 +196,13 @@ export async function run(): Promise<void> {
             resultJson: JSON.stringify([{ type: 'text', text: String(result) }]),
           });
         }
+        emitTelemetry({ toolName, action: '', phase: 'success', args, result: String(result), durationMs: Date.now() - startTime });
       } catch (err: any) {
         respMsg = CallToolResponse.create({
           isError: true,
           resultJson: JSON.stringify([{ type: 'text', text: String(err?.message ?? err) }]),
         });
+        emitTelemetry({ toolName, action: '', phase: 'error', args: {}, error: err instanceof Error ? err : new Error(String(err)) });
       }
 
       // Check if result_json exceeds chunk threshold — stream if so.
