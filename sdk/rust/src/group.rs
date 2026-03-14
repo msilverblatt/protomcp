@@ -6,6 +6,13 @@ use crate::tool::{ArgDef, ToolDef, arg_to_schema};
 
 static GROUP_REGISTRY: Mutex<Vec<GroupDef>> = Mutex::new(Vec::new());
 
+pub type CrossRuleFn = Box<dyn Fn(&Value) -> bool + Send + Sync>;
+
+pub struct CrossRule {
+    pub check: CrossRuleFn,
+    pub message: String,
+}
+
 pub struct ActionDef {
     pub name: String,
     pub description: String,
@@ -13,6 +20,7 @@ pub struct ActionDef {
     pub handler: Box<dyn Fn(ToolContext, Value) -> ToolResult + Send + Sync>,
     pub requires: Vec<String>,
     pub enum_fields: Vec<(String, Vec<String>)>,
+    pub cross_rules: Vec<CrossRule>,
 }
 
 pub struct GroupDef {
@@ -36,6 +44,7 @@ pub struct ActionBuilder {
     handler: Option<Box<dyn Fn(ToolContext, Value) -> ToolResult + Send + Sync>>,
     requires: Vec<String>,
     enum_fields: Vec<(String, Vec<String>)>,
+    cross_rules: Vec<CrossRule>,
 }
 
 pub fn tool_group(name: &str) -> GroupBuilder {
@@ -66,6 +75,7 @@ impl GroupBuilder {
             handler: None,
             requires: Vec::new(),
             enum_fields: Vec::new(),
+            cross_rules: Vec::new(),
         };
         let built = build_fn(builder);
         self.actions.push(ActionDef {
@@ -75,6 +85,7 @@ impl GroupBuilder {
             handler: built.handler.unwrap_or_else(|| Box::new(|_, _| ToolResult::new(""))),
             requires: built.requires,
             enum_fields: built.enum_fields,
+            cross_rules: built.cross_rules,
         });
         self
     }
@@ -131,6 +142,17 @@ impl ActionBuilder {
 
     pub fn enum_field(mut self, field: &str, values: &[&str]) -> Self {
         self.enum_fields.push((field.to_string(), values.iter().map(|s| s.to_string()).collect()));
+        self
+    }
+
+    pub fn cross_rule<F>(mut self, check: F, message: &str) -> Self
+    where
+        F: Fn(&Value) -> bool + Send + Sync + 'static,
+    {
+        self.cross_rules.push(CrossRule {
+            check: Box::new(check),
+            message: message.to_string(),
+        });
         self
     }
 }
@@ -268,7 +290,12 @@ fn dispatch_specific_action(group_name: &str, action_name: &str, ctx: ToolContex
         Some(g) => {
             let act = g.actions.iter().find(|a| a.name == action_name);
             match act {
-                Some(a) => (a.handler)(ctx, args),
+                Some(a) => {
+                    if let Some(err) = validate_action(a, &args) {
+                        return err;
+                    }
+                    (a.handler)(ctx, args)
+                }
                 None => ToolResult::error(
                     format!("Action '{}' not found in group '{}'", action_name, group_name),
                     "UNKNOWN_ACTION",
@@ -284,6 +311,64 @@ fn dispatch_specific_action(group_name: &str, action_name: &str, ctx: ToolContex
             false,
         ),
     }
+}
+
+fn validate_action(action: &ActionDef, args: &Value) -> Option<ToolResult> {
+    // Check requires
+    for field_name in &action.requires {
+        let val = args.get(field_name.as_str());
+        let is_missing = match val {
+            None => true,
+            Some(Value::Null) => true,
+            Some(Value::String(s)) => s.is_empty(),
+            _ => false,
+        };
+        if is_missing {
+            return Some(ToolResult::error(
+                format!("Missing required field: {}", field_name),
+                "MISSING_REQUIRED",
+                "",
+                false,
+            ));
+        }
+    }
+
+    // Check enum_fields
+    for (field_name, valid_values) in &action.enum_fields {
+        if let Some(val) = args.get(field_name.as_str()).and_then(|v| v.as_str()) {
+            if !valid_values.iter().any(|v| v == val) {
+                let candidates: Vec<&str> = valid_values.iter().map(|s| s.as_str()).collect();
+                let suggestion = fuzzy_match(val, &candidates);
+                let suggestion_text = match &suggestion {
+                    Some(s) => format!(" Did you mean '{}'?", s),
+                    None => String::new(),
+                };
+                return Some(ToolResult::error(
+                    format!(
+                        "Invalid value '{}' for field '{}'.{} Valid options: {}",
+                        val, field_name, suggestion_text, valid_values.join(", ")
+                    ),
+                    "INVALID_ENUM",
+                    "",
+                    false,
+                ));
+            }
+        }
+    }
+
+    // Check cross_rules
+    for rule in &action.cross_rules {
+        if (rule.check)(args) {
+            return Some(ToolResult::error(
+                rule.message.clone(),
+                "CROSS_PARAM_VIOLATION",
+                "",
+                false,
+            ));
+        }
+    }
+
+    None
 }
 
 fn dispatch_group_action(group: &GroupDef, ctx: ToolContext, args: Value) -> ToolResult {
@@ -302,7 +387,12 @@ fn dispatch_group_action(group: &GroupDef, ctx: ToolContext, args: Value) -> Too
 
     let act = group.actions.iter().find(|a| a.name == action_name);
     match act {
-        Some(a) => (a.handler)(ctx, args),
+        Some(a) => {
+            if let Some(err) = validate_action(a, &args) {
+                return err;
+            }
+            (a.handler)(ctx, args)
+        }
         None => {
             let names: Vec<&str> = group.actions.iter().map(|a| a.name.as_str()).collect();
             let suggestion = fuzzy_match(&action_name, &names);
@@ -554,6 +644,136 @@ mod tests {
             assert!(found);
         });
 
+        clear_group_registry();
+        clear_registry();
+    }
+
+    #[test]
+    fn test_validation_requires() {
+        clear_group_registry();
+        tool_group("val_req")
+            .action("create", |a| {
+                a.requires(&["name", "email"])
+                    .handler(|_, _| ToolResult::new("ok"))
+            })
+            .register();
+
+        {
+            let guard = GROUP_REGISTRY.lock().unwrap();
+            // Missing required field
+            let result = dispatch_group_action(&guard[0], dummy_ctx(), serde_json::json!({
+                "action": "create",
+                "name": "Alice",
+            }));
+            assert!(result.is_error);
+            assert!(result.result_text.contains("Missing required field: email"));
+            assert_eq!(result.error_code, "MISSING_REQUIRED");
+
+            // All fields present
+            let result = dispatch_group_action(&guard[0], dummy_ctx(), serde_json::json!({
+                "action": "create",
+                "name": "Alice",
+                "email": "alice@example.com",
+            }));
+            assert!(!result.is_error);
+        }
+        clear_group_registry();
+        clear_registry();
+    }
+
+    #[test]
+    fn test_validation_enum_field() {
+        clear_group_registry();
+        tool_group("val_enum")
+            .action("set_mode", |a| {
+                a.enum_field("mode", &["fast", "slow", "balanced"])
+                    .handler(|_, _| ToolResult::new("ok"))
+            })
+            .register();
+
+        {
+            let guard = GROUP_REGISTRY.lock().unwrap();
+            // Invalid enum value
+            let result = dispatch_group_action(&guard[0], dummy_ctx(), serde_json::json!({
+                "action": "set_mode",
+                "mode": "turbo",
+            }));
+            assert!(result.is_error);
+            assert!(result.result_text.contains("Invalid value 'turbo'"));
+            assert_eq!(result.error_code, "INVALID_ENUM");
+
+            // Valid enum value
+            let result = dispatch_group_action(&guard[0], dummy_ctx(), serde_json::json!({
+                "action": "set_mode",
+                "mode": "fast",
+            }));
+            assert!(!result.is_error);
+        }
+        clear_group_registry();
+        clear_registry();
+    }
+
+    #[test]
+    fn test_validation_cross_rule() {
+        clear_group_registry();
+        tool_group("val_cross")
+            .action("transfer", |a| {
+                a.cross_rule(
+                    |args| {
+                        let from = args.get("from").and_then(|v| v.as_str()).unwrap_or("");
+                        let to = args.get("to").and_then(|v| v.as_str()).unwrap_or("");
+                        from == to
+                    },
+                    "Source and destination cannot be the same",
+                )
+                .handler(|_, _| ToolResult::new("transferred"))
+            })
+            .register();
+
+        {
+            let guard = GROUP_REGISTRY.lock().unwrap();
+            // Violates cross rule
+            let result = dispatch_group_action(&guard[0], dummy_ctx(), serde_json::json!({
+                "action": "transfer",
+                "from": "A",
+                "to": "A",
+            }));
+            assert!(result.is_error);
+            assert!(result.result_text.contains("Source and destination cannot be the same"));
+            assert_eq!(result.error_code, "CROSS_PARAM_VIOLATION");
+
+            // Valid
+            let result = dispatch_group_action(&guard[0], dummy_ctx(), serde_json::json!({
+                "action": "transfer",
+                "from": "A",
+                "to": "B",
+            }));
+            assert!(!result.is_error);
+            assert_eq!(result.result_text, "transferred");
+        }
+        clear_group_registry();
+        clear_registry();
+    }
+
+    #[test]
+    fn test_validation_enum_fuzzy_suggestion() {
+        clear_group_registry();
+        tool_group("val_fuzzy")
+            .action("color", |a| {
+                a.enum_field("color", &["red", "green", "blue"])
+                    .handler(|_, _| ToolResult::new("ok"))
+            })
+            .register();
+
+        {
+            let guard = GROUP_REGISTRY.lock().unwrap();
+            let result = dispatch_group_action(&guard[0], dummy_ctx(), serde_json::json!({
+                "action": "color",
+                "color": "gren",
+            }));
+            assert!(result.is_error);
+            assert!(result.result_text.contains("Did you mean"));
+        }
         clear_group_registry();
         clear_registry();
     }
