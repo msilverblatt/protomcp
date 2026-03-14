@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "protomcp"
-version = "0.1.0"
+version = "0.1.1"
 description = "Write MCP tools in Python. No MCP knowledge required."
 readme = "README.md"
 license = "MIT"
