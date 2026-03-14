@@ -1,6 +1,6 @@
 import json
 
-from . import protomcp_pb2 as pb
+import protomcp.protomcp_pb2 as pb
 
 class ServerLogger:
     def __init__(self, send_fn, name: str = ""):

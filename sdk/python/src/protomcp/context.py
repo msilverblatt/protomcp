@@ -2,7 +2,7 @@ import json
 import threading
 import uuid
 
-from . import protomcp_pb2 as pb
+import protomcp.protomcp_pb2 as pb
 
 # Global registry for pending sampling responses.
 # The runner's main loop will check incoming envelopes for SamplingResponse

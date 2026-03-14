@@ -1,7 +1,7 @@
 import socket
 import struct
 
-from . import protomcp_pb2 as pb
+import protomcp.protomcp_pb2 as pb
 
 class Transport:
     def __init__(self, socket_path: str):
