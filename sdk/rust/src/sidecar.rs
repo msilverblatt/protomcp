@@ -224,6 +224,7 @@ fn stop_one_sidecar(sc: &SidecarDef) {
 }
 
 /// Start all sidecars that match the given trigger.
+#[allow(clippy::type_complexity)]
 pub fn start_sidecars(trigger: &str) {
     let guard = SIDECAR_REGISTRY.lock().unwrap();
     let matching: Vec<usize> = guard
@@ -266,6 +267,7 @@ pub fn start_sidecars(trigger: &str) {
 }
 
 /// Stop all running sidecars.
+#[allow(clippy::type_complexity)]
 pub fn stop_all_sidecars() {
     let guard = SIDECAR_REGISTRY.lock().unwrap();
     let sidecar_data: Vec<(String, Vec<String>, String, String, u64, u64, u64)> = guard

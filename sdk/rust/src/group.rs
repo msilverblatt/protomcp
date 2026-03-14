@@ -433,6 +433,7 @@ fn fuzzy_match(input: &str, candidates: &[&str]) -> Option<String> {
     }
 }
 
+#[allow(clippy::needless_range_loop)]
 fn levenshtein(a: &str, b: &str) -> usize {
     let a_bytes = a.as_bytes();
     let b_bytes = b.as_bytes();
