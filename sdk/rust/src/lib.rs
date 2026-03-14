@@ -13,8 +13,10 @@ mod middleware;
 pub mod resource;
 pub mod prompt;
 pub mod completion;
+pub mod group;
 
-pub use tool::{tool, ToolDef, ArgDef, clear_registry};
+pub use tool::{tool, ToolDef, ArgDef, clear_registry, arg_to_schema};
+pub use group::{tool_group, groups_to_tool_defs, clear_group_registry};
 pub use result::ToolResult;
 pub use context::ToolContext;
 pub use runner::run;

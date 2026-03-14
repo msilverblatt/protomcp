@@ -74,7 +74,7 @@ pub fn tool(name: &str) -> ToolBuilder {
     }
 }
 
-fn arg_to_schema(arg: &ArgDef) -> Value {
+pub fn arg_to_schema(arg: &ArgDef) -> Value {
     match arg.type_name.as_str() {
         "array" => {
             let mut schema = serde_json::Map::new();
@@ -171,6 +171,11 @@ where
 {
     let guard = REGISTRY.lock().unwrap();
     f(&guard)
+}
+
+/// Adds a ToolDef directly to the tool registry (used by group registration).
+pub(crate) fn push_to_registry(td: ToolDef) {
+    REGISTRY.lock().unwrap().push(td);
 }
 
 pub fn clear_registry() {
