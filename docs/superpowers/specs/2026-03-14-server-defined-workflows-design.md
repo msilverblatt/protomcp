@@ -186,6 +186,82 @@ class DeployWorkflow:
 
 ---
 
+## Error Handling Within Steps
+
+### Default behavior: stay in current state
+
+If a step handler raises an exception, the workflow does **not** transition. The current state is preserved — the same tools remain visible, including the step that just failed and cancel. The agent sees the error as a normal `ToolResult(is_error=True)` and can retry the same step or cancel.
+
+This is the right default because:
+- The agent can retry with different arguments (e.g., fix a typo in a file path)
+- The workflow state hasn't changed, so retrying is safe
+- No data has been committed to the "next" state
+
+```python
+@step(next=["verify"])
+def run_migration(self, target_version: str) -> StepResult:
+    run_db_migration(target_version)  # raises on failure
+    return StepResult(result="Migration complete")
+
+# If run_db_migration raises:
+# - Agent sees: "Error: migration failed: column already exists"
+# - Available tools: deploy.run_migration (retry), deploy.cancel
+# - Workflow stays in the run_migration state
+```
+
+### Explicit error transitions: `on_error`
+
+For cases where specific failures should route to specific steps, the `@step` decorator accepts `on_error` — a mapping from exception types to step names:
+
+```python
+@step(next=["verify"], on_error={
+    TimeoutError: "retry_with_backoff",
+    IntegrityError: "rollback",
+})
+def run_migration(self, target_version: str) -> StepResult:
+    run_db_migration(target_version)
+    return StepResult(result="Migration complete")
+```
+
+**Rules:**
+- `on_error` targets must be step names that exist in the workflow (validated at registration)
+- If the exception type matches an `on_error` entry, the workflow transitions to that step instead of staying put
+- If the exception type doesn't match any `on_error` entry, the default behavior applies (stay in current state)
+- The error message is still returned to the agent as `ToolResult(is_error=True)` so it has context
+- `on_error` transitions respect the target step's `no_cancel` and visibility settings
+
+### `on_error` with catch-all
+
+Use `Exception` as the key for a catch-all:
+
+```python
+@step(next=["verify"], on_error={
+    IntegrityError: "rollback",
+    Exception: "error_review",  # catch-all for unexpected failures
+})
+def run_migration(self, target_version: str) -> StepResult: ...
+```
+
+### Interaction with `no_cancel`
+
+If a step has `no_cancel=True` and the handler raises, the agent is still constrained — it can retry the step (since we stay in current state) but cannot cancel. This is intentional: `no_cancel` means "you must go forward," and retrying is going forward. If the developer wants a failure escape hatch on a `no_cancel` step, they use `on_error` to route to a recovery step.
+
+### Retry limits
+
+The framework does not impose retry limits — the agent can retry a failed step as many times as it wants. If the developer wants to limit retries, they track attempt count on `self` and return a `StepResult` that routes to an error step:
+
+```python
+@step(next=["verify", "abort"])
+def run_migration(self, target_version: str) -> StepResult:
+    self.migration_attempts = getattr(self, 'migration_attempts', 0) + 1
+    if self.migration_attempts > 3:
+        return StepResult(result="Too many failures", next=["abort"])
+    run_db_migration(target_version)
+    return StepResult(result="Migration complete", next=["verify"])
+```
+
+---
+
 ## Tool Visibility Rules
 
 ### Workflow-level
