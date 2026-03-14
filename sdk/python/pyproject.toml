@@ -6,11 +6,29 @@ build-backend = "hatchling.build"
 name = "protomcp"
 version = "0.1.0"
 description = "Write MCP tools in Python. No MCP knowledge required."
+readme = "../../README.md"
+license = "MIT"
 requires-python = ">=3.10"
+authors = [{ name = "msilverblatt" }]
+keywords = ["mcp", "model-context-protocol", "ai", "tools", "protobuf"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
 dependencies = [
     "protobuf>=4.0",
     "zstandard>=0.20",
 ]
+
+[project.urls]
+Homepage = "https://github.com/msilverblatt/protomcp"
+Documentation = "https://msilverblatt.github.io/protomcp/"
+Repository = "https://github.com/msilverblatt/protomcp"
 
 [project.optional-dependencies]
 dev = [

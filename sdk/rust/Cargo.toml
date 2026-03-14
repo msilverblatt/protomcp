@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 description = "Rust SDK for protomcp — write MCP tools in Rust"
 license = "MIT"
+repository = "https://github.com/msilverblatt/protomcp"
+homepage = "https://msilverblatt.github.io/protomcp/"
+keywords = ["mcp", "model-context-protocol", "ai", "tools"]
+categories = ["api-bindings", "development-tools"]
 include = ["src/**/*", "proto/**/*", "build.rs", "Cargo.toml"]
 
 [dependencies]
