@@ -40,8 +40,8 @@ func TestTraceWriter(t *testing.T) {
 	if entries[1].Direction != "recv" {
 		t.Errorf("entry 1 direction = %q, want %q", entries[1].Direction, "recv")
 	}
-	if entries[1].Method != "" {
-		t.Errorf("entry 1 method = %q, want empty (response has no method)", entries[1].Method)
+	if entries[1].Method != "initialize response" {
+		t.Errorf("entry 1 method = %q, want %q", entries[1].Method, "initialize response")
 	}
 
 	if entries[2].Direction != "send" {

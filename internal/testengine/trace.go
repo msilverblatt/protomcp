@@ -34,7 +34,7 @@ func NewTraceLog() *TraceLog {
 // Writer returns an io.Writer that parses LoggingTransport output lines
 // and records them as TraceEntries.
 func (t *TraceLog) Writer() io.Writer {
-	return &traceWriter{log: t}
+	return newTraceWriter(t)
 }
 
 // Entries returns a snapshot of all recorded entries.
@@ -87,12 +87,18 @@ func (t *TraceLog) add(entry TraceEntry) {
 //	write: {"jsonrpc":"2.0",...}
 //	read: {"jsonrpc":"2.0",...}
 type traceWriter struct {
-	log  *TraceLog
-	buf  []byte
-	scan *bufio.Scanner
-	pr   *io.PipeReader
-	pw   *io.PipeWriter
-	once sync.Once
+	log        *TraceLog
+	buf        []byte
+	scan       *bufio.Scanner
+	pr         *io.PipeReader
+	pw         *io.PipeWriter
+	once       sync.Once
+	mu         sync.Mutex
+	reqMethods map[string]string // request ID → method for response correlation
+}
+
+func newTraceWriter(log *TraceLog) *traceWriter {
+	return &traceWriter{log: log, reqMethods: make(map[string]string)}
 }
 
 func (w *traceWriter) init() {
@@ -134,12 +140,38 @@ func (w *traceWriter) parseLine(line string) {
 		Raw:       payload,
 	}
 
-	// Try to extract method from JSON
+	// Extract method from requests, or correlate responses with their requests
 	var msg struct {
-		Method string `json:"method"`
+		Method string          `json:"method"`
+		ID     json.RawMessage `json:"id"`
+		Result json.RawMessage `json:"result"`
+		Error  json.RawMessage `json:"error"`
 	}
-	if json.Unmarshal([]byte(payload), &msg) == nil && msg.Method != "" {
-		entry.Method = msg.Method
+	if json.Unmarshal([]byte(payload), &msg) == nil {
+		if msg.Method != "" {
+			entry.Method = msg.Method
+			// Track request ID → method for response correlation
+			if len(msg.ID) > 0 {
+				w.mu.Lock()
+				w.reqMethods[string(msg.ID)] = msg.Method
+				w.mu.Unlock()
+			}
+		} else if msg.Result != nil || msg.Error != nil {
+			// Response — look up the original method
+			label := "response"
+			if msg.Error != nil {
+				label = "error"
+			}
+			if len(msg.ID) > 0 {
+				w.mu.Lock()
+				if m, ok := w.reqMethods[string(msg.ID)]; ok {
+					label = m + " " + label
+					delete(w.reqMethods, string(msg.ID))
+				}
+				w.mu.Unlock()
+			}
+			entry.Method = label
+		}
 	}
 
 	w.log.add(entry)
