@@ -10,7 +10,7 @@ protomcp connects an MCP host to a tool process through three distinct layers:
 
 ```mermaid
 graph LR
-    A[MCP Host<br/>Claude Desktop] <-->|MCP protocol<br/>stdio / HTTP / SSE| B[protomcp<br/>Go binary]
+    A[MCP Host<br/>Claude Desktop] <-->|MCP protocol<br/>stdio / HTTP| B[protomcp<br/>Go binary]
     B <-->|protobuf<br/>unix socket| C[Tool Process<br/>Python / TS / any]
 ```
 
@@ -103,14 +103,11 @@ The `Envelope` message wraps all request and response types in a `oneof` field. 
 
 ## Transports
 
-protomcp supports five transports for the MCP host side:
+protomcp supports two transports for the MCP host side:
 
 | Transport | Flag | Use case |
 |-----------|------|----------|
 | stdio | `--transport stdio` | MCP clients that spawn subprocesses (default) |
-| HTTP SSE | `--transport sse` | Web-based or remote MCP clients |
-| Streamable HTTP | `--transport http` | Modern HTTP clients |
-| WebSocket | `--transport ws` | Real-time bidirectional clients |
-| In-process | `--transport inproc` | Testing and embedding |
+| Streamable HTTP | `--transport http` | Remote or web-based MCP clients |
 
 See [Transports](/concepts/transports/) for details.

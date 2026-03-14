@@ -1,6 +1,4 @@
-// Package testutil provides a shared test harness for spawning a tool process
-// via the process.Manager, sending JSON-RPC requests through the MCP handler +
-// transport, and collecting results.
+// Package testutil provides shared test utilities for protomcp tests.
 package testutil
 
 import (
@@ -16,8 +14,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/msilverblatt/protomcp/internal/mcp"
 )
 
 // RepoRoot returns the absolute path to the repository root by walking up from
@@ -46,10 +42,74 @@ func SetupPythonPath() {
 	os.Setenv("PYTHONPATH", pythonPath)
 }
 
+// JSONRPCRequest is a minimal JSON-RPC 2.0 request.
+type JSONRPCRequest struct {
+	JSONRPC string          `json:"jsonrpc"`
+	ID      json.RawMessage `json:"id,omitempty"`
+	Method  string          `json:"method"`
+	Params  json.RawMessage `json:"params,omitempty"`
+}
+
+// JSONRPCResponse is a minimal JSON-RPC 2.0 response.
+type JSONRPCResponse struct {
+	JSONRPC string          `json:"jsonrpc"`
+	ID      json.RawMessage `json:"id,omitempty"`
+	Result  json.RawMessage `json:"result,omitempty"`
+	Error   *JSONRPCError   `json:"error,omitempty"`
+}
+
+// JSONRPCError is a JSON-RPC 2.0 error object.
+type JSONRPCError struct {
+	Code    int             `json:"code"`
+	Message string          `json:"message"`
+	Data    json.RawMessage `json:"data,omitempty"`
+}
+
+// MCP response types for test assertions.
+
+type InitializeResult struct {
+	ProtocolVersion string       `json:"protocolVersion"`
+	Capabilities    Capabilities `json:"capabilities"`
+	ServerInfo      ServerInfo   `json:"serverInfo"`
+}
+
+type Capabilities struct {
+	Tools *ToolsCapability `json:"tools,omitempty"`
+}
+
+type ToolsCapability struct {
+	ListChanged bool `json:"listChanged"`
+}
+
+type ServerInfo struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
+type ToolsListResult struct {
+	Tools []MCPTool `json:"tools"`
+}
+
+type MCPTool struct {
+	Name        string          `json:"name"`
+	Description string          `json:"description,omitempty"`
+	InputSchema json.RawMessage `json:"inputSchema"`
+}
+
+type ToolsCallResult struct {
+	Content []ContentItem `json:"content"`
+	IsError bool          `json:"isError,omitempty"`
+}
+
+type ContentItem struct {
+	Type string `json:"type"`
+	Text string `json:"text,omitempty"`
+}
+
 // PMCPResult holds a parsed JSON-RPC response plus the raw bytes and the round
 // trip latency.
 type PMCPResult struct {
-	Resp    mcp.JSONRPCResponse
+	Resp    JSONRPCResponse
 	Raw     []byte
 	Latency time.Duration
 }
@@ -65,8 +125,6 @@ type StdioPMCP struct {
 }
 
 // StartPMCP builds (if needed) and starts the pmcp binary with the given args.
-// The binary is expected at <repo>/bin/pmcp; callers should run `make build`
-// before running these tests.
 func StartPMCP(tb testing.TB, args ...string) *StdioPMCP {
 	tb.Helper()
 	binPath := filepath.Join(RepoRoot(), "bin", "pmcp")
@@ -75,7 +133,7 @@ func StartPMCP(tb testing.TB, args ...string) *StdioPMCP {
 	}
 
 	cmd := exec.Command(binPath, args...)
-	cmd.Stderr = nil // suppress stderr in tests
+	cmd.Stderr = nil
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -91,7 +149,7 @@ func StartPMCP(tb testing.TB, args ...string) *StdioPMCP {
 	}
 
 	scanner := bufio.NewScanner(stdout)
-	scanner.Buffer(make([]byte, 32*1024*1024), 32*1024*1024)
+	scanner.Buffer(make([]byte, 512*1024*1024), 512*1024*1024)
 
 	tb.Cleanup(func() {
 		stdin.Close()
@@ -116,7 +174,7 @@ func (p *StdioPMCP) Send(tb testing.TB, method string, params interface{}) PMCPR
 	id := p.nextID
 	p.mu.Unlock()
 
-	req := mcp.JSONRPCRequest{
+	req := JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      json.RawMessage(fmt.Sprintf("%d", id)),
 		Method:  method,
@@ -142,7 +200,7 @@ func (p *StdioPMCP) Send(tb testing.TB, method string, params interface{}) PMCPR
 	elapsed := time.Since(start)
 
 	raw := p.Reader.Bytes()
-	var resp mcp.JSONRPCResponse
+	var resp JSONRPCResponse
 	if err := json.Unmarshal(raw, &resp); err != nil {
 		tb.Fatalf("unmarshal response: %v (raw: %s)", err, raw)
 	}
@@ -150,19 +208,32 @@ func (p *StdioPMCP) Send(tb testing.TB, method string, params interface{}) PMCPR
 	return PMCPResult{Resp: resp, Raw: bytes.Clone(raw), Latency: elapsed}
 }
 
-// SendRaw sends raw bytes followed by a newline to the pmcp stdin.
-func (p *StdioPMCP) SendRaw(tb testing.TB, data []byte) {
+// SendNotification sends a JSON-RPC notification (no ID, no response).
+func (p *StdioPMCP) SendNotification(tb testing.TB, method string, params interface{}) {
 	tb.Helper()
+	req := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"method":  method,
+	}
+	if params != nil {
+		req["params"] = params
+	}
+	data, _ := json.Marshal(req)
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.Stdin.Write(append(data, '\n'))
 }
 
-// Initialize sends the MCP initialize handshake.
+// Initialize sends a proper MCP initialize handshake (initialize + initialized notification).
 func (p *StdioPMCP) Initialize(tb testing.TB) {
 	tb.Helper()
-	r := p.Send(tb, "initialize", nil)
+	r := p.Send(tb, "initialize", map[string]interface{}{
+		"protocolVersion": "2025-03-26",
+		"capabilities":    map[string]interface{}{},
+		"clientInfo":      map[string]interface{}{"name": "test", "version": "1.0.0"},
+	})
 	if r.Resp.Error != nil {
 		tb.Fatalf("initialize failed: %s", r.Resp.Error.Message)
 	}
+	p.SendNotification(tb, "notifications/initialized", map[string]interface{}{})
 }

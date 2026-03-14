@@ -1,10 +1,10 @@
 ---
 draft: false
 title: Authentication
-description: Configure built-in token and API key authentication for network transports.
+description: Configure built-in token and API key authentication for the HTTP transport.
 ---
 
-protomcp includes built-in authentication middleware for network transports (SSE, HTTP). Auth is configured via the `--auth` flag and is automatically skipped for stdio transport.
+protomcp includes built-in authentication middleware for the HTTP transport. Auth is configured via the `--auth` flag and only applies to `--transport http`. It is automatically skipped for stdio transport.
 
 ## Configuration
 
@@ -45,7 +45,7 @@ If the environment variable is not set, `pmcp` exits with an error.
 
 1. `pmcp` reads the `--auth` flag values at startup
 2. For each `scheme:ENV_VAR` pair, it reads the environment variable value
-3. On each incoming request (for network transports only):
+3. On each incoming request (for HTTP transport only):
    - `token` scheme: validates that `Authorization: Bearer <value>` matches
    - `apikey` scheme: validates that `X-API-Key: <value>` matches
 4. If validation fails, the request is rejected with an unauthorized error

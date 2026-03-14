@@ -1,0 +1,151 @@
+---
+draft: false
+title: Resources
+description: Expose data to MCP clients — files, configs, database records, API responses.
+---
+
+Resources let your MCP server expose data that clients can read. Unlike tools (which perform actions), resources are for providing context — configuration files, database records, log entries, or any data the LLM might need.
+
+## How Resources Work
+
+```
+MCP Client                    pmcp                     Your Code
+    │                          │                          │
+    ├─ resources/list ────────►│                          │
+    │                          ├─ ListResourcesRequest ──►│
+    │                          │◄─ ResourceListResponse ──┤
+    │◄─ resource list ─────────┤                          │
+    │                          │                          │
+    ├─ resources/read(uri) ───►│                          │
+    │                          ├─ ReadResourceRequest ───►│
+    │                          │◄─ ReadResourceResponse ──┤
+    │◄─ resource contents ─────┤                          │
+```
+
+## Python
+
+### Static Resources
+
+Register a resource with a fixed URI:
+
+```python
+from protomcp import resource, ResourceContent
+
+@resource(uri="config://app", description="Application configuration")
+def app_config(uri: str) -> ResourceContent:
+    return ResourceContent(
+        uri=uri,
+        text='{"debug": false, "log_level": "info"}',
+        mime_type="application/json",
+    )
+```
+
+The handler receives the requested URI and returns a `ResourceContent` with the data. You can return text or binary data:
+
+```python
+@resource(uri="logo://main", description="Company logo", mime_type="image/png")
+def logo(uri: str) -> ResourceContent:
+    with open("logo.png", "rb") as f:
+        return ResourceContent(uri=uri, blob=f.read(), mime_type="image/png")
+```
+
+### Resource Templates
+
+Templates use URI patterns with placeholders. The client can request any URI matching the pattern:
+
+```python
+from protomcp import resource_template, ResourceContent
+
+@resource_template(
+    uri_template="db://users/{user_id}",
+    description="Read a user record by ID",
+    mime_type="application/json",
+)
+def read_user(uri: str) -> ResourceContent:
+    user_id = uri.replace("db://users/", "")
+    user = db.get_user(user_id)
+    return ResourceContent(uri=uri, text=json.dumps(user))
+```
+
+### Returning Multiple Contents
+
+A handler can return a list of `ResourceContent` for multi-part responses:
+
+```python
+@resource(uri="metrics://dashboard", description="Dashboard metrics")
+def dashboard(uri: str) -> list[ResourceContent]:
+    return [
+        ResourceContent(uri="metrics://dashboard/cpu", text="72%"),
+        ResourceContent(uri="metrics://dashboard/memory", text="4.2GB/8GB"),
+    ]
+```
+
+## TypeScript
+
+```typescript
+import { resource, resourceTemplate } from 'protomcp';
+
+resource({
+  uri: 'config://app',
+  description: 'Application configuration',
+  handler: (uri) => ({
+    uri,
+    text: '{"debug": false}',
+    mimeType: 'application/json',
+  }),
+});
+
+resourceTemplate({
+  uriTemplate: 'db://users/{user_id}',
+  description: 'Read a user record by ID',
+  handler: (uri) => {
+    const userId = uri.replace('db://users/', '');
+    return { uri, text: JSON.stringify(getUser(userId)) };
+  },
+});
+```
+
+## Go
+
+```go
+protomcp.RegisterResource(protomcp.ResourceDef{
+    URI:         "config://app",
+    Name:        "app_config",
+    Description: "Application configuration",
+    MimeType:    "application/json",
+    HandlerFn: func() []protomcp.ResourceContent {
+        return []protomcp.ResourceContent{{
+            URI:  "config://app",
+            Text: `{"debug": false}`,
+        }}
+    },
+})
+
+protomcp.RegisterResourceTemplate(protomcp.ResourceTemplateDef{
+    URITemplate: "db://users/{user_id}",
+    Name:        "read_user",
+    Description: "Read a user record by ID",
+    HandlerFn: func(uri string) []protomcp.ResourceContent {
+        userID := strings.TrimPrefix(uri, "db://users/")
+        return []protomcp.ResourceContent{{URI: uri, Text: getUser(userID)}}
+    },
+})
+```
+
+## Combining with Tools
+
+Resources and tools complement each other. A common pattern: expose data via resources, provide actions via tools.
+
+```python
+NOTES = {}
+
+@resource_template(uri_template="notes://{id}", description="Read a note")
+def read_note(uri: str) -> ResourceContent:
+    note_id = uri.replace("notes://", "")
+    return ResourceContent(uri=uri, text=NOTES.get(note_id, "Not found"))
+
+@tool("Create a new note")
+def create_note(id: str, content: str) -> ToolResult:
+    NOTES[id] = content
+    return ToolResult(result=f"Created note {id}")
+```

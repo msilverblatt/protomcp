@@ -26,6 +26,9 @@ export default defineConfig({
             { label: 'Writing Tools (TypeScript)', slug: 'guides/writing-tools-typescript' },
             { label: 'Writing Tools (Go)', slug: 'guides/writing-tools-go' },
             { label: 'Writing Tools (Rust)', slug: 'guides/writing-tools-rust' },
+            { label: 'Resources', slug: 'guides/resources' },
+            { label: 'Prompts & Completions', slug: 'guides/prompts' },
+            { label: 'Sampling', slug: 'guides/sampling' },
             { label: 'Custom Middleware', slug: 'guides/middleware' },
             { label: 'Authentication', slug: 'guides/auth' },
             { label: 'Dynamic Tool Lists', slug: 'guides/dynamic-tool-lists' },
@@ -39,6 +42,7 @@ export default defineConfig({
           label: 'Reference',
           items: [
             { label: 'CLI', slug: 'reference/cli' },
+            { label: 'MCP Spec Compliance', slug: 'reference/mcp-compliance' },
             { label: 'Protobuf Spec', slug: 'reference/protobuf-spec' },
             { label: 'Python API', slug: 'reference/python-api' },
             { label: 'TypeScript API', slug: 'reference/typescript-api' },

@@ -1,7 +1,7 @@
 ---
 draft: false
-title: Writing Tools (Python)
-description: Use the @tool() decorator, ToolResult, ToolContext, ServerLogger, and tool_manager in Python.
+title: Python Guide
+description: Tools, resources, prompts, completions, sampling, and more in Python.
 ---
 
 ## Installation
@@ -337,3 +337,69 @@ def test_add():
 ```
 
 Call the handler directly — no need to run protomcp for unit tests.
+
+---
+
+## Resources
+
+Resources expose data that MCP clients can read. See the [Resources guide](/guides/resources/) for the full pattern.
+
+```python
+from protomcp import resource, resource_template, ResourceContent
+
+@resource(uri="config://app", description="App configuration")
+def app_config(uri: str) -> ResourceContent:
+    return ResourceContent(uri=uri, text='{"debug": false}', mime_type="application/json")
+
+@resource_template(uri_template="db://users/{user_id}", description="Read a user by ID")
+def read_user(uri: str) -> ResourceContent:
+    user_id = uri.replace("db://users/", "")
+    return ResourceContent(uri=uri, text=json.dumps(get_user(user_id)))
+```
+
+---
+
+## Prompts
+
+Prompts define reusable message templates. See the [Prompts guide](/guides/prompts/) for the full pattern.
+
+```python
+from protomcp import prompt, PromptArg, PromptMessage
+
+@prompt(
+    description="Summarize a topic",
+    arguments=[PromptArg(name="topic", required=True)],
+)
+def summarize(topic: str) -> list[PromptMessage]:
+    return [PromptMessage(role="user", content=f"Summarize {topic} briefly.")]
+```
+
+---
+
+## Completions
+
+Provide autocomplete for prompt and resource arguments. See [Prompts guide — Completions](/guides/prompts/#completions).
+
+```python
+from protomcp import completion, CompletionResult
+
+@completion("ref/prompt", "summarize", "topic")
+def complete_topic(value: str) -> CompletionResult:
+    topics = ["architecture", "performance", "security"]
+    return CompletionResult(values=[t for t in topics if t.startswith(value)])
+```
+
+---
+
+## Sampling
+
+Request LLM calls from the MCP client. See the [Sampling guide](/guides/sampling/).
+
+```python
+@tool("Translate text")
+def translate(ctx: ToolContext, text: str, language: str) -> ToolResult:
+    response = ctx.sample(
+        messages=[{"role": "user", "content": f"Translate to {language}: {text}"}],
+        max_tokens=500,
+    )
+    return ToolResult(result=response.get("content", ""))
