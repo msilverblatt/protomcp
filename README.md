@@ -193,6 +193,32 @@ Use the official SDKs directly when:
 - **You need maximum control** — middleware, custom transports, OAuth flows, fine-grained session management
 - **You're embedding MCP in an existing app** — the official SDKs integrate as libraries, protomcp runs as a separate process
 
+## Testing & Playground
+
+protomcp includes built-in testing tools — no agent required.
+
+### `pmcp test` — CLI testing
+
+```sh
+# List all tools, resources, and prompts with their schemas
+pmcp test server.py list
+
+# Call a tool and see the result + full protocol trace
+pmcp test server.py call get_weather --args '{"city": "SF"}'
+
+# JSON output for scripting
+pmcp test server.py list --format json
+```
+
+### `pmcp playground` — Interactive web UI
+
+```sh
+pmcp playground server.py --port 3000
+# Open http://localhost:3000
+```
+
+Two-panel layout: interact with tools/resources/prompts on the left, watch every JSON-RPC message in real-time on the right. Auto-generated forms from your tool schemas, live protocol tracing, and hot reload visibility.
+
 ## Examples
 
 See [`examples/`](examples/) for runnable demos:
