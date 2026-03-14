@@ -1,9 +1,13 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import { rehypeMermaid } from '@beoe/rehype-mermaid';
 
 export default defineConfig({
   site: 'https://msilverblatt.github.io',
   base: '/protomcp',
+  markdown: {
+    rehypePlugins: [[rehypeMermaid, { class: 'not-content' }]],
+  },
   integrations: [
     starlight({
       title: 'protomcp',
