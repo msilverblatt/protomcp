@@ -37,6 +37,7 @@ export interface PromptArgument {
 }
 
 export interface TraceEntry {
+  seq: number
   timestamp: string
   direction: 'send' | 'recv'
   method: string

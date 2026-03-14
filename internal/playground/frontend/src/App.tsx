@@ -40,7 +40,11 @@ export default function App() {
     (event: WsEvent) => {
       switch (event.type) {
         case 'trace':
-          setTraceEntries((prev) => [...prev, event.data])
+          setTraceEntries((prev) => {
+            // Deduplicate by seq, keep sorted
+            if (prev.some((e) => e.seq === event.data.seq)) return prev
+            return [...prev, event.data].sort((a, b) => a.seq - b.seq)
+          })
           break
         case 'tools_changed':
           setTools(event.data)
@@ -63,14 +67,18 @@ export default function App() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [toolsRes, resourcesRes, promptsRes] = await Promise.all([
+      const [toolsRes, resourcesRes, promptsRes, traceRes] = await Promise.all([
         fetch('/api/tools').then((r) => r.json()),
         fetch('/api/resources').then((r) => r.json()),
         fetch('/api/prompts').then((r) => r.json()),
+        fetch('/api/trace').then((r) => r.json()),
       ])
       setTools(Array.isArray(toolsRes) ? toolsRes : toolsRes?.tools ?? [])
       setResources(Array.isArray(resourcesRes) ? resourcesRes : resourcesRes?.resources ?? [])
       setPrompts(Array.isArray(promptsRes) ? promptsRes : promptsRes?.prompts ?? [])
+      if (Array.isArray(traceRes)) {
+        setTraceEntries(traceRes.sort((a: TraceEntry, b: TraceEntry) => a.seq - b.seq))
+      }
     } catch {
       // will retry on reconnect
     }

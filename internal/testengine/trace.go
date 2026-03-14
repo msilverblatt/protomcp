@@ -11,6 +11,7 @@ import (
 
 // TraceEntry records a single JSON-RPC message.
 type TraceEntry struct {
+	Seq       uint64    `json:"seq"`
 	Timestamp time.Time `json:"timestamp"`
 	Direction string    `json:"direction"` // "send" or "recv"
 	Raw       string    `json:"raw"`       // full JSON-RPC message
@@ -22,6 +23,7 @@ type TraceLog struct {
 	mu          sync.RWMutex
 	entries     []TraceEntry
 	subscribers map[chan TraceEntry]struct{}
+	nextSeq     uint64
 }
 
 // NewTraceLog creates a new TraceLog.
@@ -71,6 +73,8 @@ func (t *TraceLog) Clear() {
 
 func (t *TraceLog) add(entry TraceEntry) {
 	t.mu.Lock()
+	entry.Seq = t.nextSeq
+	t.nextSeq++
 	t.entries = append(t.entries, entry)
 	for ch := range t.subscribers {
 		select {
