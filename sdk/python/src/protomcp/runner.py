@@ -3,7 +3,7 @@ import os
 import sys
 import time
 
-from protomcp import protomcp_pb2 as pb
+from . import protomcp_pb2 as pb
 
 import inspect
 

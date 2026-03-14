@@ -1,4 +1,4 @@
-from protomcp import protomcp_pb2 as pb
+from . import protomcp_pb2 as pb
 
 _transport = None
 
