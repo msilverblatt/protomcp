@@ -215,14 +215,30 @@ func (e *Engine) Start(ctx context.Context) error {
 
 // Stop shuts down the engine.
 func (e *Engine) Stop() {
-	if e.session != nil {
-		e.session.Close()
-	}
-	if e.pm != nil {
-		e.pm.Stop()
-	}
+	// Cancel context first to unblock any in-flight operations
 	if e.cancel != nil {
 		e.cancel()
+	}
+
+	// Close session and stop PM concurrently with a hard timeout
+	done := make(chan struct{})
+	go func() {
+		if e.session != nil {
+			e.session.Close()
+		}
+		if e.pm != nil {
+			e.pm.Stop()
+		}
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(3 * time.Second):
+		// Force kill if cleanup hangs
+		if e.pm != nil {
+			e.pm.Stop()
+		}
 	}
 }
 
