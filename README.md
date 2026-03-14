@@ -294,9 +294,45 @@ tool_group("math")
     .register();
 ```
 
+## Server-Defined Workflows
+
+Define multi-step processes as state machines. The agent only sees valid next actions at each point — the server controls progression. No more hoping the agent calls tools in the right order.
+
+```python
+@workflow("deploy", allow_during=["status"])
+class DeployWorkflow:
+    @step(initial=True, next=["approve", "reject"])
+    def review(self, pr_url: str) -> StepResult:
+        return StepResult(result=f"3 files changed in {pr_url}")
+
+    @step(next=["run_tests"])
+    def approve(self, reason: str) -> StepResult:
+        return StepResult(result="Approved")
+
+    @step(next=["promote", "rollback"], no_cancel=True)
+    def run_tests(self) -> StepResult:
+        results = execute_tests()
+        if results.all_passed:
+            return StepResult(result="All passed", next=["promote"])
+        return StepResult(result="Failures", next=["rollback"])
+
+    @step(terminal=True, no_cancel=True)
+    def promote(self) -> StepResult:
+        return StepResult(result="Live in production")
+```
+
+At each step, the framework automatically enables/disables tools so the agent can only take valid actions. `no_cancel=True` means the agent is committed — no backing out mid-migration. `allow_during=["status"]` lets the agent check status between steps without leaving the workflow.
+
+Workflows also support:
+- **Dynamic next** — narrow available next steps based on runtime state
+- **Error handling** — failed steps stay in state for retry, or route to recovery steps via `on_error`
+- **Lifecycle hooks** — `on_cancel` for cleanup, `on_complete` for audit logging
+- **Tool visibility** — `allow_during` / `block_during` with glob patterns, step-level overrides
+
 ## Advanced Features
 
 - **Tool Groups** -- Group related actions with per-action schemas (oneOf discriminated unions). Each action gets its own required fields, enums, and validation rules while appearing as a single tool to the LLM.
+- **Server-Defined Workflows** -- Multi-step state machines where the visible tool surface IS the state. The server defines the process, the agent follows it. Supports `no_cancel`, error recovery, dynamic branching, and tool visibility control.
 - **Local Middleware** -- In-process middleware chain for error handling, timing, auto-install, or any cross-cutting concern. Middleware receives the tool name, args, and a `next` handler.
 - **Server Context** -- Inject shared parameters (project directory, DB connection, auth tokens) into tool handlers automatically. Hidden contexts stay out of the tool schema entirely.
 - **Telemetry** -- Structured `ToolCallEvent`s (start, success, error, progress) emitted to pluggable sinks. Wire up logging, metrics, or tracing with a single decorator.
@@ -354,6 +390,9 @@ See [`examples/`](examples/) for runnable demos:
 - **Basic** — minimal tool examples in all four languages
 - **Resources & Prompts** — resources, prompts, completions, and tools together
 - **Full showcase** — structured output, progress, cancellation, dynamic tool lists, error handling
+- **Tool Groups** — per-action schemas with union and separate strategies
+- **Advanced Server** — middleware, telemetry, server context working together
+- **Workflows** — deployment pipeline as a server-defined state machine
 
 Examples are available in all four languages: [`examples/python/`](examples/python/), [`examples/typescript/`](examples/typescript/), [`examples/go/`](examples/go/), [`examples/rust/`](examples/rust/).
 
