@@ -1,0 +1,200 @@
+import { useState, useEffect, useCallback } from 'react'
+import type { Tool, Resource, PromptDef, TraceEntry, HistoryItem, CallResult, ResourceReadResult, PromptGetResult, WsEvent } from './types'
+import { useWebSocket } from './hooks/useWebSocket'
+import { useApi } from './hooks/useApi'
+import TopBar from './components/TopBar'
+import FeaturePicker from './components/FeaturePicker'
+import ToolForm from './components/ToolForm'
+import ResourceForm from './components/ResourceForm'
+import PromptForm from './components/PromptForm'
+import TracePanel from './components/TracePanel'
+import History from './components/History'
+
+type Tab = 'tools' | 'resources' | 'prompts'
+
+let historyId = 0
+function nextId() {
+  return String(++historyId)
+}
+
+export default function App() {
+  const [tools, setTools] = useState<Tool[]>([])
+  const [resources, setResources] = useState<Resource[]>([])
+  const [prompts, setPrompts] = useState<PromptDef[]>([])
+  const [tab, setTab] = useState<Tab>('tools')
+  const [selectedName, setSelectedName] = useState<string | null>(null)
+  const [traceEntries, setTraceEntries] = useState<TraceEntry[]>([])
+  const [history, setHistory] = useState<HistoryItem[]>([])
+  const [startTime] = useState(() => new Date())
+
+  const callApi = useApi<CallResult>()
+  const readApi = useApi<ResourceReadResult>()
+  const promptApi = useApi<PromptGetResult>()
+  const reloadApi = useApi<Record<string, never>>()
+
+  const addHistory = useCallback((item: Omit<HistoryItem, 'id' | 'timestamp'>) => {
+    setHistory((prev) => [...prev, { ...item, id: nextId(), timestamp: new Date() }])
+  }, [])
+
+  const handleWsMessage = useCallback(
+    (event: WsEvent) => {
+      switch (event.type) {
+        case 'trace':
+          setTraceEntries((prev) => [...prev, event.data])
+          break
+        case 'tools_changed':
+          setTools(event.data)
+          addHistory({ type: 'system', label: `Tools changed (${event.data.length} tools)` })
+          break
+        case 'reload':
+          addHistory({ type: 'system', label: `Reloaded (${event.data.tool_count} tools)` })
+          fetchAll()
+          break
+        case 'connection':
+          if (event.data.status === 'connected') fetchAll()
+          break
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  )
+
+  const { connected } = useWebSocket(handleWsMessage)
+
+  const fetchAll = useCallback(async () => {
+    try {
+      const [toolsRes, resourcesRes, promptsRes] = await Promise.all([
+        fetch('/api/tools').then((r) => r.json()),
+        fetch('/api/resources').then((r) => r.json()),
+        fetch('/api/prompts').then((r) => r.json()),
+      ])
+      if (toolsRes?.tools) setTools(toolsRes.tools)
+      if (resourcesRes?.resources) setResources(resourcesRes.resources)
+      if (promptsRes?.prompts) setPrompts(promptsRes.prompts)
+    } catch {
+      // will retry on reconnect
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchAll()
+  }, [fetchAll])
+
+  const handleToolCall = async (name: string, args: Record<string, unknown>) => {
+    const result = await callApi.execute('/api/call', {
+      method: 'POST',
+      body: JSON.stringify({ name, args }),
+    })
+    if (result) {
+      addHistory({ type: 'call', label: `tool/${name}`, request: { name, args }, response: result })
+      if (result.tools_enabled?.length || result.tools_disabled?.length) {
+        const parts: string[] = []
+        if (result.tools_enabled?.length) parts.push(`enabled: ${result.tools_enabled.join(', ')}`)
+        if (result.tools_disabled?.length) parts.push(`disabled: ${result.tools_disabled.join(', ')}`)
+        addHistory({ type: 'system', label: `Tools changed: ${parts.join('; ')}` })
+        fetchAll()
+      }
+    } else if (callApi.error) {
+      addHistory({ type: 'error', label: `tool/${name} failed`, response: callApi.error })
+    }
+  }
+
+  const handleResourceRead = async (uri: string) => {
+    const result = await readApi.execute('/api/resource/read', {
+      method: 'POST',
+      body: JSON.stringify({ uri }),
+    })
+    if (result) {
+      addHistory({ type: 'resource', label: `resource/${uri}`, request: { uri }, response: result })
+    } else if (readApi.error) {
+      addHistory({ type: 'error', label: `resource/${uri} failed`, response: readApi.error })
+    }
+  }
+
+  const handlePromptGet = async (name: string, args: Record<string, string>) => {
+    const result = await promptApi.execute('/api/prompt/get', {
+      method: 'POST',
+      body: JSON.stringify({ name, arguments: args }),
+    })
+    if (result) {
+      addHistory({ type: 'prompt', label: `prompt/${name}`, request: { name, arguments: args }, response: result })
+    } else if (promptApi.error) {
+      addHistory({ type: 'error', label: `prompt/${name} failed`, response: promptApi.error })
+    }
+  }
+
+  const handleReload = async () => {
+    await reloadApi.execute('/api/reload', { method: 'POST' })
+    fetchAll()
+  }
+
+  const selectedTool = tab === 'tools' ? tools.find((t) => t.name === selectedName) : undefined
+  const selectedResource = tab === 'resources' ? resources.find((r) => r.uri === selectedName) : undefined
+  const selectedPrompt = tab === 'prompts' ? prompts.find((p) => p.name === selectedName) : undefined
+
+  return (
+    <>
+      <TopBar
+        connected={connected}
+        toolCount={tools.length}
+        resourceCount={resources.length}
+        promptCount={prompts.length}
+        onReload={handleReload}
+        reloading={reloadApi.loading}
+        startTime={startTime}
+      />
+      <div className="flex flex-1 min-h-0">
+        {/* Left Panel */}
+        <div className="w-1/2 flex flex-col border-r border-gray-700 bg-gray-800">
+          <FeaturePicker
+            tab={tab}
+            onTabChange={(t) => {
+              setTab(t)
+              setSelectedName(null)
+            }}
+            tools={tools}
+            resources={resources}
+            prompts={prompts}
+            selectedName={selectedName}
+            onSelect={setSelectedName}
+          />
+
+          <div className="flex-1 overflow-y-auto border-t border-gray-700">
+            {selectedTool && (
+              <ToolForm tool={selectedTool} onSubmit={handleToolCall} loading={callApi.loading} />
+            )}
+            {selectedResource && (
+              <ResourceForm
+                resource={selectedResource}
+                onSubmit={handleResourceRead}
+                loading={readApi.loading}
+              />
+            )}
+            {selectedPrompt && (
+              <PromptForm
+                prompt={selectedPrompt}
+                onSubmit={handlePromptGet}
+                loading={promptApi.loading}
+              />
+            )}
+            {!selectedTool && !selectedResource && !selectedPrompt && (
+              <div className="p-4 text-xs text-gray-500 italic">
+                Select an item from the list above
+              </div>
+            )}
+          </div>
+
+          <History items={history} />
+        </div>
+
+        {/* Right Panel */}
+        <div className="w-1/2 bg-gray-800">
+          <TracePanel
+            entries={traceEntries}
+            onClear={() => setTraceEntries([])}
+          />
+        </div>
+      </div>
+    </>
+  )
+}
