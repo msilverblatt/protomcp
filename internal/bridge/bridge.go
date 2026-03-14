@@ -1,0 +1,110 @@
+package bridge
+
+import (
+	"context"
+	"log/slog"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
+)
+
+// ProcessBackend is the interface for communicating with an SDK tool process.
+// Implemented by process.Manager.
+type ProcessBackend interface {
+	ActiveTools() []*pb.ToolDefinition
+	CallTool(ctx context.Context, name, argsJSON string) (*pb.CallToolResponse, error)
+}
+
+// CompletionBackend is the interface for completion operations.
+type CompletionBackend interface {
+	Complete(ctx context.Context, refType, refName, argName, argValue string) (*pb.CompletionResponse, error)
+}
+
+// FullBackend combines all backend interfaces.
+type FullBackend interface {
+	ProcessBackend
+	ResourceBackend
+	PromptBackend
+	CompletionBackend
+	SamplingBackend
+}
+
+// Bridge connects an mcp.Server to a FullBackend.
+// It registers proxy handlers that forward MCP requests to the SDK process.
+type Bridge struct {
+	Server  *mcp.Server
+	backend FullBackend
+	logger  *slog.Logger
+}
+
+// New creates a Bridge with an mcp.Server that proxies to the given backend.
+func New(backend FullBackend, logger *slog.Logger) *Bridge {
+	opts := &mcp.ServerOptions{
+		Logger: logger,
+		CompletionHandler: func(ctx context.Context, req *mcp.CompleteRequest) (*mcp.CompleteResult, error) {
+			var refName string
+			switch req.Params.Ref.Type {
+			case "ref/resource":
+				refName = req.Params.Ref.URI
+			default:
+				refName = req.Params.Ref.Name
+			}
+			resp, err := backend.Complete(ctx, req.Params.Ref.Type, refName, req.Params.Argument.Name, req.Params.Argument.Value)
+			if err != nil {
+				return nil, err
+			}
+			return &mcp.CompleteResult{
+				Completion: mcp.CompletionResultDetails{
+					Values:  resp.Values,
+					Total:   int(resp.Total),
+					HasMore: resp.HasMore,
+				},
+			}, nil
+		},
+	}
+
+	opts.RootsListChangedHandler = func(ctx context.Context, req *mcp.RootsListChangedRequest) {
+		if logger != nil {
+			logger.Info("roots list changed")
+		}
+	}
+
+	server := mcp.NewServer(
+		&mcp.Implementation{Name: "protomcp", Version: "1.0.0"},
+		opts,
+	)
+
+	b := &Bridge{
+		Server:  server,
+		backend: backend,
+		logger:  logger,
+	}
+
+	// Wire reverse-request callbacks from the SDK process.
+	backend.OnSampling(func(req *pb.SamplingRequest, reqID string) {
+		go b.handleSampling(req, reqID)
+	})
+	backend.OnListRoots(func(reqID string) {
+		go b.handleListRoots(reqID)
+	})
+
+	return b
+}
+
+// SyncTools reads tool definitions from the backend and registers them
+// with the mcp.Server. Called on startup and after hot reload.
+func (b *Bridge) SyncTools() {
+	syncTools(b.Server, b.backend)
+}
+
+// SyncResources reads resource and resource template definitions from the
+// backend and registers them with the mcp.Server.
+func (b *Bridge) SyncResources() {
+	syncResources(b.Server, b.backend)
+}
+
+// SyncPrompts reads prompt definitions from the backend and registers them
+// with the mcp.Server.
+func (b *Bridge) SyncPrompts() {
+	syncPrompts(b.Server, b.backend)
+}
