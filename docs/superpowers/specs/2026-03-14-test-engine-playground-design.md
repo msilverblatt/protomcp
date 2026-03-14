@@ -48,9 +48,16 @@ The test engine acts as a full MCP client. It starts a tool process via `process
 
 The SDK provides `mcp.NewInMemoryTransports()` which returns two connected transports — one for the server, one for the client. No ports, no stdio. The test engine connects the client side and gets a `ClientSession`.
 
+**Connection ordering:** The SDK requires the server to connect before the client (the client drives initialization). In `Engine.Start()`:
+1. Start `server.Connect(ctx, serverTransport, nil)` in a goroutine (non-blocking)
+2. Call `client.Connect(ctx, clientTransport, nil)` synchronously (blocks until initialize completes)
+3. The goroutine's `ServerSession` is kept alive for the engine's lifetime
+
+**Backend adapter:** `process.Manager` does not implement `bridge.FullBackend` directly — it's missing `ActiveTools()` (which filters by the tool list manager). The engine creates a `toolBackend` wrapper identical to the one in `cmd/protomcp/main.go`, combining the process manager with a `toollist.Manager`.
+
 ### Protocol Tracing
 
-The SDK provides `mcp.LoggingTransport` which wraps any transport and writes every JSON-RPC message (both directions) to an `io.Writer`. We wrap the in-memory transport with this to capture the full protocol trace.
+The SDK provides `mcp.LoggingTransport` which wraps any transport and writes every JSON-RPC message (both directions) to an `io.Writer`. We wrap the **client-side** in-memory transport with this to capture the full protocol trace from the client's perspective (`write` = request sent, `read` = response received).
 
 The trace writer feeds a `TraceLog` that stores entries and broadcasts to live subscribers (the playground's WebSocket).
 
@@ -146,11 +153,21 @@ The trace writer parses these, extracts direction and method, timestamps them, a
 
 ### Tool List Change Tracking
 
-The engine wires `process.Manager.OnEnableTools` and `OnDisableTools` callbacks. When tool list changes occur during a `CallTool`, the engine captures them in the `CallResult`. The engine also maintains a `toolsCh` channel that the playground can listen on.
+Two mechanisms:
+
+1. **Process-level:** The engine wires `process.Manager.OnEnableTools` and `OnDisableTools` callbacks. When tool list changes occur during a `CallTool`, the engine captures the names in the `CallResult`.
+
+2. **MCP-level:** The engine sets `ClientOptions.ToolListChangedHandler` on the `mcp.Client`. When the server sends `notifications/tools/list_changed`, the handler calls `session.ListTools()` to fetch the updated list (the notification itself does not carry the list), then pushes the result to `toolsCh` and any registered callbacks.
 
 ### Hot Reload
 
-The engine wraps `reload.NewWatcher` for dev mode. On file change, it calls `pm.Reload()`, re-syncs the bridge, and pushes the updated tool list to subscribers.
+The engine wraps `reload.NewWatcher` with the file path passed to `New(file)`. On file change:
+1. Call `pm.Reload(ctx)` to get updated tool definitions
+2. Re-sync the bridge: `bridge.SyncTools()`, `bridge.SyncResources()`, `bridge.SyncPrompts()`
+3. The server automatically sends `notifications/tools/list_changed` to the connected client
+4. The client's `ToolListChangedHandler` fires, re-fetches the tool list, and pushes to subscribers
+
+Note: The in-memory transport pair survives reload — the MCP session stays open. Only the registered handlers on the `mcp.Server` change (via the bridge sync methods). No transport recycling needed.
 
 ---
 
