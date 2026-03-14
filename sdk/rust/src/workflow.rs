@@ -46,14 +46,18 @@ struct StepDef {
     on_error: Vec<(String, String)>, // (error substring, target step)
 }
 
+type OnCancelFn = Box<dyn Fn(&str, &[StepHistoryEntry]) -> String + Send + Sync>;
+type OnCompleteFn = Box<dyn Fn(&[StepHistoryEntry]) + Send + Sync>;
+
 struct WorkflowDef {
     name: String,
+    #[allow(dead_code)]
     description: String,
     steps: Vec<StepDef>,
     allow_during: Option<Vec<String>>,
     block_during: Option<Vec<String>>,
-    on_cancel: Option<Box<dyn Fn(&str, &[StepHistoryEntry]) -> String + Send + Sync>>,
-    on_complete: Option<Box<dyn Fn(&[StepHistoryEntry]) + Send + Sync>>,
+    on_cancel: Option<OnCancelFn>,
+    on_complete: Option<OnCompleteFn>,
 }
 
 struct WorkflowState {
@@ -70,8 +74,8 @@ pub struct WorkflowBuilder {
     steps: Vec<StepDef>,
     allow_during: Option<Vec<String>>,
     block_during: Option<Vec<String>>,
-    on_cancel: Option<Box<dyn Fn(&str, &[StepHistoryEntry]) -> String + Send + Sync>>,
-    on_complete: Option<Box<dyn Fn(&[StepHistoryEntry]) + Send + Sync>>,
+    on_cancel: Option<OnCancelFn>,
+    on_complete: Option<OnCompleteFn>,
 }
 
 pub struct StepBuilder {
@@ -361,7 +365,7 @@ fn compute_transition(
 
     // Add cancel tool if any next step allows cancel
     let any_cancelable = next_step_names.iter().any(|sn| {
-        step_map.get(sn.as_str()).map_or(false, |s| !s.no_cancel)
+        step_map.get(sn.as_str()).is_some_and(|s| !s.no_cancel)
     });
     if any_cancelable {
         allowed_tools.push(format!("{}.cancel", wf.name));
@@ -372,10 +376,9 @@ fn compute_transition(
         if let Some(first_step) = step_map.get(first_name.as_str()) {
             let (allow, block) = get_step_visibility(first_step, wf);
             for tool_name in all_tool_names {
-                if !tool_name.starts_with(&format!("{}.", wf.name)) {
-                    if matches_visibility(tool_name, allow, block) {
-                        allowed_tools.push(tool_name.clone());
-                    }
+                if !tool_name.starts_with(&format!("{}.", wf.name))
+                    && matches_visibility(tool_name, allow, block) {
+                    allowed_tools.push(tool_name.clone());
                 }
             }
         }
@@ -466,7 +469,7 @@ fn handle_step_call(workflow_name: &str, step_name: &str, ctx: ToolContext, args
                     if let Some(ref mut state) = *state_guard {
                         state.current_step = target.clone();
                     }
-                    let (enable, disable) = compute_transition(wf, &[target.clone()], &all_tool_names);
+                    let (enable, disable) = compute_transition(wf, std::slice::from_ref(target), &all_tool_names);
                     let mut result = ToolResult::new(
                         format!("Error caught ({}), transitioning to '{}'", err_msg, target)
                     );
@@ -527,10 +530,6 @@ fn handle_step_call(workflow_name: &str, step_name: &str, ctx: ToolContext, args
                 );
                 // Re-enable all workflow step tools that were hidden, disable non-initial
                 // Actually: restore by enabling the initial step tool and disabling all others
-                let initial_tool: Vec<String> = wf.steps.iter()
-                    .filter(|s| s.initial)
-                    .map(|s| format!("{}.{}", wf.name, s.name))
-                    .collect();
                 let non_initial_tools: Vec<String> = wf.steps.iter()
                     .filter(|s| !s.initial)
                     .map(|s| format!("{}.{}", wf.name, s.name))
@@ -543,7 +542,7 @@ fn handle_step_call(workflow_name: &str, step_name: &str, ctx: ToolContext, args
                 // Since we don't track pre-workflow state in the Rust version (no manager),
                 // we just clear the active state and let the result carry enable/disable
                 *state_guard = None;
-                return result;
+                result
             } else {
                 // Transition to next steps
                 let next_names = effective_next.cloned().unwrap_or_default();
@@ -557,7 +556,7 @@ fn handle_step_call(workflow_name: &str, step_name: &str, ctx: ToolContext, args
                 );
                 result.enable_tools = enable;
                 result.disable_tools = disable;
-                return result;
+                result
             }
         }
     }
