@@ -15,8 +15,10 @@ import (
 	"github.com/msilverblatt/protomcp/internal/bridge"
 	"github.com/msilverblatt/protomcp/internal/cli"
 	"github.com/msilverblatt/protomcp/internal/config"
+	"github.com/msilverblatt/protomcp/internal/playground"
 	"github.com/msilverblatt/protomcp/internal/process"
 	"github.com/msilverblatt/protomcp/internal/reload"
+	"github.com/msilverblatt/protomcp/internal/testengine"
 	"github.com/msilverblatt/protomcp/internal/toollist"
 	"github.com/msilverblatt/protomcp/internal/validate"
 )
@@ -339,9 +341,19 @@ func runTest(ctx context.Context, cfg *config.Config) {
 }
 
 func runPlayground(ctx context.Context, cfg *config.Config) {
-	_ = ctx
-	_ = cfg
-	fmt.Fprintf(os.Stderr, "playground: coming soon\n")
+	eng := testengine.New(cfg.File, testengine.WithLogger(slog.Default()))
+	if err := eng.Start(ctx); err != nil {
+		slog.Error("failed to start engine", "error", err)
+		os.Exit(1)
+	}
+	defer eng.Stop()
+
+	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
+	srv := playground.NewServer(eng, slog.Default())
+	if err := srv.ListenAndServe(ctx, addr); err != nil && err != http.ErrServerClosed {
+		slog.Error("playground error", "error", err)
+		os.Exit(1)
+	}
 }
 
 func slicesEqual(a, b []string) bool {
