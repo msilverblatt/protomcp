@@ -18,9 +18,11 @@ pub mod server_context;
 pub mod local_middleware;
 pub mod telemetry;
 pub mod sidecar;
+pub mod workflow;
 
 pub use tool::{tool, ToolDef, ArgDef, clear_registry, arg_to_schema};
 pub use group::{tool_group, groups_to_tool_defs, clear_group_registry};
+pub use workflow::{workflow as workflow_def, workflows_to_tool_defs, clear_workflow_registry, StepResult, StepHistoryEntry};
 pub use result::ToolResult;
 pub use context::ToolContext;
 pub use runner::run;
