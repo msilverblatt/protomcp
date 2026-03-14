@@ -68,9 +68,9 @@ export default function App() {
         fetch('/api/resources').then((r) => r.json()),
         fetch('/api/prompts').then((r) => r.json()),
       ])
-      if (toolsRes?.tools) setTools(toolsRes.tools)
-      if (resourcesRes?.resources) setResources(resourcesRes.resources)
-      if (promptsRes?.prompts) setPrompts(promptsRes.prompts)
+      setTools(Array.isArray(toolsRes) ? toolsRes : toolsRes?.tools ?? [])
+      setResources(Array.isArray(resourcesRes) ? resourcesRes : resourcesRes?.resources ?? [])
+      setPrompts(Array.isArray(promptsRes) ? promptsRes : promptsRes?.prompts ?? [])
     } catch {
       // will retry on reconnect
     }
