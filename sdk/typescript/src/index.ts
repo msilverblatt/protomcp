@@ -1,4 +1,5 @@
 export { tool, getRegisteredTools, clearRegistry } from './tool.js';
+export { toolGroup, getRegisteredGroups, clearGroupRegistry, groupsToToolDefs } from './group.js';
 export { ToolResult } from './result.js';
 export { toolManager } from './manager.js';
 export { ToolContext } from './context.js';
@@ -10,4 +11,11 @@ export { prompt, getRegisteredPrompts } from './prompt.js';
 export type { PromptArg, PromptMessage, PromptDef } from './prompt.js';
 export { completion, getCompletionHandler } from './completion.js';
 export type { CompletionResult } from './completion.js';
+export { serverContext, resolveContexts, clearContextRegistry } from './serverContext.js';
+export { localMiddleware, buildMiddlewareChain, clearLocalMiddleware } from './localMiddleware.js';
+export { telemetrySink, emitTelemetry, clearTelemetrySinks } from './telemetry.js';
+export type { ToolCallEvent } from './telemetry.js';
+export { sidecar, startSidecars, stopAllSidecars, clearSidecarRegistry } from './sidecar.js';
+export type { SidecarOptions } from './sidecar.js';
+export { configure as configureDiscovery, discoverHandlers, getDiscoveryConfig, resetConfig as resetDiscoveryConfig } from './discovery.js';
 export { run } from './runner.js';

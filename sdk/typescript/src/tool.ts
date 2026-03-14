@@ -58,8 +58,16 @@ export function tool<T extends z.ZodObject<any>>(options: ToolOptions<T>): ToolD
   return def;
 }
 
+// Lazy reference to group module to avoid circular import at module load time.
+let _groupsToToolDefs: (() => ToolDef<any>[]) | null = null;
+
+export function _setGroupsToToolDefs(fn: () => ToolDef<any>[]): void {
+  _groupsToToolDefs = fn;
+}
+
 export function getRegisteredTools(): ToolDef<any>[] {
-  return [...registry];
+  const groupDefs = _groupsToToolDefs ? _groupsToToolDefs() : [];
+  return [...registry, ...groupDefs];
 }
 
 export function clearRegistry(): void {

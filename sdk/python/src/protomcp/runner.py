@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'gen'))
 import protomcp_pb2 as pb
@@ -17,8 +18,15 @@ from protomcp import manager
 from protomcp.resource import get_registered_resources, get_registered_resource_templates, ResourceContent
 from protomcp.prompt import get_registered_prompts
 from protomcp.completion import get_completion_handler, CompletionResult
+from protomcp.server_context import resolve_contexts
+from protomcp.local_middleware import build_middleware_chain
+from protomcp.telemetry import emit_telemetry, ToolCallEvent
+from protomcp.sidecar import start_sidecars
+from protomcp.discovery import discover_handlers, get_config
 
 log: ServerLogger = ServerLogger(send_fn=lambda msg: None)
+
+_first_tool_call = True
 
 def run():
     socket_path = os.environ.get("PROTOMCP_SOCKET")
@@ -29,6 +37,9 @@ def run():
     transport = Transport(socket_path)
     transport.connect()
     manager._init(transport)
+
+    start_sidecars("server_start")
+    discover_handlers()
 
     global log
     log = ServerLogger(send_fn=transport.send)
@@ -90,6 +101,11 @@ def _handle_list_tools(transport, env):
     transport.send(resp)
 
 def _handle_call_tool(transport, env):
+    global _first_tool_call
+    if _first_tool_call:
+        _first_tool_call = False
+        start_sidecars("first_tool_call")
+
     req = env.call_tool
     tools = get_registered_tools()
     handler = None
@@ -111,15 +127,29 @@ def _handle_call_tool(transport, env):
 
     try:
         args = json.loads(req.arguments_json) if req.arguments_json else {}
+        # Resolve server contexts and inject into args if handler accepts them
+        ctx_values = resolve_contexts(args)
         sig = inspect.signature(handler)
+        for param_name, value in ctx_values.items():
+            if param_name in sig.parameters:
+                args[param_name] = value
+        # Build middleware chain around handler
+        chain = build_middleware_chain(req.name, handler)
+        action_name = args.get("action", "")
+        emit_telemetry(ToolCallEvent(tool_name=req.name, action=action_name, phase="start", args=dict(args)))
+        start_time = time.monotonic()
         if "ctx" in sig.parameters:
             ctx = ToolContext(
                 progress_token=req.progress_token,
                 send_fn=transport.send,
             )
-            result = handler(ctx=ctx, **args)
+            result = chain(ctx, args)
         else:
-            result = handler(**args)
+            result = chain(None, args)
+
+        elapsed_ms = int((time.monotonic() - start_time) * 1000)
+        result_str = result.result if isinstance(result, ToolResult) else str(result)
+        emit_telemetry(ToolCallEvent(tool_name=req.name, action=action_name, phase="success", args={}, result=str(result_str)[:20000], duration_ms=elapsed_ms))
 
         if isinstance(result, ToolResult):
             resp_msg = pb.CallToolResponse(
@@ -140,6 +170,8 @@ def _handle_call_tool(transport, env):
                 result_json=json.dumps([{"type": "text", "text": str(result)}]),
             )
     except Exception as e:
+        elapsed_ms = int((time.monotonic() - start_time) * 1000)
+        emit_telemetry(ToolCallEvent(tool_name=req.name, action=action_name, phase="error", args={}, error=e, duration_ms=elapsed_ms))
         resp_msg = pb.CallToolResponse(
             is_error=True,
             result_json=json.dumps([{"type": "text", "text": str(e)}]),
@@ -161,6 +193,9 @@ def _handle_call_tool(transport, env):
         transport.send(resp)
 
 def _handle_reload(transport, env, mw_handlers):
+    # Re-discover handlers if hot_reload is enabled
+    if get_config().get("hot_reload"):
+        discover_handlers()
     # For now, just acknowledge. Full reload with importlib is complex.
     resp = pb.Envelope(
         reload_response=pb.ReloadResponse(success=True),

@@ -9,6 +9,10 @@ use crate::middleware::with_middleware_registry;
 use crate::resource::{with_resources, with_resource_templates};
 use crate::prompt::with_prompts;
 use crate::completion::get_completion_handler;
+use crate::server_context::resolve_contexts;
+use crate::local_middleware::build_middleware_chain;
+use crate::telemetry::{ToolCallEvent, emit_telemetry};
+use crate::sidecar::start_sidecars;
 
 fn build_result_json(text: &str) -> String {
     let content = serde_json::json!([{"type": "text", "text": text}]);
@@ -105,11 +109,34 @@ async fn send_handshake_complete(transport: &Transport) {
 }
 
 async fn handle_call_tool(transport: &Transport, req: &proto::CallToolRequest, request_id: &str) {
-    let args: serde_json::Value = if req.arguments_json.is_empty() {
+    let mut args: serde_json::Value = if req.arguments_json.is_empty() {
         serde_json::json!({})
     } else {
         serde_json::from_str(&req.arguments_json).unwrap_or(serde_json::json!({}))
     };
+
+    // Start sidecars on first tool call
+    start_sidecars("first_tool_call");
+
+    // Resolve server contexts
+    let ctx_values = resolve_contexts(&mut args);
+    // Inject resolved context values into args
+    if let Some(obj) = args.as_object_mut() {
+        for (key, val) in ctx_values {
+            obj.insert(key, val);
+        }
+    }
+
+    let tool_name = req.name.clone();
+
+    // Emit start telemetry
+    let start_time = std::time::Instant::now();
+    emit_telemetry(ToolCallEvent {
+        tool_name: tool_name.clone(),
+        phase: "start".to_string(),
+        args_json: args.to_string(),
+        ..ToolCallEvent::new(&tool_name, "start")
+    });
 
     let result = with_registry(|tools| {
         if let Some(tool_def) = tools.iter().find(|t| t.name == req.name) {
@@ -119,7 +146,28 @@ async fn handle_call_tool(transport: &Transport, req: &proto::CallToolRequest, r
                 cancelled,
                 Box::new(|_| {}),
             );
-            (tool_def.handler)(ctx, args.clone())
+
+            // Build local middleware chain around the tool handler
+            // We need to create a closure that captures the tool handler
+            let tool_name_inner = tool_def.name.clone();
+            let args_clone = args.clone();
+
+            // Since we can't move the handler out of the registry,
+            // call the handler directly but wrap via middleware chain
+            // We pass a handler that looks up and calls the tool
+            let handler: Box<dyn Fn(ToolContext, serde_json::Value) -> crate::result::ToolResult + Send + Sync> =
+                Box::new(move |ctx, args| {
+                    with_registry(|tools2| {
+                        if let Some(td) = tools2.iter().find(|t| t.name == tool_name_inner) {
+                            (td.handler)(ctx, args)
+                        } else {
+                            crate::result::ToolResult::error("Tool not found", "NOT_FOUND", "", false)
+                        }
+                    })
+                });
+
+            let chain = build_middleware_chain(&req.name, handler);
+            chain(ctx, args_clone)
         } else {
             crate::result::ToolResult::error(
                 format!("Tool not found: {}", req.name),
@@ -128,6 +176,19 @@ async fn handle_call_tool(transport: &Transport, req: &proto::CallToolRequest, r
                 false,
             )
         }
+    });
+
+    // Emit completion telemetry
+    let duration = start_time.elapsed().as_millis() as i64;
+    let phase = if result.is_error { "error" } else { "success" };
+    emit_telemetry(ToolCallEvent {
+        tool_name: tool_name.clone(),
+        phase: phase.to_string(),
+        duration_ms: duration,
+        result_text: result.result_text.clone(),
+        is_error: result.is_error,
+        error_code: result.error_code.clone(),
+        ..ToolCallEvent::new(&tool_name, phase)
     });
 
     let mut resp = proto::CallToolResponse {

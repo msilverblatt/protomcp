@@ -78,6 +78,9 @@ tool("delete_file")
 | `ArgDef::string(name)` | `"string"` |
 | `ArgDef::number(name)` | `"number"` |
 | `ArgDef::boolean(name)` | `"boolean"` |
+| `ArgDef::array(name, item_type)` | `{"type": "array", "items": <item_type>}` |
+| `ArgDef::union(name, types...)` | `{"anyOf": [...]}` |
+| `ArgDef::literal(name, values...)` | `{"type": "string", "enum": [...]}` |
 
 Arguments are passed as `serde_json::Value`. Use `.as_i64()`, `.as_f64()`, `.as_str()`, `.as_bool()` to extract values.
 
@@ -220,4 +223,194 @@ fn test_add() {
     });
     clear_registry();
 }
+```
+
+---
+
+## Tool Groups
+
+Group related actions under a single tool using `tool_group()`.
+
+```rust
+use protomcp::{tool_group, action, ToolResult, ArgDef};
+
+tool_group("files")
+    .description("File operations")
+    .strategy("union")
+    .action(
+        action("read")
+            .description("Read a file")
+            .arg(ArgDef::string("path"))
+            .handler(|_ctx, args| {
+                let path = args["path"].as_str().unwrap_or("");
+                ToolResult::new(std::fs::read_to_string(path).unwrap_or_default())
+            }),
+    )
+    .action(
+        action("write")
+            .description("Write a file")
+            .arg(ArgDef::string("path"))
+            .arg(ArgDef::string("content"))
+            .handler(|_ctx, args| {
+                ToolResult::new("written")
+            }),
+    )
+    .register();
+```
+
+### Strategy: union (default)
+
+With `.strategy("union")`, the group registers as a single tool with a discriminated `oneOf` schema. The caller passes an `action` field to select the action.
+
+### Strategy: separate
+
+With `.strategy("separate")`, each action becomes its own tool, namespaced as `group.action` (e.g. `files.read`, `files.write`).
+
+### Dispatch and fuzzy matching
+
+When an unknown action is passed, the dispatcher returns an error with a fuzzy "Did you mean?" suggestion.
+
+---
+
+## Declarative Validation
+
+Declare validation rules on actions to validate input before the handler runs.
+
+### `requires`
+
+```rust
+action("deploy")
+    .requires(&["env", "version"])
+    .handler(deploy_handler)
+```
+
+### `enum_fields`
+
+Restrict a field to a set of valid values. Invalid values trigger a "Did you mean?" suggestion.
+
+```rust
+action("set_env")
+    .enum_field("env", &["dev", "staging", "prod"])
+    .handler(set_env_handler)
+```
+
+### `cross_rules`
+
+Validate relationships between parameters.
+
+```rust
+action("scale")
+    .cross_rule(|args| {
+        let min = args["min"].as_f64().unwrap_or(0.0);
+        let max = args["max"].as_f64().unwrap_or(0.0);
+        min > max
+    }, "min must be <= max")
+    .handler(scale_handler)
+```
+
+### `hints`
+
+Non-blocking advisory messages appended to the result when a condition is met.
+
+```rust
+action("query")
+    .hint("slow_warning", |args| {
+        args["limit"].as_f64().unwrap_or(0.0) > 1000.0
+    }, "Large limit may cause slow queries")
+    .handler(query_handler)
+```
+
+---
+
+## Server Context
+
+Register resolvers that inject shared parameters into tool handlers automatically.
+
+```rust
+use protomcp::server_context;
+
+server_context("project_dir")
+    .expose(false)
+    .resolver(|_args| {
+        std::env::current_dir()
+            .map(|p| p.display().to_string())
+            .unwrap_or_default()
+            .into()
+    })
+    .register();
+```
+
+With `.expose(false)`, the parameter is hidden from the tool schema sent to the MCP host but still injected into the handler's `args`.
+
+---
+
+## Local Middleware
+
+Wrap tool handlers with in-process middleware for cross-cutting concerns.
+
+```rust
+use protomcp::local_middleware;
+
+local_middleware(10, |ctx, tool_name, args, next| {
+    let start = std::time::Instant::now();
+    let result = next(ctx, args);
+    println!("{} took {:?}", tool_name, start.elapsed());
+    result
+});
+```
+
+Middleware is sorted by priority (lowest first = outermost). Return a `ToolResult` directly to short-circuit the chain.
+
+### Local vs Go-bridge middleware
+
+Local middleware runs in-process. Go-bridge middleware runs at the transport layer between the MCP host and the server process.
+
+---
+
+## Telemetry
+
+Observe tool calls with fail-safe telemetry sinks. Exceptions in sinks are silently swallowed.
+
+```rust
+use protomcp::{telemetry_sink, ToolCallEvent};
+
+telemetry_sink(|event: &ToolCallEvent| {
+    println!("[{}] {}: {}", event.phase, event.tool_name, event.message);
+});
+```
+
+### `ToolCallEvent` phases
+
+| Phase | When |
+|-------|------|
+| `"start"` | Before the handler runs |
+| `"success"` | After the handler returns successfully |
+| `"error"` | After the handler raises or returns an error |
+| `"progress"` | When `report_progress` is called |
+
+---
+
+## Sidecar Management
+
+Declare companion processes that protomcp manages alongside your server.
+
+```rust
+use protomcp::sidecar;
+
+sidecar("redis")
+    .command(&["redis-server", "--port", "6380"])
+    .health_check("http://localhost:6380/ping")
+    .start_on("server_start")
+    .health_timeout(std::time::Duration::from_secs(30))
+    .register();
+```
+
+| Method | Description |
+|--------|-------------|
+| `.command(args)` | Process command and arguments |
+| `.health_check(url)` | URL to poll for health (HTTP 200 = healthy) |
+| `.start_on(trigger)` | `"server_start"` or `"first_tool_call"` |
+| `.health_timeout(d)` | Duration to wait for health check to pass |
+
+PID files are stored in `~/.protomcp/sidecars/`. Processes receive `SIGTERM` on shutdown, followed by `SIGKILL` if they do not stop within the timeout.
 ```

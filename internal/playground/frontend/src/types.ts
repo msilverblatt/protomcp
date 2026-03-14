@@ -8,6 +8,7 @@ export interface JsonSchema {
   type: string
   properties?: Record<string, JsonSchemaProperty>
   required?: string[]
+  oneOf?: JsonSchema[]
 }
 
 export interface JsonSchemaProperty {
@@ -15,6 +16,10 @@ export interface JsonSchemaProperty {
   description?: string
   default?: unknown
   enum?: unknown[]
+  const?: unknown
+  oneOf?: JsonSchema[]
+  properties?: Record<string, JsonSchemaProperty>
+  required?: string[]
 }
 
 export interface Resource {

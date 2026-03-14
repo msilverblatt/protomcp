@@ -8,13 +8,32 @@ static REGISTRY: Mutex<Vec<ToolDef>> = Mutex::new(Vec::new());
 pub struct ArgDef {
     pub name: String,
     pub type_name: String,
+    pub item_type: Option<String>,
+    pub union_types: Option<Vec<String>>,
+    pub enum_values: Option<Vec<String>>,
 }
 
 impl ArgDef {
-    pub fn int(name: &str) -> Self { Self { name: name.to_string(), type_name: "integer".to_string() } }
-    pub fn string(name: &str) -> Self { Self { name: name.to_string(), type_name: "string".to_string() } }
-    pub fn number(name: &str) -> Self { Self { name: name.to_string(), type_name: "number".to_string() } }
-    pub fn boolean(name: &str) -> Self { Self { name: name.to_string(), type_name: "boolean".to_string() } }
+    pub fn int(name: &str) -> Self { Self { name: name.to_string(), type_name: "integer".to_string(), item_type: None, union_types: None, enum_values: None } }
+    pub fn string(name: &str) -> Self { Self { name: name.to_string(), type_name: "string".to_string(), item_type: None, union_types: None, enum_values: None } }
+    pub fn number(name: &str) -> Self { Self { name: name.to_string(), type_name: "number".to_string(), item_type: None, union_types: None, enum_values: None } }
+    pub fn boolean(name: &str) -> Self { Self { name: name.to_string(), type_name: "boolean".to_string(), item_type: None, union_types: None, enum_values: None } }
+
+    pub fn array(name: &str, item_type: &str) -> Self {
+        Self { name: name.to_string(), type_name: "array".to_string(), item_type: Some(item_type.to_string()), union_types: None, enum_values: None }
+    }
+
+    pub fn object(name: &str) -> Self {
+        Self { name: name.to_string(), type_name: "object".to_string(), item_type: None, union_types: None, enum_values: None }
+    }
+
+    pub fn union(name: &str, types: &[&str]) -> Self {
+        Self { name: name.to_string(), type_name: "union".to_string(), item_type: None, union_types: Some(types.iter().map(|s| s.to_string()).collect()), enum_values: None }
+    }
+
+    pub fn literal(name: &str, values: &[&str]) -> Self {
+        Self { name: name.to_string(), type_name: "literal".to_string(), item_type: None, union_types: None, enum_values: Some(values.iter().map(|s| s.to_string()).collect()) }
+    }
 }
 
 pub struct ToolDef {
@@ -55,6 +74,42 @@ pub fn tool(name: &str) -> ToolBuilder {
     }
 }
 
+pub fn arg_to_schema(arg: &ArgDef) -> Value {
+    match arg.type_name.as_str() {
+        "array" => {
+            let mut schema = serde_json::Map::new();
+            schema.insert("type".to_string(), Value::String("array".to_string()));
+            if let Some(ref item_type) = arg.item_type {
+                let mut items = serde_json::Map::new();
+                items.insert("type".to_string(), Value::String(item_type.clone()));
+                schema.insert("items".to_string(), Value::Object(items));
+            }
+            Value::Object(schema)
+        }
+        "union" => {
+            if let Some(ref types) = arg.union_types {
+                let any_of: Vec<Value> = types.iter().map(|t| {
+                    serde_json::json!({"type": t})
+                }).collect();
+                serde_json::json!({"anyOf": any_of})
+            } else {
+                serde_json::json!({"type": "string"})
+            }
+        }
+        "literal" => {
+            if let Some(ref values) = arg.enum_values {
+                let enum_vals: Vec<Value> = values.iter().map(|v| Value::String(v.clone())).collect();
+                serde_json::json!({"type": "string", "enum": enum_vals})
+            } else {
+                serde_json::json!({"type": "string"})
+            }
+        }
+        _ => {
+            serde_json::json!({"type": arg.type_name})
+        }
+    }
+}
+
 impl ToolBuilder {
     pub fn description(mut self, desc: &str) -> Self {
         self.description = desc.to_string();
@@ -84,9 +139,7 @@ impl ToolBuilder {
         let mut properties = serde_json::Map::new();
         let mut required = Vec::new();
         for arg in &self.args {
-            let mut prop = serde_json::Map::new();
-            prop.insert("type".to_string(), Value::String(arg.type_name.clone()));
-            properties.insert(arg.name.clone(), Value::Object(prop));
+            properties.insert(arg.name.clone(), arg_to_schema(arg));
             required.push(Value::String(arg.name.clone()));
         }
 
@@ -120,6 +173,11 @@ where
     f(&guard)
 }
 
+/// Adds a ToolDef directly to the tool registry (used by group registration).
+pub(crate) fn push_to_registry(td: ToolDef) {
+    REGISTRY.lock().unwrap().push(td);
+}
+
 pub fn clear_registry() {
     REGISTRY.lock().unwrap().clear();
 }
@@ -142,6 +200,87 @@ mod tests {
             assert_eq!(tools.len(), 1);
             assert_eq!(tools[0].name, "add");
             assert_eq!(tools[0].description, "Add two numbers");
+        });
+        clear_registry();
+    }
+
+    #[test]
+    fn test_array_arg() {
+        clear_registry();
+        tool("list_items")
+            .description("List items")
+            .arg(ArgDef::array("tags", "string"))
+            .handler(|_, _| ToolResult::new("ok"))
+            .register();
+
+        with_registry(|tools| {
+            let schema = &tools[0].input_schema;
+            let props = schema["properties"].as_object().unwrap();
+            let tags = props["tags"].as_object().unwrap();
+            assert_eq!(tags["type"], "array");
+            assert_eq!(tags["items"]["type"], "string");
+        });
+        clear_registry();
+    }
+
+    #[test]
+    fn test_object_arg() {
+        clear_registry();
+        tool("set_config")
+            .description("Set config")
+            .arg(ArgDef::object("config"))
+            .handler(|_, _| ToolResult::new("ok"))
+            .register();
+
+        with_registry(|tools| {
+            let schema = &tools[0].input_schema;
+            let props = schema["properties"].as_object().unwrap();
+            let config = props["config"].as_object().unwrap();
+            assert_eq!(config["type"], "object");
+        });
+        clear_registry();
+    }
+
+    #[test]
+    fn test_union_arg() {
+        clear_registry();
+        tool("process")
+            .description("Process data")
+            .arg(ArgDef::union("data", &["string", "object"]))
+            .handler(|_, _| ToolResult::new("ok"))
+            .register();
+
+        with_registry(|tools| {
+            let schema = &tools[0].input_schema;
+            let props = schema["properties"].as_object().unwrap();
+            let data = props["data"].as_object().unwrap();
+            let any_of = data["anyOf"].as_array().unwrap();
+            assert_eq!(any_of.len(), 2);
+            assert_eq!(any_of[0]["type"], "string");
+            assert_eq!(any_of[1]["type"], "object");
+        });
+        clear_registry();
+    }
+
+    #[test]
+    fn test_literal_arg() {
+        clear_registry();
+        tool("set_mode")
+            .description("Set mode")
+            .arg(ArgDef::literal("mode", &["fast", "slow", "balanced"]))
+            .handler(|_, _| ToolResult::new("ok"))
+            .register();
+
+        with_registry(|tools| {
+            let schema = &tools[0].input_schema;
+            let props = schema["properties"].as_object().unwrap();
+            let mode = props["mode"].as_object().unwrap();
+            assert_eq!(mode["type"], "string");
+            let enum_vals = mode["enum"].as_array().unwrap();
+            assert_eq!(enum_vals.len(), 3);
+            assert_eq!(enum_vals[0], "fast");
+            assert_eq!(enum_vals[1], "slow");
+            assert_eq!(enum_vals[2], "balanced");
         });
         clear_registry();
     }

@@ -16,6 +16,12 @@ pip install protomcp
 from protomcp import tool, ToolResult, tool_manager
 from protomcp.context import ToolContext
 from protomcp.log import ServerLogger
+from protomcp.group import tool_group, action
+from protomcp.local_middleware import local_middleware
+from protomcp.server_context import server_context
+from protomcp.telemetry import telemetry_sink, ToolCallEvent
+from protomcp.sidecar import sidecar
+from protomcp.discovery import configure
 ```
 
 ---
@@ -59,7 +65,11 @@ def multiply(a: float, b: float) -> ToolResult:
 | `bool` | `{"type": "boolean"}` |
 | `list` | `{"type": "array"}` |
 | `dict` | `{"type": "object"}` |
+| `list[T]` | `{"type": "array", "items": <T schema>}` |
+| `dict[K, V]` | `{"type": "object", "additionalProperties": <V schema>}` |
+| `str \| int` / `Union[str, int]` | `{"anyOf": [{"type": "string"}, {"type": "integer"}]}` |
 | `Optional[T]` | type of `T`, not required |
+| `Literal["a", "b"]` | `{"type": "string", "enum": ["a", "b"]}` |
 
 Parameters without defaults and without `Optional` are added to the `required` array. Parameters with `Optional[T]` or a default value are optional.
 
@@ -296,4 +306,387 @@ class ToolDef:
     read_only_hint: bool = False
     open_world_hint: bool = False
     task_support: bool = False
+    hidden: bool = False
 ```
+
+---
+
+## `@tool_group(...)`
+
+Class decorator that registers a group of related actions as one or more MCP tools.
+
+```python
+from protomcp.group import tool_group
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | required | Tool group name |
+| `description` | `str` | `""` | Human-readable description |
+| `strategy` | `str` | `"union"` | `"union"` (single tool with `oneOf` schema) or `"separate"` (one tool per action, namespaced as `group.action`) |
+| `title` | `str` | `""` | Display name |
+| `destructive` | `bool` | `False` | Hint: destructive side effects |
+| `idempotent` | `bool` | `False` | Hint: idempotent |
+| `read_only` | `bool` | `False` | Hint: read-only |
+| `open_world` | `bool` | `False` | Hint: open world access |
+| `task_support` | `bool` | `False` | Hint: task support |
+| `hidden` | `bool` | `False` | Hide from tool list |
+
+**Returns:** The original class (unmodified).
+
+```python
+@tool_group("files", description="File operations", strategy="union")
+class FileTools:
+    @action("read", description="Read a file")
+    def read(self, path: str) -> ToolResult:
+        return ToolResult(result=open(path).read())
+```
+
+---
+
+## `@action(...)`
+
+Method decorator that marks a method as a group action.
+
+```python
+from protomcp.group import action
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | required | Action name |
+| `description` | `str` | `""` | Human-readable description |
+| `requires` | `list[str]` | `[]` | Required field names — validation fails if missing or empty |
+| `enum_fields` | `dict[str, list]` | `{}` | Map of field name to valid values — invalid values trigger "Did you mean?" suggestions |
+| `cross_rules` | `list[tuple[Callable, str]]` | `[]` | List of `(condition_fn, error_message)` tuples — if condition returns `True`, validation fails |
+| `hints` | `dict[str, dict]` | `{}` | Map of hint name to `{"condition": Callable, "message": str}` — non-blocking advisory messages |
+
+**Returns:** The original function (unmodified).
+
+```python
+@action("deploy", requires=["env"], enum_fields={"env": ["dev", "staging", "prod"]})
+def deploy(self, env: str, version: str) -> ToolResult:
+    return ToolResult(result=f"Deployed {version} to {env}")
+```
+
+---
+
+## `ActionDef`
+
+```python
+@dataclass
+class ActionDef:
+    name: str
+    description: str
+    handler: Callable
+    input_schema: dict
+    requires: list[str] = field(default_factory=list)
+    enum_fields: dict[str, list] = field(default_factory=dict)
+    cross_rules: list[tuple[Callable, str]] = field(default_factory=list)
+    hints: dict[str, dict] = field(default_factory=dict)
+```
+
+---
+
+## `GroupDef`
+
+```python
+@dataclass
+class GroupDef:
+    name: str
+    description: str
+    actions: list[ActionDef]
+    instance: Any
+    strategy: str = "union"
+    title: str = ""
+    destructive_hint: bool = False
+    idempotent_hint: bool = False
+    read_only_hint: bool = False
+    open_world_hint: bool = False
+    task_support: bool = False
+    hidden: bool = False
+```
+
+### `get_registered_groups()`
+
+Returns a copy of the current group registry.
+
+```python
+from protomcp.group import get_registered_groups
+groups: list[GroupDef] = get_registered_groups()
+```
+
+### `clear_group_registry()`
+
+Clears the group registry.
+
+```python
+from protomcp.group import clear_group_registry
+clear_group_registry()
+```
+
+---
+
+## `@server_context(...)`
+
+Registers a context resolver that injects a value into tool handlers.
+
+```python
+from protomcp.server_context import server_context
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `param_name` | `str` | required | Name of the parameter to inject into handlers |
+| `expose` | `bool` | `True` | If `False`, the parameter is hidden from the tool JSON Schema |
+
+**Returns:** The original function (unmodified).
+
+The decorated function receives the full `args` dict and returns the resolved value.
+
+```python
+@server_context("project_dir", expose=False)
+def resolve_project_dir(args: dict) -> str:
+    return os.getcwd()
+```
+
+### `ContextDef`
+
+```python
+@dataclass
+class ContextDef:
+    param_name: str
+    resolver: Callable[[dict], Any]
+    expose: bool
+```
+
+### `resolve_contexts(args)`
+
+Runs all registered context resolvers against `args`. Returns a `dict[str, Any]` of resolved values keyed by `param_name`.
+
+### `get_hidden_context_params()`
+
+Returns a `set[str]` of parameter names where `expose=False`.
+
+### `get_registered_contexts()`
+
+Returns a copy of the context registry.
+
+### `clear_context_registry()`
+
+Clears the context registry.
+
+---
+
+## `@local_middleware(...)`
+
+Registers an in-process middleware that wraps tool handlers.
+
+```python
+from protomcp.local_middleware import local_middleware
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `priority` | `int` | `100` | Sort order — lowest priority runs outermost |
+
+**Returns:** The original function (unmodified).
+
+The decorated function signature is `(ctx, tool_name: str, args: dict, next_handler) -> ToolResult`. Call `next_handler(ctx, args)` to continue the chain, or return a `ToolResult` directly to short-circuit.
+
+```python
+@local_middleware(priority=10)
+def timing_mw(ctx, tool_name, args, next_handler):
+    import time
+    start = time.monotonic()
+    result = next_handler(ctx, args)
+    elapsed = time.monotonic() - start
+    print(f"{tool_name} took {elapsed:.3f}s")
+    return result
+```
+
+### `LocalMiddlewareDef`
+
+```python
+@dataclass
+class LocalMiddlewareDef:
+    priority: int
+    handler: Callable  # (ctx, tool_name, args, next_handler) -> ToolResult
+```
+
+### `build_middleware_chain(tool_name, handler)`
+
+Builds a composed callable that wraps `handler` with all registered middleware. Returns `(ctx, args_dict) -> ToolResult`.
+
+### `get_local_middleware()`
+
+Returns middleware sorted by priority (lowest first).
+
+### `clear_local_middleware()`
+
+Clears the middleware registry.
+
+---
+
+## `@telemetry_sink`
+
+Registers an observe-only telemetry sink. Sinks receive `ToolCallEvent` instances but cannot affect tool execution. Exceptions in sinks are silently swallowed.
+
+```python
+from protomcp.telemetry import telemetry_sink
+```
+
+**Returns:** The original function (unmodified).
+
+```python
+@telemetry_sink
+def log_events(event: ToolCallEvent):
+    print(f"[{event.phase}] {event.tool_name}")
+```
+
+### `ToolCallEvent`
+
+```python
+@dataclass
+class ToolCallEvent:
+    tool_name: str
+    phase: str        # "start", "success", "error", "progress"
+    args: dict
+    action: str = ""
+    result: str = ""
+    error: Optional[Exception] = None
+    duration_ms: int = 0
+    progress: int = 0
+    total: int = 0
+    message: str = ""
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `tool_name` | `str` | Name of the tool being called |
+| `phase` | `str` | One of `"start"`, `"success"`, `"error"`, `"progress"` |
+| `args` | `dict` | Arguments passed to the tool |
+| `action` | `str` | Action name (for tool groups) |
+| `result` | `str` | Result string (on success) |
+| `error` | `Exception \| None` | Exception (on error) |
+| `duration_ms` | `int` | Elapsed time in milliseconds |
+| `progress` | `int` | Current progress value (on progress) |
+| `total` | `int` | Total progress value (on progress) |
+| `message` | `str` | Human-readable status message |
+
+### `emit_telemetry(event)`
+
+Sends a `ToolCallEvent` to all registered sinks. Called internally by protomcp.
+
+### `get_telemetry_sinks()`
+
+Returns a copy of the sink list.
+
+### `clear_telemetry_sinks()`
+
+Clears the telemetry sink registry.
+
+---
+
+## `@sidecar(...)`
+
+Declares a companion process that protomcp manages alongside the server.
+
+```python
+from protomcp.sidecar import sidecar
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | required | Unique sidecar identifier |
+| `command` | `list[str]` | required | Process command and arguments |
+| `health_check` | `str` | `""` | URL to poll for health (HTTP 200 = healthy) |
+| `start_on` | `str` | `"first_tool_call"` | `"server_start"` or `"first_tool_call"` |
+| `restart_on_version_mismatch` | `bool` | `False` | Restart if version changes |
+| `health_timeout` | `float` | `30.0` | Seconds to wait for health check |
+
+**Returns:** The original function (unmodified).
+
+```python
+@sidecar(name="redis", command=["redis-server"], start_on="server_start")
+def redis_sidecar():
+    pass
+```
+
+### `SidecarDef`
+
+```python
+@dataclass
+class SidecarDef:
+    name: str
+    command: list[str]
+    health_check: str = ""
+    start_on: str = "first_tool_call"
+    restart_on_version_mismatch: bool = False
+    health_timeout: float = 30.0
+    health_interval: float = 1.0
+    shutdown_timeout: float = 3.0
+```
+
+| Property | Description |
+|----------|-------------|
+| `pid_file_path` | `~/.protomcp/sidecars/{name}.pid` |
+
+### `start_sidecars(trigger)`
+
+Starts all sidecars matching the given trigger (`"server_start"` or `"first_tool_call"`).
+
+### `stop_all_sidecars()`
+
+Stops all running sidecars. Sends `SIGTERM`, then `SIGKILL` after `shutdown_timeout`. Registered with `atexit` automatically.
+
+### `get_registered_sidecars()`
+
+Returns a copy of the sidecar registry.
+
+### `clear_sidecar_registry()`
+
+Clears the sidecar registry.
+
+---
+
+## `configure(...)`
+
+Configures handler auto-discovery.
+
+```python
+from protomcp.discovery import configure
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `handlers_dir` | `str` | `""` | Path to the directory containing handler files |
+| `hot_reload` | `bool` | `False` | Re-import handlers on each discovery pass |
+
+```python
+configure(handlers_dir="./handlers", hot_reload=True)
+```
+
+### `discover_handlers()`
+
+Imports all `.py` files in the configured `handlers_dir`. Files prefixed with `_` are skipped. With `hot_reload=True`, previously loaded modules are cleared first.
+
+### `get_config()`
+
+Returns a copy of the current configuration dict.
+
+### `reset_config()`
+
+Clears the configuration and loaded module cache.
