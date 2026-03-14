@@ -131,6 +131,55 @@ def tool_group(
     return decorator
 
 
+def _validate_action(action_def: ActionDef, kwargs: dict) -> ToolResult | None:
+    """Validate action parameters against declarative rules. Returns ToolResult error or None."""
+    # Check requires
+    for field_name in action_def.requires:
+        val = kwargs.get(field_name)
+        if val is None or val == "":
+            return ToolResult(
+                result=f"Missing required field: {field_name}",
+                is_error=True,
+                error_code="MISSING_REQUIRED",
+                message=f"Missing required field: {field_name}",
+            )
+
+    # Check enum_fields
+    for field_name, valid in action_def.enum_fields.items():
+        val = kwargs.get(field_name)
+        if val is not None and val not in valid:
+            matches = difflib.get_close_matches(str(val), [str(v) for v in valid], n=1, cutoff=0.6)
+            suggestion = f"Did you mean '{matches[0]}'?" if matches else None
+            return ToolResult(
+                result=f"Invalid value '{val}' for field '{field_name}'. Valid options: {', '.join(str(v) for v in valid)}",
+                is_error=True,
+                error_code="INVALID_ENUM",
+                message=f"Invalid value '{val}' for field '{field_name}'.",
+                suggestion=suggestion,
+            )
+
+    # Check cross_rules
+    for condition_fn, error_message in action_def.cross_rules:
+        if condition_fn(kwargs):
+            return ToolResult(
+                result=error_message,
+                is_error=True,
+                error_code="CROSS_PARAM_VIOLATION",
+                message=error_message,
+            )
+
+    return None
+
+
+def _collect_hints(action_def: ActionDef, kwargs: dict) -> list[str]:
+    """Collect advisory hint messages whose conditions are met."""
+    messages = []
+    for hint_info in action_def.hints.values():
+        if hint_info["condition"](kwargs):
+            messages.append(hint_info["message"])
+    return messages
+
+
 def _dispatch_group_action(group: GroupDef, **kwargs) -> Any:
     """Dispatch to the correct action handler within a group."""
     action_name = kwargs.pop("action", None)
@@ -145,7 +194,35 @@ def _dispatch_group_action(group: GroupDef, **kwargs) -> Any:
 
     for act in group.actions:
         if act.name == action_name:
-            return act.handler(**kwargs)
+            # Validate before calling handler
+            validation_error = _validate_action(act, kwargs)
+            if validation_error is not None:
+                return validation_error
+
+            # Collect hints
+            hints = _collect_hints(act, kwargs)
+
+            # Call the handler
+            result = act.handler(**kwargs)
+
+            # Append hints if any
+            if hints:
+                hint_text = "\n\n**Hints:**\n" + "\n".join(f"- {m}" for m in hints)
+                if isinstance(result, ToolResult):
+                    return ToolResult(
+                        result=result.result + hint_text,
+                        is_error=result.is_error,
+                        enable_tools=result.enable_tools,
+                        disable_tools=result.disable_tools,
+                        error_code=result.error_code,
+                        message=result.message,
+                        suggestion=result.suggestion,
+                        retryable=result.retryable,
+                    )
+                else:
+                    return ToolResult(result=str(result) + hint_text)
+
+            return result
 
     matches = difflib.get_close_matches(action_name, action_names, n=1, cutoff=0.4)
     suggestion = f" Did you mean '{matches[0]}'?" if matches else ""
