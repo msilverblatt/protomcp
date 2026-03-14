@@ -94,6 +94,15 @@ func main() {
 
 	// 5. Create bridge (replaces custom mcp.NewHandler)
 	b := bridge.New(backend, logger)
+	b.SetToolListMutationHandler(func(enable, disable []string) {
+		if len(enable) > 0 {
+			tlm.Enable(enable)
+		}
+		if len(disable) > 0 {
+			tlm.Disable(disable)
+		}
+		b.SyncTools()
+	})
 
 	// 6. Sync tools, resources, and prompts from backend into the official mcp.Server
 	b.SyncTools()

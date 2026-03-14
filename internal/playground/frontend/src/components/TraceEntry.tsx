@@ -3,10 +3,11 @@ import type { TraceEntry as TraceEntryType } from '../types'
 
 interface TraceEntryProps {
   entry: TraceEntryType
+  defaultExpanded?: boolean
 }
 
-export default function TraceEntry({ entry }: TraceEntryProps) {
-  const [expanded, setExpanded] = useState(false)
+export default function TraceEntry({ entry, defaultExpanded = false }: TraceEntryProps) {
+  const [expanded, setExpanded] = useState(defaultExpanded)
 
   const isSend = entry.direction === 'send'
   const arrow = isSend ? '\u2192' : '\u2190'

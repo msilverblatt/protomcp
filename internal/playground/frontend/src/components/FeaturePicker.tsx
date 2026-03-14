@@ -35,7 +35,7 @@ export default function FeaturePicker({
         : prompts.map((p) => ({ id: p.name, label: p.name, desc: p.description }))
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col flex-1 min-h-0">
       <div className="flex border-b border-gray-700">
         {tabs.map((t) => (
           <button
@@ -51,7 +51,7 @@ export default function FeaturePicker({
           </button>
         ))}
       </div>
-      <div className="overflow-y-auto max-h-48">
+      <div className="overflow-y-auto flex-1">
         {items.length === 0 && (
           <p className="p-3 text-xs text-gray-500 italic">No {tab} registered</p>
         )}

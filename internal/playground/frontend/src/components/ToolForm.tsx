@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { Tool } from '../types'
 
 interface ToolFormProps {
@@ -10,6 +10,12 @@ interface ToolFormProps {
 export default function ToolForm({ tool, onSubmit, loading }: ToolFormProps) {
   const [values, setValues] = useState<Record<string, unknown>>({})
   const [errors, setErrors] = useState<string[]>([])
+
+  // Reset form when tool changes
+  useEffect(() => {
+    setValues({})
+    setErrors([])
+  }, [tool.name])
 
   const properties = tool.inputSchema?.properties || {}
   const required = new Set(tool.inputSchema?.required || [])

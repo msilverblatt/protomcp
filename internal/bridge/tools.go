@@ -10,12 +10,12 @@ import (
 )
 
 // syncTools clears existing tools and re-registers them from the backend.
-func syncTools(server *mcp.Server, backend ProcessBackend) {
+func syncTools(server *mcp.Server, backend ProcessBackend, onMutation ToolListMutationHandler) {
 	tools := backend.ActiveTools()
 
 	for _, t := range tools {
 		tool := convertToolDef(t)
-		handler := makeToolHandler(backend, t.Name)
+		handler := makeToolHandler(backend, t.Name, onMutation)
 		server.AddTool(tool, handler)
 	}
 }
@@ -66,7 +66,7 @@ func convertToolDef(t *pb.ToolDefinition) *mcp.Tool {
 	return tool
 }
 
-func makeToolHandler(backend ProcessBackend, name string) mcp.ToolHandler {
+func makeToolHandler(backend ProcessBackend, name string, onMutation ToolListMutationHandler) mcp.ToolHandler {
 	return func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		// req.Params.Arguments is json.RawMessage — use directly, don't re-marshal
 		argsJSON := "{}"
@@ -77,6 +77,11 @@ func makeToolHandler(backend ProcessBackend, name string) mcp.ToolHandler {
 		resp, err := backend.CallTool(ctx, name, argsJSON)
 		if err != nil {
 			return nil, err
+		}
+
+		// Process enable_tools/disable_tools from the response
+		if onMutation != nil && (len(resp.EnableTools) > 0 || len(resp.DisableTools) > 0) {
+			onMutation(resp.EnableTools, resp.DisableTools)
 		}
 
 		result := &mcp.CallToolResult{

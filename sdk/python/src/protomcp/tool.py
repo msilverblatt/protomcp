@@ -19,6 +19,7 @@ class ToolDef:
     read_only_hint: bool = False
     open_world_hint: bool = False
     task_support: bool = False
+    hidden: bool = False
 
 def tool(
     description: str,
@@ -29,6 +30,7 @@ def tool(
     read_only: bool = False,
     open_world: bool = False,
     task_support: bool = False,
+    hidden: bool = False,
 ):
     def decorator(func: Callable) -> Callable:
         schema = _generate_schema(func)
@@ -45,12 +47,16 @@ def tool(
             read_only_hint=read_only,
             open_world_hint=open_world,
             task_support=task_support,
+            hidden=hidden,
         ))
         return func
     return decorator
 
 def get_registered_tools() -> list[ToolDef]:
     return list(_registry)
+
+def get_hidden_tool_names() -> list[str]:
+    return [t.name for t in _registry if t.hidden]
 
 def clear_registry():
     _registry.clear()

@@ -44,9 +44,20 @@ export default function TracePanel({ entries, onClear }: TracePanelProps) {
         {entries.length === 0 && (
           <p className="p-3 text-xs text-gray-500 italic">No trace entries yet</p>
         )}
-        {[...entries].sort((a, b) => a.seq - b.seq).map((entry) => (
-          <TraceEntry key={entry.seq} entry={entry} />
-        ))}
+        {(() => {
+          const sorted = [...entries].sort((a, b) => a.seq - b.seq)
+          // Find the last response entry (direction=recv, has result data)
+          let lastResponseSeq = -1
+          for (let i = sorted.length - 1; i >= 0; i--) {
+            if (sorted[i].direction === 'recv' && sorted[i].method?.includes('response')) {
+              lastResponseSeq = sorted[i].seq
+              break
+            }
+          }
+          return sorted.map((entry) => (
+            <TraceEntry key={entry.seq} entry={entry} defaultExpanded={entry.seq === lastResponseSeq} />
+          ))
+        })()}
       </div>
     </div>
   )

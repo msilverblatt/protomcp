@@ -29,12 +29,16 @@ type FullBackend interface {
 	SamplingBackend
 }
 
+// ToolListMutationHandler is called when a tool call response contains enable_tools or disable_tools.
+type ToolListMutationHandler func(enable, disable []string)
+
 // Bridge connects an mcp.Server to a FullBackend.
 // It registers proxy handlers that forward MCP requests to the SDK process.
 type Bridge struct {
-	Server  *mcp.Server
-	backend FullBackend
-	logger  *slog.Logger
+	Server            *mcp.Server
+	backend           FullBackend
+	logger            *slog.Logger
+	onToolListMutation ToolListMutationHandler
 }
 
 // New creates a Bridge with an mcp.Server that proxies to the given backend.
@@ -91,10 +95,15 @@ func New(backend FullBackend, logger *slog.Logger) *Bridge {
 	return b
 }
 
+// SetToolListMutationHandler registers a callback for enable_tools/disable_tools in tool call responses.
+func (b *Bridge) SetToolListMutationHandler(fn ToolListMutationHandler) {
+	b.onToolListMutation = fn
+}
+
 // SyncTools reads tool definitions from the backend and registers them
 // with the mcp.Server. Called on startup and after hot reload.
 func (b *Bridge) SyncTools() {
-	syncTools(b.Server, b.backend)
+	syncTools(b.Server, b.backend, b.onToolListMutation)
 }
 
 // SyncResources reads resource and resource template definitions from the

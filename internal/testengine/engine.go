@@ -113,6 +113,9 @@ func (e *Engine) Start(ctx context.Context) error {
 	}
 	socketPath := filepath.Join(dir, "pmcp", fmt.Sprintf("testengine-%d.sock", os.Getpid()))
 
+	// Create tool list manager early — callbacks fire during pm.Start() handshake
+	e.tlm = toollist.New()
+
 	// Start process manager
 	e.pm = process.NewManager(process.ManagerConfig{
 		File:        e.file,
@@ -123,14 +126,28 @@ func (e *Engine) Start(ctx context.Context) error {
 		CallTimeout: e.cfg.callTimeout,
 	})
 
+	// Wire callbacks BEFORE Start() — the SDK process may send DisableToolsRequest
+	// during the handshake (e.g. for hidden tools)
+	e.pm.OnEnableTools(func(names []string) {
+		e.tlm.Enable(names)
+		if e.br != nil {
+			e.br.SyncTools()
+		}
+	})
+	e.pm.OnDisableTools(func(names []string) {
+		e.tlm.Disable(names)
+		if e.br != nil {
+			e.br.SyncTools()
+		}
+	})
+
 	tools, err := e.pm.Start(ctx)
 	if err != nil {
 		cancel()
 		return fmt.Errorf("start process: %w", err)
 	}
 
-	// Create tool list manager
-	e.tlm = toollist.New()
+	// Register all tools, then apply any disables that happened during handshake
 	toolNames := make([]string, len(tools))
 	for i, t := range tools {
 		toolNames[i] = t.Name
@@ -142,19 +159,18 @@ func (e *Engine) Start(ctx context.Context) error {
 
 	// Create bridge
 	e.br = bridge.New(e.be, e.cfg.logger)
+	e.br.SetToolListMutationHandler(func(enable, disable []string) {
+		if len(enable) > 0 {
+			e.tlm.Enable(enable)
+		}
+		if len(disable) > 0 {
+			e.tlm.Disable(disable)
+		}
+		e.br.SyncTools()
+	})
 	e.br.SyncTools()
 	e.br.SyncResources()
 	e.br.SyncPrompts()
-
-	// Wire process manager callbacks for dynamic tool list
-	e.pm.OnEnableTools(func(names []string) {
-		e.tlm.Enable(names)
-		e.br.SyncTools()
-	})
-	e.pm.OnDisableTools(func(names []string) {
-		e.tlm.Disable(names)
-		e.br.SyncTools()
-	})
 
 	// Create in-memory transport pair
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()

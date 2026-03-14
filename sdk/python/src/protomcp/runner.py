@@ -8,7 +8,7 @@ import protomcp_pb2 as pb
 import inspect
 
 from protomcp.transport import Transport
-from protomcp.tool import get_registered_tools
+from protomcp.tool import get_registered_tools, get_hidden_tool_names
 from protomcp.result import ToolResult
 from protomcp.context import ToolContext, _deliver_sampling_response
 from protomcp.log import ServerLogger
@@ -45,6 +45,7 @@ def run():
         if env.HasField("list_tools"):
             _handle_list_tools(transport, env)
             _send_middleware_registrations(transport, _mw_handlers)
+            _disable_hidden_tools(transport)
         elif env.HasField("call_tool"):
             _handle_call_tool(transport, env)
         elif env.HasField("reload"):
@@ -191,6 +192,14 @@ def _send_middleware_registrations(transport, mw_handlers):
         reload_response=pb.ReloadResponse(success=True),
     )
     transport.send(complete)
+
+def _disable_hidden_tools(transport):
+    """Disable any tools registered with hidden=True after handshake."""
+    hidden = get_hidden_tool_names()
+    if not hidden:
+        return
+    env = pb.Envelope(disable_tools=pb.DisableToolsRequest(tool_names=hidden))
+    transport.send(env)
 
 def _handle_middleware_intercept(transport, env, mw_handlers):
     req = env.middleware_intercept
