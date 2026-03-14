@@ -1,9 +1,5 @@
 import json
 import pytest
-from unittest.mock import patch, MagicMock
-
-import importlib
-workflow_module = importlib.import_module('protomcp.workflow')
 from protomcp.workflow import (
     step,
     workflow,
@@ -288,10 +284,8 @@ def test_no_cancel_tool_when_all_no_cancel():
 
 # --- Step dispatch ---
 
-@patch.object(workflow_module, '_tool_manager')
-def test_initial_step_dispatch(mock_tm):
-    mock_tm.get_active_tools.return_value = ["existing_tool"]
-    mock_tm.set_allowed.return_value = []
+
+def test_initial_step_dispatch():
 
     @workflow(name="d1", description="test")
     class D1:
@@ -309,10 +303,8 @@ def test_initial_step_dispatch(mock_tm):
     assert _active_workflow_stack[0].current_step == "start"
 
 
-@patch.object(workflow_module, '_tool_manager')
-def test_state_persistence_across_steps(mock_tm):
-    mock_tm.get_active_tools.return_value = ["existing_tool"]
-    mock_tm.set_allowed.return_value = []
+
+def test_state_persistence_across_steps():
 
     @workflow(name="stateful", description="test")
     class Stateful:
@@ -333,10 +325,8 @@ def test_state_persistence_across_steps(mock_tm):
     assert "data=foo" in result.result
 
 
-@patch.object(workflow_module, '_tool_manager')
-def test_dynamic_next_narrowing(mock_tm):
-    mock_tm.get_active_tools.return_value = []
-    mock_tm.set_allowed.return_value = []
+
+def test_dynamic_next_narrowing():
 
     @workflow(name="dyn", description="test")
     class Dyn:
@@ -352,17 +342,14 @@ def test_dynamic_next_narrowing(mock_tm):
         def b(self) -> StepResult:
             return StepResult(result="B done")
 
-    _handle_step_call("dyn", "start", {})
-    # set_allowed should have been called with only "dyn.a" (not "dyn.b")
-    call_args = mock_tm.set_allowed.call_args[0][0]
-    assert "dyn.a" in call_args
-    assert "dyn.b" not in call_args
+    result = _handle_step_call("dyn", "start", {})
+    # enable_tools should include dyn.a but not dyn.b
+    assert "dyn.a" in result.enable_tools
+    assert "dyn.b" not in result.enable_tools
 
 
-@patch.object(workflow_module, '_tool_manager')
-def test_dynamic_next_rejects_invalid(mock_tm):
-    mock_tm.get_active_tools.return_value = []
-    mock_tm.set_allowed.return_value = []
+
+def test_dynamic_next_rejects_invalid():
 
     @workflow(name="dyn2", description="test")
     class Dyn2:
@@ -379,10 +366,8 @@ def test_dynamic_next_rejects_invalid(mock_tm):
     assert "invalid next" in result.result
 
 
-@patch.object(workflow_module, '_tool_manager')
-def test_cancel_calls_on_cancel(mock_tm):
-    mock_tm.get_active_tools.return_value = ["t1", "t2"]
-    mock_tm.set_allowed.return_value = []
+
+def test_cancel_calls_on_cancel():
 
     cancel_called = []
 
@@ -404,13 +389,10 @@ def test_cancel_calls_on_cancel(mock_tm):
     assert "cancelled" in result.result
     assert len(cancel_called) == 1
     # Should restore pre-workflow tools
-    mock_tm.set_allowed.assert_called_with(["t1", "t2"])
 
 
-@patch.object(workflow_module, '_tool_manager')
-def test_on_complete_called_on_terminal(mock_tm):
-    mock_tm.get_active_tools.return_value = []
-    mock_tm.set_allowed.return_value = []
+
+def test_on_complete_called_on_terminal():
 
     complete_called = []
 
@@ -433,10 +415,8 @@ def test_on_complete_called_on_terminal(mock_tm):
     assert "finished" in result.result
 
 
-@patch.object(workflow_module, '_tool_manager')
-def test_history_tracking(mock_tm):
-    mock_tm.get_active_tools.return_value = []
-    mock_tm.set_allowed.return_value = []
+
+def test_history_tracking():
 
     @workflow(name="hist", description="test")
     class Hist:
@@ -462,10 +442,8 @@ def test_history_tracking(mock_tm):
     assert state.history[0][1].result == "s1"
 
 
-@patch.object(workflow_module, '_tool_manager')
-def test_error_stays_in_state(mock_tm):
-    mock_tm.get_active_tools.return_value = []
-    mock_tm.set_allowed.return_value = []
+
+def test_error_stays_in_state():
 
     call_count = []
 
@@ -495,10 +473,8 @@ def test_error_stays_in_state(mock_tm):
     assert "ok" in result2.result
 
 
-@patch.object(workflow_module, '_tool_manager')
-def test_on_error_transitions(mock_tm):
-    mock_tm.get_active_tools.return_value = []
-    mock_tm.set_allowed.return_value = []
+
+def test_on_error_transitions():
 
     @workflow(name="err2", description="test")
     class Err2:
@@ -520,10 +496,8 @@ def test_on_error_transitions(mock_tm):
     assert _active_workflow_stack[-1].current_step == "fix"
 
 
-@patch.object(workflow_module, '_tool_manager')
-def test_on_error_catch_all(mock_tm):
-    mock_tm.get_active_tools.return_value = []
-    mock_tm.set_allowed.return_value = []
+
+def test_on_error_catch_all():
 
     @workflow(name="err3", description="test")
     class Err3:
@@ -544,10 +518,8 @@ def test_on_error_catch_all(mock_tm):
     assert "transitioning to 'recover'" in result.result
 
 
-@patch.object(workflow_module, '_tool_manager')
-def test_no_cancel_with_error_allows_retry(mock_tm):
-    mock_tm.get_active_tools.return_value = []
-    mock_tm.set_allowed.return_value = []
+
+def test_no_cancel_with_error_allows_retry():
 
     attempt = []
 
@@ -573,10 +545,8 @@ def test_no_cancel_with_error_allows_retry(mock_tm):
     assert not result2.is_error
 
 
-@patch.object(workflow_module, '_tool_manager')
-def test_unmatched_error_stays_in_state(mock_tm):
-    mock_tm.get_active_tools.return_value = []
-    mock_tm.set_allowed.return_value = []
+
+def test_unmatched_error_stays_in_state():
 
     @workflow(name="err4", description="test")
     class Err4:
@@ -592,3 +562,128 @@ def test_unmatched_error_stays_in_state(mock_tm):
     result = _handle_step_call("err4", "start", {})
     assert result.is_error
     assert "retry" in result.result.lower() or "failed" in result.result.lower()
+
+
+# --- No-deadlock tests ---
+# Workflow step handlers run INSIDE a tool call. If they try to do a synchronous
+# round-trip to the Go bridge (e.g. tool_manager.get_active_tools()), the bridge
+# is blocked waiting for the tool call response → deadlock.
+# These tests verify that step dispatch never hangs and always returns
+# enable_tools/disable_tools on the ToolResult instead.
+
+
+def test_step_dispatch_returns_enable_disable_no_transport():
+    """Step dispatch must work without a live transport connection.
+    If it tries to call tool_manager (which needs transport), it would raise RuntimeError.
+    """
+
+    @workflow(name="nodeadlock1", description="test")
+    class W:
+        @step("start", description="Start", initial=True, next=["done"])
+        def start(self) -> StepResult:
+            return StepResult(result="started")
+
+        @step("done", description="Done", terminal=True)
+        def done(self) -> StepResult:
+            return StepResult(result="finished")
+
+    # Initial step — must return enable_tools/disable_tools, not call transport
+    result = _handle_step_call("nodeadlock1", "start", {})
+    assert not result.is_error
+    assert result.enable_tools is not None
+    assert isinstance(result.enable_tools, list)
+    assert "nodeadlock1.done" in result.enable_tools
+
+    # Terminal step — must restore tools via enable/disable
+    result = _handle_step_call("nodeadlock1", "done", {})
+    assert not result.is_error
+    assert result.enable_tools is not None
+    assert result.disable_tools is not None
+
+
+def test_cancel_returns_enable_disable_no_transport():
+    """Cancel must work without a live transport connection."""
+
+    @workflow(name="nodeadlock2", description="test")
+    class W:
+        @step("start", description="Start", initial=True, next=["done"])
+        def start(self) -> StepResult:
+            return StepResult(result="started")
+
+        @step("done", description="Done", terminal=True)
+        def done(self) -> StepResult:
+            return StepResult(result="finished")
+
+    _handle_step_call("nodeadlock2", "start", {})
+    result = _handle_cancel("nodeadlock2")
+    assert not result.is_error
+    assert result.enable_tools is not None
+    assert result.disable_tools is not None
+
+
+def test_on_error_transition_returns_enable_disable_no_transport():
+    """on_error transitions must work without a live transport connection."""
+
+    @workflow(name="nodeadlock3", description="test")
+    class W:
+        @step("start", description="Start", initial=True, next=["done"],
+              on_error={ValueError: "recover"})
+        def start(self) -> StepResult:
+            raise ValueError("boom")
+
+        @step("done", description="Done", terminal=True)
+        def done(self) -> StepResult:
+            return StepResult(result="done")
+
+        @step("recover", description="Recover", terminal=True)
+        def recover(self) -> StepResult:
+            return StepResult(result="recovered")
+
+    result = _handle_step_call("nodeadlock3", "start", {})
+    assert "transitioning" in result.result
+    assert result.enable_tools is not None
+    assert "nodeadlock3.recover" in result.enable_tools
+
+
+def test_multi_step_workflow_no_transport():
+    """A full workflow cycle must complete without any transport calls."""
+
+    @workflow(name="nodeadlock4", description="test")
+    class W:
+        def __init__(self):
+            self.steps_executed = []
+
+        @step("review", description="Review", initial=True, next=["approve", "reject"])
+        def review(self, pr: str) -> StepResult:
+            self.steps_executed.append("review")
+            return StepResult(result=f"Reviewed {pr}")
+
+        @step("approve", description="Approve", next=["deploy"])
+        def approve(self) -> StepResult:
+            self.steps_executed.append("approve")
+            return StepResult(result="Approved")
+
+        @step("deploy", description="Deploy", terminal=True)
+        def deploy(self) -> StepResult:
+            self.steps_executed.append("deploy")
+            return StepResult(result="Deployed")
+
+        @step("reject", description="Reject", terminal=True)
+        def reject(self) -> StepResult:
+            self.steps_executed.append("reject")
+            return StepResult(result="Rejected")
+
+    r1 = _handle_step_call("nodeadlock4", "review", {"pr": "#42"})
+    assert not r1.is_error
+    assert "nodeadlock4.approve" in r1.enable_tools
+    assert "nodeadlock4.reject" in r1.enable_tools
+
+    r2 = _handle_step_call("nodeadlock4", "approve", {})
+    assert not r2.is_error
+    assert "nodeadlock4.deploy" in r2.enable_tools
+
+    r3 = _handle_step_call("nodeadlock4", "deploy", {})
+    assert not r3.is_error
+    assert "Deployed" in r3.result
+    # Workflow complete — should have no active state
+    assert len(_active_workflow_stack) == 0

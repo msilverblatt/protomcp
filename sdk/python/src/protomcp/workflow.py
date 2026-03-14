@@ -4,9 +4,8 @@ import json
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
-from protomcp.tool import ToolDef, _type_to_schema, _is_optional_type
+from protomcp.tool import ToolDef, _type_to_schema, _is_optional_type, get_registered_tools
 from protomcp.result import ToolResult
-from protomcp import manager as _tool_manager
 
 _workflow_registry: list["WorkflowDef"] = []
 _active_workflow_stack: list["WorkflowState"] = []
@@ -249,37 +248,46 @@ def _get_step_visibility(step_def: StepDef, workflow_def: WorkflowDef) -> tuple[
     return workflow_def.allow_during, workflow_def.block_during
 
 
-def _transition_to_steps(
+def _compute_transition(
     workflow_def: WorkflowDef,
     state: WorkflowState,
     next_step_names: list[str],
-) -> None:
-    """Transition visibility to show only the given next steps (plus cancel if applicable, plus visibility-matched tools)."""
-    step_map = {s.name: s for s in workflow_def.steps}
+) -> tuple[list[str], list[str]]:
+    """Compute enable/disable tool lists for a step transition.
 
-    # Build the list of tool names to allow
-    allowed_tools: list[str] = []
+    Returns (enable_tools, disable_tools) to put on the ToolResult.
+    This avoids calling tool_manager during a tool call handler (which deadlocks).
+    """
+    step_map = {s.name: s for s in workflow_def.steps}
+    all_tools = [t.name for t in get_registered_tools()]
+
+    # Tools that should be visible after transition
+    allowed: set[str] = set()
 
     # Add the next step tools
     for sn in next_step_names:
-        allowed_tools.append(f"{workflow_def.name}.{sn}")
+        allowed.add(f"{workflow_def.name}.{sn}")
 
     # Add cancel tool if any next step allows cancel
     any_cancelable = any(not step_map[sn].no_cancel for sn in next_step_names if sn in step_map)
     if any_cancelable:
-        allowed_tools.append(f"{workflow_def.name}.cancel")
+        allowed.add(f"{workflow_def.name}.cancel")
 
-    # Add visibility-matched tools from pre_workflow_tools
-    # Use the first next step's visibility settings for determining external tool visibility
+    # Add visibility-matched non-workflow tools
     if next_step_names:
         first_step = step_map.get(next_step_names[0])
         if first_step:
             allow_during, block_during = _get_step_visibility(first_step, workflow_def)
             for tool_name in state.pre_workflow_tools:
                 if _matches_visibility(tool_name, allow_during, block_during):
-                    allowed_tools.append(tool_name)
+                    allowed.add(tool_name)
 
-    _tool_manager.set_allowed(allowed_tools)
+    # Compute diff: enable what should be visible, disable what shouldn't
+    all_set = set(all_tools)
+    enable = sorted(allowed)
+    disable = sorted(all_set - allowed)
+
+    return enable, disable
 
 
 def _find_workflow(name: str) -> WorkflowDef | None:
@@ -315,8 +323,10 @@ def _handle_step_call(workflow_name: str, step_name: str, kwargs: dict) -> Any:
     state = _get_active_state()
 
     if step_def.initial:
-        # Start a new workflow
-        pre_tools = _tool_manager.get_active_tools()
+        # Start a new workflow — snapshot all registered tool names (no transport roundtrip)
+        all_tool_names = [t.name for t in get_registered_tools()]
+        # Pre-workflow tools are everything that's not part of this workflow
+        pre_tools = [t for t in all_tool_names if not t.startswith(f"{workflow_name}.")]
         state = WorkflowState(
             workflow_name=workflow_name,
             current_step=step_name,
@@ -344,9 +354,11 @@ def _handle_step_call(workflow_name: str, step_name: str, kwargs: dict) -> Any:
                 if isinstance(exc, exc_type):
                     state.current_step = target_step
                     # Transition to the error target step
-                    _transition_to_steps(wf, state, [target_step])
+                    enable, disable = _compute_transition(wf, state, [target_step])
                     return ToolResult(
                         result=f"Error caught ({type(exc).__name__}: {exc}), transitioning to '{target_step}'",
+                        enable_tools=enable,
+                        disable_tools=disable,
                     )
         # No matching on_error: stay in current state for retry
         return ToolResult(
@@ -382,14 +394,24 @@ def _handle_step_call(workflow_name: str, step_name: str, kwargs: dict) -> Any:
         # Workflow complete
         if wf.on_complete is not None:
             wf.on_complete()
-        # Restore pre-workflow tools
-        _tool_manager.set_allowed(state.pre_workflow_tools)
+        # Restore pre-workflow tools via enable/disable
+        all_tool_names = set(t.name for t in get_registered_tools())
+        restore_enable = sorted(set(state.pre_workflow_tools))
+        restore_disable = sorted(all_tool_names - set(state.pre_workflow_tools))
         _active_workflow_stack.pop()
-        return ToolResult(result=result.result or "Workflow complete")
+        return ToolResult(
+            result=result.result or "Workflow complete",
+            enable_tools=restore_enable,
+            disable_tools=restore_disable,
+        )
     else:
         # Transition to next steps
-        _transition_to_steps(wf, state, effective_next or [])
-        return ToolResult(result=result.result or f"Proceed to: {effective_next}")
+        enable, disable = _compute_transition(wf, state, effective_next or [])
+        return ToolResult(
+            result=result.result or f"Proceed to: {effective_next}",
+            enable_tools=enable,
+            disable_tools=disable,
+        )
 
 
 def _handle_cancel(workflow_name: str) -> Any:
@@ -408,10 +430,16 @@ def _handle_cancel(workflow_name: str) -> Any:
     if wf.on_cancel is not None:
         wf.on_cancel()
 
-    # Restore pre-workflow tools
-    _tool_manager.set_allowed(state.pre_workflow_tools)
+    # Restore pre-workflow tools via enable/disable
+    all_tool_names = set(t.name for t in get_registered_tools())
+    restore_enable = sorted(set(state.pre_workflow_tools))
+    restore_disable = sorted(all_tool_names - set(state.pre_workflow_tools))
     _active_workflow_stack.pop()
-    return ToolResult(result=f"Workflow '{workflow_name}' cancelled")
+    return ToolResult(
+        result=f"Workflow '{workflow_name}' cancelled",
+        enable_tools=restore_enable,
+        disable_tools=restore_disable,
+    )
 
 
 def workflows_to_tool_defs() -> list[ToolDef]:
