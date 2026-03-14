@@ -18,6 +18,7 @@ from protomcp.resource import get_registered_resources, get_registered_resource_
 from protomcp.prompt import get_registered_prompts
 from protomcp.completion import get_completion_handler, CompletionResult
 from protomcp.server_context import resolve_contexts
+from protomcp.local_middleware import build_middleware_chain
 
 log: ServerLogger = ServerLogger(send_fn=lambda msg: None)
 
@@ -118,14 +119,16 @@ def _handle_call_tool(transport, env):
         for param_name, value in ctx_values.items():
             if param_name in sig.parameters:
                 args[param_name] = value
+        # Build middleware chain around handler
+        chain = build_middleware_chain(req.name, handler)
         if "ctx" in sig.parameters:
             ctx = ToolContext(
                 progress_token=req.progress_token,
                 send_fn=transport.send,
             )
-            result = handler(ctx=ctx, **args)
+            result = chain(ctx, args)
         else:
-            result = handler(**args)
+            result = chain(None, args)
 
         if isinstance(result, ToolResult):
             resp_msg = pb.CallToolResponse(
