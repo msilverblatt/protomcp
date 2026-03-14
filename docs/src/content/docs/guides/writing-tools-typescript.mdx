@@ -394,3 +394,237 @@ test('add tool returns sum', async () => {
   expect(result.isError).toBe(false);
 });
 ```
+
+---
+
+## Extended Schema Types
+
+Zod provides built-in support for complex types that map to JSON Schema automatically:
+
+| Zod type | JSON Schema |
+|----------|-------------|
+| `z.array(z.string())` | `{"type": "array", "items": {"type": "string"}}` |
+| `z.record(z.number())` | `{"type": "object", "additionalProperties": {"type": "number"}}` |
+| `z.union([z.string(), z.number()])` | `{"anyOf": [...]}` |
+| `z.enum(["a", "b"])` | `{"type": "string", "enum": ["a", "b"]}` |
+| `z.string().optional()` | `{"type": "string"}`, not required |
+
+---
+
+## Tool Groups
+
+Group related actions under a single tool using `toolGroup()`.
+
+```typescript
+import { toolGroup, ToolResult } from 'protomcp';
+import { z } from 'zod';
+
+toolGroup({
+  name: 'files',
+  description: 'File operations',
+  strategy: 'union',
+  actions: [
+    {
+      name: 'read',
+      description: 'Read a file',
+      args: z.object({ path: z.string() }),
+      handler({ path }) {
+        return new ToolResult({ result: readFileSync(path, 'utf8') });
+      },
+    },
+    {
+      name: 'write',
+      description: 'Write a file',
+      args: z.object({ path: z.string(), content: z.string() }),
+      handler({ path, content }) {
+        writeFileSync(path, content);
+        return new ToolResult({ result: `Wrote ${path}` });
+      },
+    },
+  ],
+});
+```
+
+### Strategy: union (default)
+
+With `strategy: 'union'`, the group registers as a single tool with a discriminated `oneOf` schema. The caller passes an `action` field to select the action.
+
+### Strategy: separate
+
+With `strategy: 'separate'`, each action becomes its own tool, namespaced as `group.action` (e.g. `files.read`, `files.write`).
+
+### Dispatch and fuzzy matching
+
+When an unknown action is passed, the dispatcher returns an error with a fuzzy "Did you mean?" suggestion.
+
+---
+
+## Declarative Validation
+
+Declare validation rules on actions to validate input before the handler runs.
+
+### `requires`
+
+```typescript
+{
+  name: 'deploy',
+  requires: ['env', 'version'],
+  args: z.object({ env: z.string(), version: z.string() }),
+  handler({ env, version }) { ... },
+}
+```
+
+### `enumFields`
+
+Restrict a field to a set of valid values. Invalid values trigger a "Did you mean?" suggestion.
+
+```typescript
+{
+  name: 'set_env',
+  enumFields: { env: ['dev', 'staging', 'prod'] },
+  args: z.object({ env: z.string() }),
+  handler({ env }) { ... },
+}
+```
+
+### `crossRules`
+
+Validate relationships between parameters.
+
+```typescript
+{
+  name: 'scale',
+  crossRules: [
+    { check: (args) => args.min > args.max, message: 'min must be <= max' },
+  ],
+  args: z.object({ min: z.number(), max: z.number() }),
+  handler({ min, max }) { ... },
+}
+```
+
+### `hints`
+
+Non-blocking advisory messages appended to the result when a condition is met.
+
+```typescript
+{
+  name: 'query',
+  hints: {
+    slow_warning: {
+      condition: (args) => args.limit > 1000,
+      message: 'Large limit may cause slow queries',
+    },
+  },
+  args: z.object({ table: z.string(), limit: z.number().default(100) }),
+  handler({ table, limit }) { ... },
+}
+```
+
+---
+
+## Server Context
+
+Register resolvers that inject shared parameters into tool handlers automatically.
+
+```typescript
+import { serverContext } from 'protomcp';
+
+serverContext('project_dir', {
+  expose: false,
+  resolver: (args) => process.cwd(),
+});
+```
+
+With `expose: false`, the parameter is hidden from the tool schema sent to the MCP host but still injected into the handler arguments.
+
+---
+
+## Local Middleware
+
+Wrap tool handlers with in-process middleware for cross-cutting concerns.
+
+```typescript
+import { localMiddleware, ToolResult } from 'protomcp';
+
+localMiddleware(10, async (ctx, toolName, args, next) => {
+  const start = Date.now();
+  const result = await next(ctx, args);
+  console.log(`${toolName} took ${Date.now() - start}ms`);
+  return result;
+});
+```
+
+### Priority chain
+
+Middleware is sorted by priority (lowest first = outermost). Return a `ToolResult` directly to short-circuit the chain.
+
+### Local vs Go-bridge middleware
+
+Local middleware runs in-process in Node.js. Go-bridge middleware runs cross-process via the Go transport layer.
+
+---
+
+## Telemetry
+
+Observe tool calls with fail-safe telemetry sinks. Exceptions in sinks are silently swallowed.
+
+```typescript
+import { telemetrySink, ToolCallEvent } from 'protomcp';
+
+telemetrySink((event: ToolCallEvent) => {
+  console.log(`[${event.phase}] ${event.toolName}: ${event.message}`);
+});
+```
+
+### `ToolCallEvent` phases
+
+| Phase | When |
+|-------|------|
+| `"start"` | Before the handler runs |
+| `"success"` | After the handler returns successfully |
+| `"error"` | After the handler raises or returns an error |
+| `"progress"` | When `reportProgress` is called |
+
+---
+
+## Sidecar Management
+
+Declare companion processes that protomcp manages alongside your server.
+
+```typescript
+import { sidecar } from 'protomcp';
+
+sidecar({
+  name: 'redis',
+  command: ['redis-server', '--port', '6380'],
+  healthCheck: 'http://localhost:6380/ping',
+  startOn: 'server_start',
+  healthTimeout: 30000,
+});
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `name` | `string` | required | Unique sidecar identifier |
+| `command` | `string[]` | required | Process command and arguments |
+| `healthCheck` | `string` | `""` | URL to poll for health (HTTP 200 = healthy) |
+| `startOn` | `string` | `"first_tool_call"` | `"server_start"` or `"first_tool_call"` |
+| `healthTimeout` | `number` | `30000` | Milliseconds to wait for health check to pass |
+
+PID files are stored in `~/.protomcp/sidecars/`. Processes receive `SIGTERM` on shutdown, followed by `SIGKILL` if they do not stop within the timeout.
+
+---
+
+## Handler Discovery
+
+Auto-discover handler files from a directory instead of importing them manually.
+
+```typescript
+import { configure } from 'protomcp';
+
+configure({ handlersDir: './handlers', hotReload: true });
+```
+
+- All `.ts` and `.js` files in `handlersDir` are imported automatically.
+- Files prefixed with `_` (e.g. `_helpers.ts`) are skipped.
+- With `hotReload: true`, previously loaded modules are cleared and re-imported on each discovery pass.

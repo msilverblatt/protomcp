@@ -66,6 +66,11 @@ protomcp reads Python type hints to generate the JSON Schema for tool inputs aut
 | `bool`      | `"boolean"` |
 | `list`      | `"array"` |
 | `dict`      | `"object"` |
+| `list[T]`   | `{"type": "array", "items": <T schema>}` |
+| `dict[K, V]` | `{"type": "object", "additionalProperties": <V schema>}` |
+| `str \| int` / `Union[str, int]` | `{"anyOf": [...]}` |
+| `Optional[T]` | type of `T`, not required |
+| `Literal["a", "b"]` | `{"type": "string", "enum": ["a", "b"]}` |
 
 ```python
 @tool("Search for documents")
@@ -403,3 +408,255 @@ def translate(ctx: ToolContext, text: str, language: str) -> ToolResult:
         max_tokens=500,
     )
     return ToolResult(result=response.get("content", ""))
+```
+
+---
+
+## Tool Groups
+
+Group related actions under a single tool using `@tool_group` on a class and `@action` on its methods.
+
+```python
+from protomcp.group import tool_group, action
+from protomcp import ToolResult
+
+@tool_group("files", description="File operations", strategy="union")
+class FileTools:
+    @action("read", description="Read a file")
+    def read(self, path: str) -> ToolResult:
+        return ToolResult(result=open(path).read())
+
+    @action("write", description="Write a file")
+    def write(self, path: str, content: str) -> ToolResult:
+        open(path, "w").write(content)
+        return ToolResult(result=f"Wrote {path}")
+```
+
+### Strategy: union (default)
+
+With `strategy="union"`, the group registers as a single tool with a discriminated `oneOf` schema. The caller passes an `action` field to select the action.
+
+### Strategy: separate
+
+With `strategy="separate"`, each action becomes its own tool, namespaced as `group.action` (e.g. `files.read`, `files.write`).
+
+```python
+@tool_group("files", strategy="separate")
+class FileTools:
+    ...
+```
+
+### Dispatch and fuzzy matching
+
+When an unknown action is passed, the dispatcher returns an error with a fuzzy "Did you mean?" suggestion based on close matches.
+
+### Per-action schema
+
+Each `@action` generates its own JSON Schema from the method's type hints, following the same rules as `@tool()`.
+
+---
+
+## Declarative Validation
+
+Declare validation rules on `@action()` to validate input before your handler runs.
+
+### `requires`
+
+Fail if a required field is missing or empty.
+
+```python
+@action("deploy", requires=["env", "version"])
+def deploy(self, env: str, version: str) -> ToolResult:
+    return ToolResult(result=f"Deployed {version} to {env}")
+```
+
+### `enum_fields`
+
+Restrict a field to a set of valid values. Invalid values trigger a "Did you mean?" suggestion.
+
+```python
+@action("set_env", enum_fields={"env": ["dev", "staging", "prod"]})
+def set_env(self, env: str) -> ToolResult:
+    return ToolResult(result=f"Set to {env}")
+```
+
+### `cross_rules`
+
+Validate relationships between parameters. Each rule is a `(condition_fn, error_message)` tuple — if the condition returns `True`, the error is raised.
+
+```python
+@action("scale", cross_rules=[
+    (lambda args: args.get("min", 0) > args.get("max", 0), "min must be <= max"),
+])
+def scale(self, min: int, max: int) -> ToolResult:
+    return ToolResult(result=f"Scaled {min}-{max}")
+```
+
+### `hints`
+
+Non-blocking advisory messages appended to the result when a condition is met.
+
+```python
+@action("query", hints={
+    "slow_warning": {
+        "condition": lambda args: args.get("limit", 0) > 1000,
+        "message": "Large limit may cause slow queries",
+    },
+})
+def query(self, table: str, limit: int = 100) -> ToolResult:
+    return ToolResult(result=f"Queried {table}")
+```
+
+---
+
+## Server Context
+
+Register resolvers that inject shared parameters into tool handlers automatically.
+
+```python
+from protomcp.server_context import server_context
+
+@server_context("project_dir", expose=False)
+def resolve_project_dir(args: dict) -> str:
+    return os.getcwd()
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `param_name` | `str` | required | Name of the parameter to inject |
+| `expose` | `bool` | `True` | If `False`, the parameter is hidden from the tool schema |
+
+When a tool handler declares a parameter matching `param_name`, protomcp calls the resolver and injects the returned value. With `expose=False`, the parameter does not appear in the JSON Schema sent to the MCP host.
+
+---
+
+## Local Middleware
+
+Wrap tool handlers with in-process middleware for cross-cutting concerns like logging, error formatting, or timing.
+
+```python
+from protomcp.local_middleware import local_middleware
+
+@local_middleware(priority=10)
+def timing_middleware(ctx, tool_name, args, next_handler):
+    import time
+    start = time.monotonic()
+    result = next_handler(ctx, args)
+    elapsed = time.monotonic() - start
+    print(f"{tool_name} took {elapsed:.3f}s")
+    return result
+```
+
+### Priority chain
+
+Middleware is sorted by `priority` (lowest first = outermost). A priority-10 middleware wraps a priority-100 middleware, which wraps the tool handler.
+
+### Short-circuit
+
+Return a `ToolResult` directly from middleware to skip the handler entirely.
+
+```python
+@local_middleware(priority=5)
+def auth_gate(ctx, tool_name, args, next_handler):
+    if not is_authenticated():
+        return ToolResult(is_error=True, message="Not authenticated")
+    return next_handler(ctx, args)
+```
+
+### Local vs Go-bridge middleware
+
+Local middleware runs in-process in Python. Go-bridge middleware runs cross-process via the Go transport layer. Use local middleware for Python-only concerns; use Go-bridge middleware for transport-level concerns.
+
+---
+
+## Telemetry
+
+Observe tool calls with fail-safe telemetry sinks. Sinks receive events but cannot affect tool execution — exceptions in sinks are silently swallowed.
+
+```python
+from protomcp.telemetry import telemetry_sink, ToolCallEvent
+
+@telemetry_sink
+def log_events(event: ToolCallEvent):
+    print(f"[{event.phase}] {event.tool_name}: {event.message}")
+```
+
+### `ToolCallEvent` phases
+
+| Phase | When |
+|-------|------|
+| `"start"` | Before the handler runs |
+| `"success"` | After the handler returns successfully |
+| `"error"` | After the handler raises or returns an error |
+| `"progress"` | When `report_progress` is called |
+
+### Example: SQLite event store
+
+```python
+@telemetry_sink
+def sqlite_store(event: ToolCallEvent):
+    import sqlite3
+    conn = sqlite3.connect("telemetry.db")
+    conn.execute(
+        "INSERT INTO events (tool, phase, duration_ms) VALUES (?, ?, ?)",
+        (event.tool_name, event.phase, event.duration_ms),
+    )
+    conn.commit()
+```
+
+---
+
+## Sidecar Management
+
+Declare companion processes that protomcp manages alongside your server.
+
+```python
+from protomcp.sidecar import sidecar
+
+@sidecar(
+    name="redis",
+    command=["redis-server", "--port", "6380"],
+    health_check="http://localhost:6380/ping",
+    start_on="server_start",
+    health_timeout=30.0,
+)
+def redis_sidecar():
+    pass
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | required | Unique sidecar identifier |
+| `command` | `list[str]` | required | Process command and arguments |
+| `health_check` | `str` | `""` | URL to poll for health (HTTP 200 = healthy) |
+| `start_on` | `str` | `"first_tool_call"` | `"server_start"` or `"first_tool_call"` |
+| `health_timeout` | `float` | `30.0` | Seconds to wait for health check to pass |
+
+### Lifecycle
+
+- **PID management**: PID files are stored in `~/.protomcp/sidecars/`.
+- **Graceful shutdown**: On exit, processes receive `SIGTERM` followed by `SIGKILL` if they do not stop within the shutdown timeout.
+- **Health checks**: If `health_check` is set, protomcp polls the URL until it returns 200 or the timeout expires.
+
+---
+
+## Handler Discovery
+
+Auto-discover handler files from a directory instead of importing them manually.
+
+```python
+from protomcp.discovery import configure
+
+configure(handlers_dir="./handlers", hot_reload=True)
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `handlers_dir` | `str` | `""` | Path to the directory containing handler files |
+| `hot_reload` | `bool` | `False` | Re-import handlers on each discovery pass |
+
+### Behavior
+
+- All `.py` files in `handlers_dir` are imported automatically.
+- Files prefixed with `_` (e.g. `_helpers.py`) are skipped.
+- With `hot_reload=True`, previously loaded modules are cleared and re-imported on each discovery pass.
