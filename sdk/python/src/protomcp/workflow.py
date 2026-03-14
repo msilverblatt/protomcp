@@ -57,7 +57,7 @@ class WorkflowState:
 
 
 def step(
-    name: str,
+    name: str | None = None,
     description: str = "",
     initial: bool = False,
     next: list[str] | None = None,
@@ -69,10 +69,14 @@ def step(
     requires: list[str] | None = None,
     enum_fields: dict[str, list] | None = None,
 ):
-    """Decorator that marks a method as a workflow step."""
+    """Decorator that marks a method as a workflow step.
+
+    If ``name`` is not provided, the decorated function's name is used.
+    """
     def decorator(func: Callable) -> Callable:
+        step_name = name if name is not None else func.__name__
         func._step_def = {  # type: ignore[attr-defined]
-            "name": name,
+            "name": step_name,
             "description": description,
             "initial": initial,
             "next": next,
