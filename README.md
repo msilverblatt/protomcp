@@ -178,6 +178,137 @@ protomcp implements the full MCP specification (2025-03-26) via the official Go 
 - **Custom Middleware** — intercept tool calls with before/after hooks
 - **Validation** — `pmcp validate` checks definitions before deployment
 
+## Tool Groups
+
+Real-world MCP tools tend to accumulate dozens of parameters behind a single endpoint. Tool groups let you split actions into clean, per-action schemas while exposing a single tool with a discriminated union (`oneOf`) to the LLM.
+
+**Before** -- one tool, 20+ params:
+
+```python
+@tool("Manage data")
+def data(action: str, data_path: str | None = None, join_on: list[str] | None = None,
+         prefix: str | None = None, column: str | None = None, strategy: str = "median",
+         # ... 15 more params ...
+         ) -> ToolResult:
+    ...
+```
+
+**After** -- per-action schemas, one class:
+
+```python
+@tool_group("data", description="Manage data")
+class DataTools:
+    @action("add", description="Ingest a dataset")
+    def add(self, data_path: str, join_on: list[str] | None = None) -> ToolResult:
+        ...
+
+    @action("profile", description="Profile the dataset")
+    def profile(self, category: str | None = None) -> ToolResult:
+        ...
+```
+
+The same pattern works across all four languages:
+
+**Python**
+
+```python
+from protomcp import tool_group, action, ToolResult
+
+@tool_group("math", description="Math operations")
+class MathTools:
+    @action("add", description="Add two numbers")
+    def add(self, a: int, b: int) -> ToolResult:
+        return ToolResult(result=str(a + b))
+
+    @action("multiply", description="Multiply two numbers")
+    def multiply(self, a: int, b: int) -> ToolResult:
+        return ToolResult(result=str(a * b))
+```
+
+**Go**
+
+```go
+protomcp.ToolGroup("math",
+    protomcp.Description("Math operations"),
+    protomcp.Action("add", protomcp.Description("Add two numbers"),
+        protomcp.Args(protomcp.IntArg("a"), protomcp.IntArg("b")),
+        protomcp.Handler(func(ctx protomcp.ToolContext, args map[string]interface{}) protomcp.ToolResult {
+            return protomcp.Result(fmt.Sprintf("%d", int(args["a"].(float64))+int(args["b"].(float64))))
+        }),
+    ),
+    protomcp.Action("multiply", protomcp.Description("Multiply two numbers"),
+        protomcp.Args(protomcp.IntArg("a"), protomcp.IntArg("b")),
+        protomcp.Handler(func(ctx protomcp.ToolContext, args map[string]interface{}) protomcp.ToolResult {
+            return protomcp.Result(fmt.Sprintf("%d", int(args["a"].(float64))*int(args["b"].(float64))))
+        }),
+    ),
+)
+```
+
+**TypeScript**
+
+```typescript
+import { toolGroup, ToolResult } from 'protomcp';
+import { z } from 'zod';
+
+toolGroup({
+  name: 'math',
+  description: 'Math operations',
+  actions: {
+    add: {
+      description: 'Add two numbers',
+      args: z.object({ a: z.number(), b: z.number() }),
+      handler: ({ a, b }) => new ToolResult({ result: String(a + b) }),
+    },
+    multiply: {
+      description: 'Multiply two numbers',
+      args: z.object({ a: z.number(), b: z.number() }),
+      handler: ({ a, b }) => new ToolResult({ result: String(a * b) }),
+    },
+  },
+});
+```
+
+**Rust**
+
+```rust
+use protomcp::{tool_group, action, ToolResult, ArgDef};
+
+tool_group("math")
+    .description("Math operations")
+    .action(action("add")
+        .description("Add two numbers")
+        .arg(ArgDef::int("a"))
+        .arg(ArgDef::int("b"))
+        .handler(|_ctx, args| {
+            let a = args["a"].as_i64().unwrap_or(0);
+            let b = args["b"].as_i64().unwrap_or(0);
+            ToolResult::new(format!("{}", a + b))
+        }))
+    .action(action("multiply")
+        .description("Multiply two numbers")
+        .arg(ArgDef::int("a"))
+        .arg(ArgDef::int("b"))
+        .handler(|_ctx, args| {
+            let a = args["a"].as_i64().unwrap_or(0);
+            let b = args["b"].as_i64().unwrap_or(0);
+            ToolResult::new(format!("{}", a * b))
+        }))
+    .register();
+```
+
+## Advanced Features
+
+- **Tool Groups** -- Group related actions with per-action schemas (oneOf discriminated unions). Each action gets its own required fields, enums, and validation rules while appearing as a single tool to the LLM.
+- **Local Middleware** -- In-process middleware chain for error handling, timing, auto-install, or any cross-cutting concern. Middleware receives the tool name, args, and a `next` handler.
+- **Server Context** -- Inject shared parameters (project directory, DB connection, auth tokens) into tool handlers automatically. Hidden contexts stay out of the tool schema entirely.
+- **Telemetry** -- Structured `ToolCallEvent`s (start, success, error, progress) emitted to pluggable sinks. Wire up logging, metrics, or tracing with a single decorator.
+- **Declarative Validation** -- Required fields, enum fuzzy matching (with "did you mean?" suggestions), and cross-parameter rules defined alongside your actions.
+- **Sidecar Management** -- Managed companion processes with health checks, started and stopped alongside your server.
+- **Handler Discovery** -- Auto-discover tool handlers from a directory so you can organize large servers into separate files.
+
+See the [full documentation](https://msilverblatt.github.io/protomcp/) for details on each feature.
+
 ## When to Use protomcp
 
 protomcp is not a replacement for the official MCP SDKs — it's built on top of the [official Go SDK](https://github.com/modelcontextprotocol/go-sdk). Use protomcp when:
