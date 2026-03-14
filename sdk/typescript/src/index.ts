@@ -1,4 +1,5 @@
 export { tool, getRegisteredTools, clearRegistry } from './tool.js';
+export { toolGroup, getRegisteredGroups, clearGroupRegistry, groupsToToolDefs } from './group.js';
 export { ToolResult } from './result.js';
 export { toolManager } from './manager.js';
 export { ToolContext } from './context.js';
