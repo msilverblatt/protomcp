@@ -13,6 +13,7 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
 	"github.com/msilverblatt/protomcp/internal/bridge"
+	"github.com/msilverblatt/protomcp/internal/cli"
 	"github.com/msilverblatt/protomcp/internal/config"
 	"github.com/msilverblatt/protomcp/internal/process"
 	"github.com/msilverblatt/protomcp/internal/reload"
@@ -37,6 +38,16 @@ func main() {
 
 	if cfg.Command == "validate" {
 		runValidate(ctx, cfg)
+		return
+	}
+
+	if cfg.Command == "test" {
+		runTest(ctx, cfg)
+		return
+	}
+
+	if cfg.Command == "playground" {
+		runPlayground(ctx, cfg)
 		return
 	}
 
@@ -308,6 +319,29 @@ func runValidate(ctx context.Context, cfg *config.Config) {
 	if !result.Pass {
 		os.Exit(1)
 	}
+}
+
+func runTest(ctx context.Context, cfg *config.Config) {
+	var err error
+	switch cfg.TestSubcommand {
+	case "list":
+		err = cli.RunTestList(ctx, cfg.File, cfg.Format)
+	case "call":
+		err = cli.RunTestCall(ctx, cfg.File, cfg.TestToolName, cfg.TestArgs, cfg.Format, cfg.ShowTrace)
+	case "scenario":
+		fmt.Fprintf(os.Stderr, "test scenario: coming soon\n")
+		return
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func runPlayground(ctx context.Context, cfg *config.Config) {
+	_ = ctx
+	_ = cfg
+	fmt.Fprintf(os.Stderr, "playground: coming soon\n")
 }
 
 func slicesEqual(a, b []string) bool {
