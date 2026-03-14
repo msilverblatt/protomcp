@@ -39,6 +39,7 @@ def run():
     manager._init(transport)
 
     start_sidecars("server_start")
+    discover_handlers()
 
     global log
     log = ServerLogger(send_fn=transport.send)
@@ -192,6 +193,9 @@ def _handle_call_tool(transport, env):
         transport.send(resp)
 
 def _handle_reload(transport, env, mw_handlers):
+    # Re-discover handlers if hot_reload is enabled
+    if get_config().get("hot_reload"):
+        discover_handlers()
     # For now, just acknowledge. Full reload with importlib is complex.
     resp = pb.Envelope(
         reload_response=pb.ReloadResponse(success=True),
