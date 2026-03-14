@@ -6,7 +6,7 @@ from typing import Any, Callable
 
 from protomcp.tool import ToolDef, _type_to_schema, _is_optional_type
 from protomcp.result import ToolResult
-from protomcp import manager as tool_manager
+from protomcp import manager as _tool_manager
 
 _workflow_registry: list["WorkflowDef"] = []
 _active_workflow_stack: list["WorkflowState"] = []
@@ -279,7 +279,7 @@ def _transition_to_steps(
                 if _matches_visibility(tool_name, allow_during, block_during):
                     allowed_tools.append(tool_name)
 
-    tool_manager.set_allowed(allowed_tools)
+    _tool_manager.set_allowed(allowed_tools)
 
 
 def _find_workflow(name: str) -> WorkflowDef | None:
@@ -316,7 +316,7 @@ def _handle_step_call(workflow_name: str, step_name: str, kwargs: dict) -> Any:
 
     if step_def.initial:
         # Start a new workflow
-        pre_tools = tool_manager.get_active_tools()
+        pre_tools = _tool_manager.get_active_tools()
         state = WorkflowState(
             workflow_name=workflow_name,
             current_step=step_name,
@@ -383,7 +383,7 @@ def _handle_step_call(workflow_name: str, step_name: str, kwargs: dict) -> Any:
         if wf.on_complete is not None:
             wf.on_complete()
         # Restore pre-workflow tools
-        tool_manager.set_allowed(state.pre_workflow_tools)
+        _tool_manager.set_allowed(state.pre_workflow_tools)
         _active_workflow_stack.pop()
         return ToolResult(result=result.result or "Workflow complete")
     else:
@@ -409,7 +409,7 @@ def _handle_cancel(workflow_name: str) -> Any:
         wf.on_cancel()
 
     # Restore pre-workflow tools
-    tool_manager.set_allowed(state.pre_workflow_tools)
+    _tool_manager.set_allowed(state.pre_workflow_tools)
     _active_workflow_stack.pop()
     return ToolResult(result=f"Workflow '{workflow_name}' cancelled")
 
