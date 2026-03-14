@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'gen'))
 import protomcp_pb2 as pb
@@ -19,6 +20,7 @@ from protomcp.prompt import get_registered_prompts
 from protomcp.completion import get_completion_handler, CompletionResult
 from protomcp.server_context import resolve_contexts
 from protomcp.local_middleware import build_middleware_chain
+from protomcp.telemetry import emit_telemetry, ToolCallEvent
 
 log: ServerLogger = ServerLogger(send_fn=lambda msg: None)
 
@@ -121,6 +123,9 @@ def _handle_call_tool(transport, env):
                 args[param_name] = value
         # Build middleware chain around handler
         chain = build_middleware_chain(req.name, handler)
+        action_name = args.get("action", "")
+        emit_telemetry(ToolCallEvent(tool_name=req.name, action=action_name, phase="start", args=dict(args)))
+        start_time = time.monotonic()
         if "ctx" in sig.parameters:
             ctx = ToolContext(
                 progress_token=req.progress_token,
@@ -129,6 +134,10 @@ def _handle_call_tool(transport, env):
             result = chain(ctx, args)
         else:
             result = chain(None, args)
+
+        elapsed_ms = int((time.monotonic() - start_time) * 1000)
+        result_str = result.result if isinstance(result, ToolResult) else str(result)
+        emit_telemetry(ToolCallEvent(tool_name=req.name, action=action_name, phase="success", args={}, result=str(result_str)[:20000], duration_ms=elapsed_ms))
 
         if isinstance(result, ToolResult):
             resp_msg = pb.CallToolResponse(
@@ -149,6 +158,8 @@ def _handle_call_tool(transport, env):
                 result_json=json.dumps([{"type": "text", "text": str(result)}]),
             )
     except Exception as e:
+        elapsed_ms = int((time.monotonic() - start_time) * 1000)
+        emit_telemetry(ToolCallEvent(tool_name=req.name, action=action_name, phase="error", args={}, error=e, duration_ms=elapsed_ms))
         resp_msg = pb.CallToolResponse(
             is_error=True,
             result_json=json.dumps([{"type": "text", "text": str(e)}]),
