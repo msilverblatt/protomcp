@@ -123,5 +123,9 @@ func (td ToolDef) InputSchemaJSON() string {
 	return string(b)
 }
 
-func GetRegisteredTools() []ToolDef { return append([]ToolDef{}, registry...) }
+func GetRegisteredTools() []ToolDef {
+	all := append([]ToolDef{}, registry...)
+	all = append(all, GroupsToToolDefs()...)
+	return all
+}
 func ClearRegistry()                { registry = nil }
