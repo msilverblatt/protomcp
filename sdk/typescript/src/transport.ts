@@ -2,6 +2,24 @@ import * as net from 'net';
 import * as path from 'path';
 import * as url from 'url';
 import protobuf from 'protobufjs';
+import { ZstdCodec } from 'zstd-codec';
+
+// Lazy-initialized zstd codec (WASM init is async)
+let zstdInstance: { compress: (data: Uint8Array) => Uint8Array; decompress: (data: Uint8Array) => Uint8Array } | null = null;
+
+function getZstd(): Promise<{ compress: (data: Uint8Array) => Uint8Array; decompress: (data: Uint8Array) => Uint8Array }> {
+  if (zstdInstance) return Promise.resolve(zstdInstance);
+  return new Promise((resolve, reject) => {
+    ZstdCodec.run((zstd: any) => {
+      const simple = new zstd.Simple();
+      zstdInstance = {
+        compress: (data: Uint8Array) => simple.compress(data),
+        decompress: (data: Uint8Array) => simple.decompress(data),
+      };
+      resolve(zstdInstance);
+    });
+  });
+}
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const PROTO_PATH = path.resolve(__dirname, '../../../proto/protomcp.proto');
@@ -148,12 +166,17 @@ export class Transport {
 
     let compression = '';
     let uncompressedSize = 0;
-    const threshold = parseInt(process.env.PROTOMCP_COMPRESS_THRESHOLD || '65536', 10);
-    if (data.length > threshold) {
-      const { compressSync } = await import('fzstd');
-      uncompressedSize = data.length;
-      data = Buffer.from(compressSync(data));
-      compression = 'zstd';
+    const compressThreshold = parseInt(process.env['PROTOMCP_COMPRESS_THRESHOLD'] ?? '65536', 10);
+    if (data.length > compressThreshold) {
+      try {
+        const zstd = await getZstd();
+        uncompressedSize = data.length;
+        const compressed = zstd.compress(new Uint8Array(data));
+        data = Buffer.from(compressed);
+        compression = 'zstd';
+      } catch {
+        // Compression failed, send uncompressed
+      }
     }
 
     const header = Envelope.create({

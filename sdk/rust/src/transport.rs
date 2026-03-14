@@ -37,7 +37,7 @@ impl Transport {
 
         let (payload, compression, uncompressed_size) = if data.len() > threshold {
             let compressed = zstd::encode_all(std::io::Cursor::new(data), 3)
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+                .map_err(std::io::Error::other)?;
             (compressed, "zstd".to_string(), data.len() as u64)
         } else {
             (data.to_vec(), String::new(), 0u64)

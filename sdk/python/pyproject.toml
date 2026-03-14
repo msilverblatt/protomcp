@@ -9,6 +9,7 @@ description = "Write MCP tools in Python. No MCP knowledge required."
 requires-python = ">=3.10"
 dependencies = [
     "protobuf>=4.0",
+    "zstandard>=0.20",
 ]
 
 [project.optional-dependencies]

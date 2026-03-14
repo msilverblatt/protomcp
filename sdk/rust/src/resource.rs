@@ -1,5 +1,7 @@
 use std::sync::Mutex;
 
+pub type ResourceHandler = Box<dyn Fn(&str) -> Vec<ResourceContent> + Send + Sync>;
+
 pub struct ResourceContent {
     pub uri: String,
     pub text: String,
@@ -23,7 +25,7 @@ pub struct ResourceDef {
     pub name: String,
     pub description: String,
     pub mime_type: String,
-    pub handler: Box<dyn Fn(&str) -> Vec<ResourceContent> + Send + Sync>,
+    pub handler: ResourceHandler,
 }
 
 pub struct ResourceTemplateDef {
@@ -31,7 +33,7 @@ pub struct ResourceTemplateDef {
     pub name: String,
     pub description: String,
     pub mime_type: String,
-    pub handler: Box<dyn Fn(&str) -> Vec<ResourceContent> + Send + Sync>,
+    pub handler: ResourceHandler,
 }
 
 static RESOURCE_REGISTRY: Mutex<Vec<ResourceDef>> = Mutex::new(Vec::new());

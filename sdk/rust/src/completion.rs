@@ -7,9 +7,12 @@ pub struct CompletionResult {
     pub has_more: bool,
 }
 
-type CompletionHandler = Box<dyn Fn(&str) -> CompletionResult + Send + Sync>;
+pub type CompletionHandler = Box<dyn Fn(&str) -> CompletionResult + Send + Sync>;
 
-static COMPLETION_REGISTRY: Mutex<Option<HashMap<(String, String, String), CompletionHandler>>> = Mutex::new(None);
+type CompletionKey = (String, String, String);
+type CompletionMap = HashMap<CompletionKey, CompletionHandler>;
+
+static COMPLETION_REGISTRY: Mutex<Option<CompletionMap>> = Mutex::new(None);
 
 pub fn register_completion(ref_type: &str, ref_name: &str, arg_name: &str, handler: CompletionHandler) {
     let mut guard = COMPLETION_REGISTRY.lock().unwrap();
