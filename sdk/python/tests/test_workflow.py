@@ -2,6 +2,8 @@ import json
 import pytest
 from unittest.mock import patch, MagicMock
 
+import importlib
+workflow_module = importlib.import_module('protomcp.workflow')
 from protomcp.workflow import (
     step,
     workflow,
@@ -286,7 +288,7 @@ def test_no_cancel_tool_when_all_no_cancel():
 
 # --- Step dispatch ---
 
-@patch('protomcp.workflow._tool_manager')
+@patch.object(workflow_module, '_tool_manager')
 def test_initial_step_dispatch(mock_tm):
     mock_tm.get_active_tools.return_value = ["existing_tool"]
     mock_tm.set_allowed.return_value = []
@@ -307,7 +309,7 @@ def test_initial_step_dispatch(mock_tm):
     assert _active_workflow_stack[0].current_step == "start"
 
 
-@patch('protomcp.workflow._tool_manager')
+@patch.object(workflow_module, '_tool_manager')
 def test_state_persistence_across_steps(mock_tm):
     mock_tm.get_active_tools.return_value = ["existing_tool"]
     mock_tm.set_allowed.return_value = []
@@ -331,7 +333,7 @@ def test_state_persistence_across_steps(mock_tm):
     assert "data=foo" in result.result
 
 
-@patch('protomcp.workflow._tool_manager')
+@patch.object(workflow_module, '_tool_manager')
 def test_dynamic_next_narrowing(mock_tm):
     mock_tm.get_active_tools.return_value = []
     mock_tm.set_allowed.return_value = []
@@ -357,7 +359,7 @@ def test_dynamic_next_narrowing(mock_tm):
     assert "dyn.b" not in call_args
 
 
-@patch('protomcp.workflow._tool_manager')
+@patch.object(workflow_module, '_tool_manager')
 def test_dynamic_next_rejects_invalid(mock_tm):
     mock_tm.get_active_tools.return_value = []
     mock_tm.set_allowed.return_value = []
@@ -377,7 +379,7 @@ def test_dynamic_next_rejects_invalid(mock_tm):
     assert "invalid next" in result.result
 
 
-@patch('protomcp.workflow._tool_manager')
+@patch.object(workflow_module, '_tool_manager')
 def test_cancel_calls_on_cancel(mock_tm):
     mock_tm.get_active_tools.return_value = ["t1", "t2"]
     mock_tm.set_allowed.return_value = []
@@ -405,7 +407,7 @@ def test_cancel_calls_on_cancel(mock_tm):
     mock_tm.set_allowed.assert_called_with(["t1", "t2"])
 
 
-@patch('protomcp.workflow._tool_manager')
+@patch.object(workflow_module, '_tool_manager')
 def test_on_complete_called_on_terminal(mock_tm):
     mock_tm.get_active_tools.return_value = []
     mock_tm.set_allowed.return_value = []
@@ -431,7 +433,7 @@ def test_on_complete_called_on_terminal(mock_tm):
     assert "finished" in result.result
 
 
-@patch('protomcp.workflow._tool_manager')
+@patch.object(workflow_module, '_tool_manager')
 def test_history_tracking(mock_tm):
     mock_tm.get_active_tools.return_value = []
     mock_tm.set_allowed.return_value = []
@@ -460,7 +462,7 @@ def test_history_tracking(mock_tm):
     assert state.history[0][1].result == "s1"
 
 
-@patch('protomcp.workflow._tool_manager')
+@patch.object(workflow_module, '_tool_manager')
 def test_error_stays_in_state(mock_tm):
     mock_tm.get_active_tools.return_value = []
     mock_tm.set_allowed.return_value = []
@@ -493,7 +495,7 @@ def test_error_stays_in_state(mock_tm):
     assert "ok" in result2.result
 
 
-@patch('protomcp.workflow._tool_manager')
+@patch.object(workflow_module, '_tool_manager')
 def test_on_error_transitions(mock_tm):
     mock_tm.get_active_tools.return_value = []
     mock_tm.set_allowed.return_value = []
@@ -518,7 +520,7 @@ def test_on_error_transitions(mock_tm):
     assert _active_workflow_stack[-1].current_step == "fix"
 
 
-@patch('protomcp.workflow._tool_manager')
+@patch.object(workflow_module, '_tool_manager')
 def test_on_error_catch_all(mock_tm):
     mock_tm.get_active_tools.return_value = []
     mock_tm.set_allowed.return_value = []
@@ -542,7 +544,7 @@ def test_on_error_catch_all(mock_tm):
     assert "transitioning to 'recover'" in result.result
 
 
-@patch('protomcp.workflow._tool_manager')
+@patch.object(workflow_module, '_tool_manager')
 def test_no_cancel_with_error_allows_retry(mock_tm):
     mock_tm.get_active_tools.return_value = []
     mock_tm.set_allowed.return_value = []
@@ -571,7 +573,7 @@ def test_no_cancel_with_error_allows_retry(mock_tm):
     assert not result2.is_error
 
 
-@patch('protomcp.workflow._tool_manager')
+@patch.object(workflow_module, '_tool_manager')
 def test_unmatched_error_stays_in_state(mock_tm):
     mock_tm.get_active_tools.return_value = []
     mock_tm.set_allowed.return_value = []
