@@ -11,3 +11,8 @@ def add(a: int, b: int) -> ToolResult:
 @tool("Multiply two numbers")
 def multiply(a: int, b: int) -> ToolResult:
     return ToolResult(result=str(a * b))
+
+
+if __name__ == "__main__":
+    from protomcp.runner import run
+    run()

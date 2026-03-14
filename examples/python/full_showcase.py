@@ -146,3 +146,8 @@ def validate_data(data_json: str, strict: bool = False) -> ToolResult:
 
     log.info("Validation passed")
     return ToolResult(result=json.dumps({"valid": True, "issues": []}))
+
+
+if __name__ == "__main__":
+    from protomcp.runner import run
+    run()

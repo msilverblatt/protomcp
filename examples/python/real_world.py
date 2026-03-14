@@ -50,3 +50,8 @@ def search_files(ctx: ToolContext, directory: str, pattern: str, max_results: in
     ctx.report_progress(total, total, "Complete")
     log.info(f"Search complete: {len(matches)} matches")
     return ToolResult(result="\n".join(matches) if matches else "No files found")
+
+
+if __name__ == "__main__":
+    from protomcp.runner import run
+    run()
