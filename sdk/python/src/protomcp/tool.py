@@ -54,7 +54,8 @@ def tool(
     return decorator
 
 def get_registered_tools() -> list[ToolDef]:
-    return list(_registry)
+    from protomcp.group import groups_to_tool_defs
+    return list(_registry) + groups_to_tool_defs()
 
 def get_hidden_tool_names() -> list[str]:
     return [t.name for t in _registry if t.hidden]

@@ -7,6 +7,7 @@ from protomcp import manager as tool_manager
 from protomcp.resource import resource, resource_template, ResourceContent
 from protomcp.prompt import prompt, PromptArg, PromptMessage
 from protomcp.completion import completion, CompletionResult
+from protomcp.group import tool_group, action, get_registered_groups, clear_group_registry
 
 # Module-level logger; replaced with a transport-connected instance when run() is called
 log: ServerLogger = ServerLogger(send_fn=lambda msg: None)
@@ -30,4 +31,8 @@ __all__ = [
     "PromptMessage",
     "completion",
     "CompletionResult",
+    "tool_group",
+    "action",
+    "get_registered_groups",
+    "clear_group_registry",
 ]
