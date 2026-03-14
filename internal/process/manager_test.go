@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/klauspost/compress/zstd"
 	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
 	"github.com/msilverblatt/protomcp/internal/envelope"
 	"github.com/msilverblatt/protomcp/internal/process"
@@ -548,5 +549,51 @@ func TestRawSidebandTransfer_StreamChannel(t *testing.T) {
 	}
 	if !gotResult {
 		t.Error("never received result event")
+	}
+}
+
+func TestRawSidebandTransfer_Compressed(t *testing.T) {
+	mgr, toolConn := testStreamSetup(t)
+	respCh := mgr.RegisterPending("req-zstd")
+
+	original := `[{"type":"text","text":"` + strings.Repeat("COMPRESSED_DATA_", 20000) + `"}]`
+
+	// Compress with zstd
+	zstdEncoder, err := zstd.NewWriter(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	compressed := zstdEncoder.EncodeAll([]byte(original), nil)
+	zstdEncoder.Close()
+
+	// Send a RawHeader with compression metadata
+	header := &pb.Envelope{
+		Msg: &pb.Envelope_RawHeader{
+			RawHeader: &pb.RawHeader{
+				RequestId:        "req-zstd",
+				FieldName:        "result_json",
+				Size:             uint64(len(compressed)),
+				Compression:      "zstd",
+				UncompressedSize: uint64(len(original)),
+			},
+		},
+	}
+	envelope.Write(toolConn, header)
+
+	// Send compressed bytes
+	toolConn.Write(compressed)
+
+	select {
+	case resp := <-respCh:
+		result := resp.GetCallResult()
+		if result == nil {
+			t.Fatal("expected CallToolResponse")
+		}
+		if result.ResultJson != original {
+			t.Errorf("decompressed result length = %d, want %d", len(result.ResultJson), len(original))
+		}
+		t.Logf("compressed %d -> %d bytes (%.1fx)", len(original), len(compressed), float64(len(original))/float64(len(compressed)))
+	case <-time.After(5 * time.Second):
+		t.Fatal("timeout")
 	}
 }

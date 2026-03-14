@@ -146,11 +146,23 @@ export class Transport {
     const Envelope = root.lookupType('protomcp.Envelope');
     const RawHeader = root.lookupType('protomcp.RawHeader');
 
+    let compression = '';
+    let uncompressedSize = 0;
+    const threshold = parseInt(process.env.PROTOMCP_COMPRESS_THRESHOLD || '65536', 10);
+    if (data.length > threshold) {
+      const { compressSync } = await import('fzstd');
+      uncompressedSize = data.length;
+      data = Buffer.from(compressSync(data));
+      compression = 'zstd';
+    }
+
     const header = Envelope.create({
       rawHeader: RawHeader.create({
         requestId,
         fieldName,
         size: data.length,
+        compression,
+        uncompressedSize,
       }),
     });
 

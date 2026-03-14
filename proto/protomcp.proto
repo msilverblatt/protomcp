@@ -47,6 +47,33 @@ message Envelope {
 
     // Raw sideband transfer
     RawHeader raw_header = 30;
+
+    // Resources
+    ListResourcesRequest list_resources_request = 31;
+    ResourceListResponse resource_list_response = 32;
+    ListResourceTemplatesRequest list_resource_templates_request = 33;
+    ResourceTemplateListResponse resource_template_list_response = 34;
+    ReadResourceRequest read_resource_request = 35;
+    ReadResourceResponse read_resource_response = 36;
+    ResourceChangedNotification resource_changed = 37;
+
+    // Prompts
+    ListPromptsRequest list_prompts_request = 40;
+    PromptListResponse prompt_list_response = 41;
+    GetPromptRequest get_prompt_request = 42;
+    GetPromptResponse get_prompt_response = 43;
+
+    // Completions
+    CompletionRequest completion_request = 50;
+    CompletionResponse completion_response = 51;
+
+    // Sampling (bidirectional: SDK process -> Go -> MCP client)
+    SamplingRequest sampling_request = 60;
+    SamplingResponse sampling_response = 61;
+
+    // Roots
+    ListRootsRequest list_roots_request = 62;
+    ListRootsResponse list_roots_response = 63;
   }
   // Correlation ID for matching requests to responses.
   string request_id = 14;
@@ -225,7 +252,119 @@ message StreamChunk {
 // RawHeader signals that the next N bytes on the socket are raw (not protobuf-wrapped).
 // This avoids protobuf serialization overhead for large payloads.
 message RawHeader {
-  string request_id = 1;   // which request this payload belongs to
-  string field_name = 2;   // which field, e.g. "result_json"
-  uint64 size = 3;          // exact byte count that follows
+  string request_id = 1;        // which request this payload belongs to
+  string field_name = 2;        // which field, e.g. "result_json"
+  uint64 size = 3;               // exact byte count that follows
+  string compression = 4;       // compression algorithm, e.g. "zstd" or "" (none)
+  uint64 uncompressed_size = 5;  // original size before compression (0 if uncompressed)
+}
+
+// --- Resources ---
+
+message ResourceDefinition {
+  string uri = 1;
+  string name = 2;
+  string description = 3;
+  string mime_type = 4;
+  int64 size = 5;
+}
+
+message ResourceTemplateDefinition {
+  string uri_template = 1;
+  string name = 2;
+  string description = 3;
+  string mime_type = 4;
+}
+
+message ListResourcesRequest {}
+message ResourceListResponse { repeated ResourceDefinition resources = 1; }
+message ListResourceTemplatesRequest {}
+message ResourceTemplateListResponse { repeated ResourceTemplateDefinition templates = 1; }
+message ReadResourceRequest { string uri = 1; }
+
+message ResourceContent {
+  string uri = 1;
+  string mime_type = 2;
+  string text = 3;
+  bytes blob = 4;
+}
+
+message ReadResourceResponse { repeated ResourceContent contents = 1; }
+message ResourceChangedNotification { string uri = 1; }
+
+// --- Prompts ---
+
+message PromptArgument {
+  string name = 1;
+  string description = 2;
+  bool required = 3;
+}
+
+message PromptDefinition {
+  string name = 1;
+  string description = 2;
+  repeated PromptArgument arguments = 3;
+}
+
+message ListPromptsRequest {}
+message PromptListResponse { repeated PromptDefinition prompts = 1; }
+
+message GetPromptRequest {
+  string name = 1;
+  string arguments_json = 2;
+}
+
+message PromptMessage {
+  string role = 1;
+  string content_json = 2;
+}
+
+message GetPromptResponse {
+  string description = 1;
+  repeated PromptMessage messages = 2;
+}
+
+// --- Completions ---
+
+message CompletionRequest {
+  string ref_type = 1;
+  string ref_name = 2;
+  string argument_name = 3;
+  string argument_value = 4;
+}
+
+message CompletionResponse {
+  repeated string values = 1;
+  int32 total = 2;
+  bool has_more = 3;
+}
+
+// --- Sampling ---
+
+message SamplingRequest {
+  string messages_json = 1;
+  string model_preferences_json = 2;
+  string system_prompt = 3;
+  int32 max_tokens = 4;
+}
+
+message SamplingResponse {
+  string role = 1;
+  string content_json = 2;
+  string model = 3;
+  string stop_reason = 4;
+  string error = 5;
+}
+
+// --- Roots ---
+
+message ListRootsRequest {}
+
+message RootDef {
+  string uri = 1;
+  string name = 2;
+}
+
+message ListRootsResponse {
+  repeated RootDef roots = 1;
 }

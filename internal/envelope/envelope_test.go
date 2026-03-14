@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/klauspost/compress/zstd"
 	"github.com/msilverblatt/protomcp/internal/envelope"
 	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
 )
@@ -169,4 +170,64 @@ func TestReadRaw(t *testing.T) {
 	if raw2 != nil {
 		t.Error("expected nil raw for non-RawHeader envelope")
 	}
+}
+
+func TestReadRaw_Compressed(t *testing.T) {
+	var buf bytes.Buffer
+
+	// Create a payload and compress it with zstd
+	original := []byte(strings.Repeat("ABCDEFGH", 50000)) // 400KB, compresses well
+	encoder, err := zstd.NewWriter(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	compressed := encoder.EncodeAll(original, nil)
+	encoder.Close()
+
+	// Write a RawHeader with compression metadata
+	header := &pb.Envelope{
+		Msg: &pb.Envelope_RawHeader{
+			RawHeader: &pb.RawHeader{
+				RequestId:        "req-compressed",
+				FieldName:        "result_json",
+				Size:             uint64(len(compressed)),
+				Compression:      "zstd",
+				UncompressedSize: uint64(len(original)),
+			},
+		},
+	}
+	if err := envelope.Write(&buf, header); err != nil {
+		t.Fatal(err)
+	}
+
+	// Write compressed bytes
+	buf.Write(compressed)
+
+	// ReadRaw should decompress and return original payload
+	env, raw, err := envelope.ReadRaw(&buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rh := env.GetRawHeader()
+	if rh == nil {
+		t.Fatal("expected RawHeader")
+	}
+	if rh.RequestId != "req-compressed" {
+		t.Errorf("request_id = %q, want req-compressed", rh.RequestId)
+	}
+	if rh.Compression != "zstd" {
+		t.Errorf("compression = %q, want zstd", rh.Compression)
+	}
+	if len(raw) != len(original) {
+		t.Errorf("decompressed length = %d, want %d", len(raw), len(original))
+	}
+	if string(raw) != string(original) {
+		t.Error("decompressed bytes don't match original")
+	}
+
+	// Verify compression actually reduced size
+	if len(compressed) >= len(original) {
+		t.Errorf("compression did not reduce size: compressed=%d, original=%d", len(compressed), len(original))
+	}
+	t.Logf("compression ratio: %d -> %d (%.1fx)", len(original), len(compressed), float64(len(original))/float64(len(compressed)))
 }

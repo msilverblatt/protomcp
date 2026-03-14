@@ -81,6 +81,10 @@ type Manager struct {
 	onLog          func(*pb.LogMessage)
 	onEnableTools  func([]string)
 	onDisableTools func([]string)
+
+	// Callbacks for reverse requests from the SDK process (SDK → Go)
+	onSampling  func(*pb.SamplingRequest, string) // receives sampling request + request_id
+	onListRoots func(string)                      // receives request_id
 }
 
 // NewManager creates a new process manager with the given configuration.
@@ -266,6 +270,298 @@ func (m *Manager) CallTool(ctx context.Context, name, argsJSON string) (*pb.Call
 	}
 }
 
+// ListResources sends a ListResourcesRequest and waits for the matching ResourceListResponse.
+func (m *Manager) ListResources(ctx context.Context) ([]*pb.ResourceDefinition, error) {
+	reqID := m.nextRequestID()
+
+	env := &pb.Envelope{
+		RequestId: reqID,
+		Msg: &pb.Envelope_ListResourcesRequest{
+			ListResourcesRequest: &pb.ListResourcesRequest{},
+		},
+	}
+
+	respCh := make(chan *pb.Envelope, 1)
+	m.mu.Lock()
+	m.pending[reqID] = respCh
+	m.mu.Unlock()
+
+	defer func() {
+		m.mu.Lock()
+		delete(m.pending, reqID)
+		m.mu.Unlock()
+	}()
+
+	m.writeMu.Lock()
+	err := envelope.Write(m.conn, env)
+	m.writeMu.Unlock()
+	if err != nil {
+		return nil, fmt.Errorf("write ListResourcesRequest: %w", err)
+	}
+
+	timeout := m.cfg.CallTimeout
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-timer.C:
+		return nil, fmt.Errorf("list resources timed out after %v", timeout)
+	case resp := <-respCh:
+		result := resp.GetResourceListResponse()
+		if result == nil {
+			return nil, fmt.Errorf("unexpected response type for ListResources")
+		}
+		return result.Resources, nil
+	}
+}
+
+// ListResourceTemplates sends a ListResourceTemplatesRequest and waits for the matching ResourceTemplateListResponse.
+func (m *Manager) ListResourceTemplates(ctx context.Context) ([]*pb.ResourceTemplateDefinition, error) {
+	reqID := m.nextRequestID()
+
+	env := &pb.Envelope{
+		RequestId: reqID,
+		Msg: &pb.Envelope_ListResourceTemplatesRequest{
+			ListResourceTemplatesRequest: &pb.ListResourceTemplatesRequest{},
+		},
+	}
+
+	respCh := make(chan *pb.Envelope, 1)
+	m.mu.Lock()
+	m.pending[reqID] = respCh
+	m.mu.Unlock()
+
+	defer func() {
+		m.mu.Lock()
+		delete(m.pending, reqID)
+		m.mu.Unlock()
+	}()
+
+	m.writeMu.Lock()
+	err := envelope.Write(m.conn, env)
+	m.writeMu.Unlock()
+	if err != nil {
+		return nil, fmt.Errorf("write ListResourceTemplatesRequest: %w", err)
+	}
+
+	timeout := m.cfg.CallTimeout
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-timer.C:
+		return nil, fmt.Errorf("list resource templates timed out after %v", timeout)
+	case resp := <-respCh:
+		result := resp.GetResourceTemplateListResponse()
+		if result == nil {
+			return nil, fmt.Errorf("unexpected response type for ListResourceTemplates")
+		}
+		return result.Templates, nil
+	}
+}
+
+// ReadResource sends a ReadResourceRequest and waits for the matching ReadResourceResponse.
+func (m *Manager) ReadResource(ctx context.Context, uri string) (*pb.ReadResourceResponse, error) {
+	reqID := m.nextRequestID()
+
+	env := &pb.Envelope{
+		RequestId: reqID,
+		Msg: &pb.Envelope_ReadResourceRequest{
+			ReadResourceRequest: &pb.ReadResourceRequest{
+				Uri: uri,
+			},
+		},
+	}
+
+	respCh := make(chan *pb.Envelope, 1)
+	m.mu.Lock()
+	m.pending[reqID] = respCh
+	m.mu.Unlock()
+
+	defer func() {
+		m.mu.Lock()
+		delete(m.pending, reqID)
+		m.mu.Unlock()
+	}()
+
+	m.writeMu.Lock()
+	err := envelope.Write(m.conn, env)
+	m.writeMu.Unlock()
+	if err != nil {
+		return nil, fmt.Errorf("write ReadResourceRequest: %w", err)
+	}
+
+	timeout := m.cfg.CallTimeout
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-timer.C:
+		return nil, fmt.Errorf("read resource %q timed out after %v", uri, timeout)
+	case resp := <-respCh:
+		result := resp.GetReadResourceResponse()
+		if result == nil {
+			return nil, fmt.Errorf("unexpected response type for ReadResource")
+		}
+		return result, nil
+	}
+}
+
+// ListPrompts sends a ListPromptsRequest and waits for the matching PromptListResponse.
+func (m *Manager) ListPrompts(ctx context.Context) ([]*pb.PromptDefinition, error) {
+	reqID := m.nextRequestID()
+
+	env := &pb.Envelope{
+		RequestId: reqID,
+		Msg: &pb.Envelope_ListPromptsRequest{
+			ListPromptsRequest: &pb.ListPromptsRequest{},
+		},
+	}
+
+	respCh := make(chan *pb.Envelope, 1)
+	m.mu.Lock()
+	m.pending[reqID] = respCh
+	m.mu.Unlock()
+
+	defer func() {
+		m.mu.Lock()
+		delete(m.pending, reqID)
+		m.mu.Unlock()
+	}()
+
+	m.writeMu.Lock()
+	err := envelope.Write(m.conn, env)
+	m.writeMu.Unlock()
+	if err != nil {
+		return nil, fmt.Errorf("write ListPromptsRequest: %w", err)
+	}
+
+	timeout := m.cfg.CallTimeout
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-timer.C:
+		return nil, fmt.Errorf("list prompts timed out after %v", timeout)
+	case resp := <-respCh:
+		result := resp.GetPromptListResponse()
+		if result == nil {
+			return nil, fmt.Errorf("unexpected response type for ListPrompts")
+		}
+		return result.Prompts, nil
+	}
+}
+
+// GetPrompt sends a GetPromptRequest and waits for the matching GetPromptResponse.
+func (m *Manager) GetPrompt(ctx context.Context, name, argsJSON string) (*pb.GetPromptResponse, error) {
+	reqID := m.nextRequestID()
+
+	env := &pb.Envelope{
+		RequestId: reqID,
+		Msg: &pb.Envelope_GetPromptRequest{
+			GetPromptRequest: &pb.GetPromptRequest{
+				Name:          name,
+				ArgumentsJson: argsJSON,
+			},
+		},
+	}
+
+	respCh := make(chan *pb.Envelope, 1)
+	m.mu.Lock()
+	m.pending[reqID] = respCh
+	m.mu.Unlock()
+
+	defer func() {
+		m.mu.Lock()
+		delete(m.pending, reqID)
+		m.mu.Unlock()
+	}()
+
+	m.writeMu.Lock()
+	err := envelope.Write(m.conn, env)
+	m.writeMu.Unlock()
+	if err != nil {
+		return nil, fmt.Errorf("write GetPromptRequest: %w", err)
+	}
+
+	timeout := m.cfg.CallTimeout
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-timer.C:
+		return nil, fmt.Errorf("get prompt %q timed out after %v", name, timeout)
+	case resp := <-respCh:
+		result := resp.GetGetPromptResponse()
+		if result == nil {
+			return nil, fmt.Errorf("unexpected response type for GetPrompt")
+		}
+		return result, nil
+	}
+}
+
+// Complete sends a CompletionRequest and waits for the matching CompletionResponse.
+func (m *Manager) Complete(ctx context.Context, refType, refName, argName, argValue string) (*pb.CompletionResponse, error) {
+	reqID := m.nextRequestID()
+
+	env := &pb.Envelope{
+		RequestId: reqID,
+		Msg: &pb.Envelope_CompletionRequest{
+			CompletionRequest: &pb.CompletionRequest{
+				RefType:       refType,
+				RefName:       refName,
+				ArgumentName:  argName,
+				ArgumentValue: argValue,
+			},
+		},
+	}
+
+	respCh := make(chan *pb.Envelope, 1)
+	m.mu.Lock()
+	m.pending[reqID] = respCh
+	m.mu.Unlock()
+
+	defer func() {
+		m.mu.Lock()
+		delete(m.pending, reqID)
+		m.mu.Unlock()
+	}()
+
+	m.writeMu.Lock()
+	err := envelope.Write(m.conn, env)
+	m.writeMu.Unlock()
+	if err != nil {
+		return nil, fmt.Errorf("write CompletionRequest: %w", err)
+	}
+
+	timeout := m.cfg.CallTimeout
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-timer.C:
+		return nil, fmt.Errorf("complete timed out after %v", timeout)
+	case resp := <-respCh:
+		result := resp.GetCompletionResponse()
+		if result == nil {
+			return nil, fmt.Errorf("unexpected response type for Complete")
+		}
+		return result, nil
+	}
+}
+
 // CallToolStream sends a CallToolRequest and returns a channel that receives
 // stream events. If the tool responds with a single (non-chunked) message,
 // the channel receives one StreamEvent with Result set. If the tool streams,
@@ -421,6 +717,32 @@ func (m *Manager) OnEnableTools(fn func([]string)) { m.onEnableTools = fn }
 
 // OnDisableTools sets a callback for disable-tools requests from the tool process.
 func (m *Manager) OnDisableTools(fn func([]string)) { m.onDisableTools = fn }
+
+// OnSampling sets a callback for sampling requests from the SDK process.
+func (m *Manager) OnSampling(fn func(*pb.SamplingRequest, string)) { m.onSampling = fn }
+
+// OnListRoots sets a callback for list-roots requests from the SDK process.
+func (m *Manager) OnListRoots(fn func(string)) { m.onListRoots = fn }
+
+// SendSamplingResponse sends a SamplingResponse back to the SDK process.
+func (m *Manager) SendSamplingResponse(reqID string, resp *pb.SamplingResponse) error {
+	m.writeMu.Lock()
+	defer m.writeMu.Unlock()
+	return envelope.Write(m.conn, &pb.Envelope{
+		RequestId: reqID,
+		Msg:       &pb.Envelope_SamplingResponse{SamplingResponse: resp},
+	})
+}
+
+// SendListRootsResponse sends a ListRootsResponse back to the SDK process.
+func (m *Manager) SendListRootsResponse(reqID string, resp *pb.ListRootsResponse) error {
+	m.writeMu.Lock()
+	defer m.writeMu.Unlock()
+	return envelope.Write(m.conn, &pb.Envelope{
+		RequestId: reqID,
+		Msg:       &pb.Envelope_ListRootsResponse{ListRootsResponse: resp},
+	})
+}
 
 func (m *Manager) awaitHandshakeComplete(ctx context.Context) ([]RegisteredMiddleware, error) {
 	var middlewares []RegisteredMiddleware
@@ -696,6 +1018,21 @@ func (m *Manager) readLoop() {
 				case m.handshakeCh <- env:
 				default:
 				}
+			}
+			continue
+		}
+
+		// Reverse requests from SDK process (SDK → Go).
+		// These arrive WITH a request_id but are NOT responses to pending Go requests.
+		if sr := env.GetSamplingRequest(); sr != nil {
+			if m.onSampling != nil {
+				go m.onSampling(sr, reqID)
+			}
+			continue
+		}
+		if env.GetListRootsRequest() != nil {
+			if m.onListRoots != nil {
+				go m.onListRoots(reqID)
 			}
 			continue
 		}

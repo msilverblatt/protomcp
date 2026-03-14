@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
+	"strconv"
 
+	"github.com/klauspost/compress/zstd"
 	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
 	"google.golang.org/protobuf/proto"
 )
@@ -44,13 +47,37 @@ func (t *Transport) Send(env *pb.Envelope) error {
 
 // SendRaw sends a RawHeader envelope followed by raw payload bytes.
 // This avoids protobuf serialization overhead for large payloads.
+// If the payload exceeds PROTOMCP_COMPRESS_THRESHOLD (default 64KB),
+// it is zstd-compressed before sending.
 func (t *Transport) SendRaw(requestID, fieldName string, data []byte) error {
+	compression := ""
+	var uncompressedSize uint64
+	threshold := 65536
+	if v := os.Getenv("PROTOMCP_COMPRESS_THRESHOLD"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			threshold = n
+		}
+	}
+	if len(data) > threshold {
+		encoder, err := zstd.NewWriter(nil)
+		if err != nil {
+			return fmt.Errorf("create zstd encoder: %w", err)
+		}
+		compressed := encoder.EncodeAll(data, make([]byte, 0, len(data)))
+		encoder.Close()
+		uncompressedSize = uint64(len(data))
+		data = compressed
+		compression = "zstd"
+	}
+
 	header := &pb.Envelope{
 		Msg: &pb.Envelope_RawHeader{
 			RawHeader: &pb.RawHeader{
-				RequestId: requestID,
-				FieldName: fieldName,
-				Size:      uint64(len(data)),
+				RequestId:        requestID,
+				FieldName:        fieldName,
+				Size:             uint64(len(data)),
+				Compression:      compression,
+				UncompressedSize: uncompressedSize,
 			},
 		},
 	}

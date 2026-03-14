@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/klauspost/compress/zstd"
 	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
 	"google.golang.org/protobuf/proto"
 )
@@ -72,6 +73,20 @@ func ReadRaw(r io.Reader) (*pb.Envelope, []byte, error) {
 	raw := make([]byte, rh.Size)
 	if _, err := io.ReadFull(r, raw); err != nil {
 		return nil, nil, fmt.Errorf("read raw payload (%d bytes): %w", rh.Size, err)
+	}
+
+	// Decompress if the payload was compressed
+	if rh.Compression == "zstd" {
+		decoder, err := zstd.NewReader(nil)
+		if err != nil {
+			return nil, nil, fmt.Errorf("create zstd decoder: %w", err)
+		}
+		defer decoder.Close()
+		decompressed, err := decoder.DecodeAll(raw, make([]byte, 0, rh.UncompressedSize))
+		if err != nil {
+			return nil, nil, fmt.Errorf("zstd decompress (%d bytes): %w", rh.Size, err)
+		}
+		raw = decompressed
 	}
 
 	return env, raw, nil

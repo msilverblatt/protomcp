@@ -6,7 +6,7 @@
 import * as pb_1 from "google-protobuf";
 export namespace protomcp {
     export class Envelope extends pb_1.Message {
-        #one_of_decls: number[][] = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]];
+        #one_of_decls: number[][] = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 40, 41, 42, 43, 50, 51, 60, 61, 62, 63]];
         constructor(data?: any[] | ({
             request_id?: string;
             namespace?: string;
@@ -39,6 +39,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: ListToolsRequest;
@@ -68,6 +85,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -97,6 +131,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -126,6 +177,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -155,6 +223,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -184,6 +269,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -213,6 +315,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -242,6 +361,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -271,6 +407,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -300,6 +453,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -329,6 +499,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -358,6 +545,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -387,6 +591,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -416,6 +637,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -445,6 +683,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -474,6 +729,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -503,6 +775,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -532,6 +821,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -561,6 +867,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -590,6 +913,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -619,6 +959,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -648,6 +1005,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -677,6 +1051,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -706,6 +1097,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -735,6 +1143,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -764,6 +1189,23 @@ export namespace protomcp {
             stream_header?: StreamHeader;
             stream_chunk?: never;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -793,6 +1235,23 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: StreamChunk;
             raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
         } | {
             reload?: never;
             list_tools?: never;
@@ -822,6 +1281,805 @@ export namespace protomcp {
             stream_header?: never;
             stream_chunk?: never;
             raw_header?: RawHeader;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
+        } | {
+            reload?: never;
+            list_tools?: never;
+            call_tool?: never;
+            reload_response?: never;
+            tool_list?: never;
+            call_result?: never;
+            enable_tools?: never;
+            disable_tools?: never;
+            set_allowed?: never;
+            set_blocked?: never;
+            get_active_tools?: never;
+            batch?: never;
+            active_tools?: never;
+            progress?: never;
+            cancel?: never;
+            log?: never;
+            create_task?: never;
+            task_status?: never;
+            task_status_response?: never;
+            task_result?: never;
+            task_cancel?: never;
+            register_middleware?: never;
+            register_middleware_response?: never;
+            middleware_intercept?: never;
+            middleware_intercept_response?: never;
+            stream_header?: never;
+            stream_chunk?: never;
+            raw_header?: never;
+            list_resources_request?: ListResourcesRequest;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
+        } | {
+            reload?: never;
+            list_tools?: never;
+            call_tool?: never;
+            reload_response?: never;
+            tool_list?: never;
+            call_result?: never;
+            enable_tools?: never;
+            disable_tools?: never;
+            set_allowed?: never;
+            set_blocked?: never;
+            get_active_tools?: never;
+            batch?: never;
+            active_tools?: never;
+            progress?: never;
+            cancel?: never;
+            log?: never;
+            create_task?: never;
+            task_status?: never;
+            task_status_response?: never;
+            task_result?: never;
+            task_cancel?: never;
+            register_middleware?: never;
+            register_middleware_response?: never;
+            middleware_intercept?: never;
+            middleware_intercept_response?: never;
+            stream_header?: never;
+            stream_chunk?: never;
+            raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: ResourceListResponse;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
+        } | {
+            reload?: never;
+            list_tools?: never;
+            call_tool?: never;
+            reload_response?: never;
+            tool_list?: never;
+            call_result?: never;
+            enable_tools?: never;
+            disable_tools?: never;
+            set_allowed?: never;
+            set_blocked?: never;
+            get_active_tools?: never;
+            batch?: never;
+            active_tools?: never;
+            progress?: never;
+            cancel?: never;
+            log?: never;
+            create_task?: never;
+            task_status?: never;
+            task_status_response?: never;
+            task_result?: never;
+            task_cancel?: never;
+            register_middleware?: never;
+            register_middleware_response?: never;
+            middleware_intercept?: never;
+            middleware_intercept_response?: never;
+            stream_header?: never;
+            stream_chunk?: never;
+            raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: ListResourceTemplatesRequest;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
+        } | {
+            reload?: never;
+            list_tools?: never;
+            call_tool?: never;
+            reload_response?: never;
+            tool_list?: never;
+            call_result?: never;
+            enable_tools?: never;
+            disable_tools?: never;
+            set_allowed?: never;
+            set_blocked?: never;
+            get_active_tools?: never;
+            batch?: never;
+            active_tools?: never;
+            progress?: never;
+            cancel?: never;
+            log?: never;
+            create_task?: never;
+            task_status?: never;
+            task_status_response?: never;
+            task_result?: never;
+            task_cancel?: never;
+            register_middleware?: never;
+            register_middleware_response?: never;
+            middleware_intercept?: never;
+            middleware_intercept_response?: never;
+            stream_header?: never;
+            stream_chunk?: never;
+            raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: ResourceTemplateListResponse;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
+        } | {
+            reload?: never;
+            list_tools?: never;
+            call_tool?: never;
+            reload_response?: never;
+            tool_list?: never;
+            call_result?: never;
+            enable_tools?: never;
+            disable_tools?: never;
+            set_allowed?: never;
+            set_blocked?: never;
+            get_active_tools?: never;
+            batch?: never;
+            active_tools?: never;
+            progress?: never;
+            cancel?: never;
+            log?: never;
+            create_task?: never;
+            task_status?: never;
+            task_status_response?: never;
+            task_result?: never;
+            task_cancel?: never;
+            register_middleware?: never;
+            register_middleware_response?: never;
+            middleware_intercept?: never;
+            middleware_intercept_response?: never;
+            stream_header?: never;
+            stream_chunk?: never;
+            raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: ReadResourceRequest;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
+        } | {
+            reload?: never;
+            list_tools?: never;
+            call_tool?: never;
+            reload_response?: never;
+            tool_list?: never;
+            call_result?: never;
+            enable_tools?: never;
+            disable_tools?: never;
+            set_allowed?: never;
+            set_blocked?: never;
+            get_active_tools?: never;
+            batch?: never;
+            active_tools?: never;
+            progress?: never;
+            cancel?: never;
+            log?: never;
+            create_task?: never;
+            task_status?: never;
+            task_status_response?: never;
+            task_result?: never;
+            task_cancel?: never;
+            register_middleware?: never;
+            register_middleware_response?: never;
+            middleware_intercept?: never;
+            middleware_intercept_response?: never;
+            stream_header?: never;
+            stream_chunk?: never;
+            raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: ReadResourceResponse;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
+        } | {
+            reload?: never;
+            list_tools?: never;
+            call_tool?: never;
+            reload_response?: never;
+            tool_list?: never;
+            call_result?: never;
+            enable_tools?: never;
+            disable_tools?: never;
+            set_allowed?: never;
+            set_blocked?: never;
+            get_active_tools?: never;
+            batch?: never;
+            active_tools?: never;
+            progress?: never;
+            cancel?: never;
+            log?: never;
+            create_task?: never;
+            task_status?: never;
+            task_status_response?: never;
+            task_result?: never;
+            task_cancel?: never;
+            register_middleware?: never;
+            register_middleware_response?: never;
+            middleware_intercept?: never;
+            middleware_intercept_response?: never;
+            stream_header?: never;
+            stream_chunk?: never;
+            raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: ResourceChangedNotification;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
+        } | {
+            reload?: never;
+            list_tools?: never;
+            call_tool?: never;
+            reload_response?: never;
+            tool_list?: never;
+            call_result?: never;
+            enable_tools?: never;
+            disable_tools?: never;
+            set_allowed?: never;
+            set_blocked?: never;
+            get_active_tools?: never;
+            batch?: never;
+            active_tools?: never;
+            progress?: never;
+            cancel?: never;
+            log?: never;
+            create_task?: never;
+            task_status?: never;
+            task_status_response?: never;
+            task_result?: never;
+            task_cancel?: never;
+            register_middleware?: never;
+            register_middleware_response?: never;
+            middleware_intercept?: never;
+            middleware_intercept_response?: never;
+            stream_header?: never;
+            stream_chunk?: never;
+            raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: ListPromptsRequest;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
+        } | {
+            reload?: never;
+            list_tools?: never;
+            call_tool?: never;
+            reload_response?: never;
+            tool_list?: never;
+            call_result?: never;
+            enable_tools?: never;
+            disable_tools?: never;
+            set_allowed?: never;
+            set_blocked?: never;
+            get_active_tools?: never;
+            batch?: never;
+            active_tools?: never;
+            progress?: never;
+            cancel?: never;
+            log?: never;
+            create_task?: never;
+            task_status?: never;
+            task_status_response?: never;
+            task_result?: never;
+            task_cancel?: never;
+            register_middleware?: never;
+            register_middleware_response?: never;
+            middleware_intercept?: never;
+            middleware_intercept_response?: never;
+            stream_header?: never;
+            stream_chunk?: never;
+            raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: PromptListResponse;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
+        } | {
+            reload?: never;
+            list_tools?: never;
+            call_tool?: never;
+            reload_response?: never;
+            tool_list?: never;
+            call_result?: never;
+            enable_tools?: never;
+            disable_tools?: never;
+            set_allowed?: never;
+            set_blocked?: never;
+            get_active_tools?: never;
+            batch?: never;
+            active_tools?: never;
+            progress?: never;
+            cancel?: never;
+            log?: never;
+            create_task?: never;
+            task_status?: never;
+            task_status_response?: never;
+            task_result?: never;
+            task_cancel?: never;
+            register_middleware?: never;
+            register_middleware_response?: never;
+            middleware_intercept?: never;
+            middleware_intercept_response?: never;
+            stream_header?: never;
+            stream_chunk?: never;
+            raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: GetPromptRequest;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
+        } | {
+            reload?: never;
+            list_tools?: never;
+            call_tool?: never;
+            reload_response?: never;
+            tool_list?: never;
+            call_result?: never;
+            enable_tools?: never;
+            disable_tools?: never;
+            set_allowed?: never;
+            set_blocked?: never;
+            get_active_tools?: never;
+            batch?: never;
+            active_tools?: never;
+            progress?: never;
+            cancel?: never;
+            log?: never;
+            create_task?: never;
+            task_status?: never;
+            task_status_response?: never;
+            task_result?: never;
+            task_cancel?: never;
+            register_middleware?: never;
+            register_middleware_response?: never;
+            middleware_intercept?: never;
+            middleware_intercept_response?: never;
+            stream_header?: never;
+            stream_chunk?: never;
+            raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: GetPromptResponse;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
+        } | {
+            reload?: never;
+            list_tools?: never;
+            call_tool?: never;
+            reload_response?: never;
+            tool_list?: never;
+            call_result?: never;
+            enable_tools?: never;
+            disable_tools?: never;
+            set_allowed?: never;
+            set_blocked?: never;
+            get_active_tools?: never;
+            batch?: never;
+            active_tools?: never;
+            progress?: never;
+            cancel?: never;
+            log?: never;
+            create_task?: never;
+            task_status?: never;
+            task_status_response?: never;
+            task_result?: never;
+            task_cancel?: never;
+            register_middleware?: never;
+            register_middleware_response?: never;
+            middleware_intercept?: never;
+            middleware_intercept_response?: never;
+            stream_header?: never;
+            stream_chunk?: never;
+            raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: CompletionRequest;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
+        } | {
+            reload?: never;
+            list_tools?: never;
+            call_tool?: never;
+            reload_response?: never;
+            tool_list?: never;
+            call_result?: never;
+            enable_tools?: never;
+            disable_tools?: never;
+            set_allowed?: never;
+            set_blocked?: never;
+            get_active_tools?: never;
+            batch?: never;
+            active_tools?: never;
+            progress?: never;
+            cancel?: never;
+            log?: never;
+            create_task?: never;
+            task_status?: never;
+            task_status_response?: never;
+            task_result?: never;
+            task_cancel?: never;
+            register_middleware?: never;
+            register_middleware_response?: never;
+            middleware_intercept?: never;
+            middleware_intercept_response?: never;
+            stream_header?: never;
+            stream_chunk?: never;
+            raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: CompletionResponse;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
+        } | {
+            reload?: never;
+            list_tools?: never;
+            call_tool?: never;
+            reload_response?: never;
+            tool_list?: never;
+            call_result?: never;
+            enable_tools?: never;
+            disable_tools?: never;
+            set_allowed?: never;
+            set_blocked?: never;
+            get_active_tools?: never;
+            batch?: never;
+            active_tools?: never;
+            progress?: never;
+            cancel?: never;
+            log?: never;
+            create_task?: never;
+            task_status?: never;
+            task_status_response?: never;
+            task_result?: never;
+            task_cancel?: never;
+            register_middleware?: never;
+            register_middleware_response?: never;
+            middleware_intercept?: never;
+            middleware_intercept_response?: never;
+            stream_header?: never;
+            stream_chunk?: never;
+            raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: SamplingRequest;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: never;
+        } | {
+            reload?: never;
+            list_tools?: never;
+            call_tool?: never;
+            reload_response?: never;
+            tool_list?: never;
+            call_result?: never;
+            enable_tools?: never;
+            disable_tools?: never;
+            set_allowed?: never;
+            set_blocked?: never;
+            get_active_tools?: never;
+            batch?: never;
+            active_tools?: never;
+            progress?: never;
+            cancel?: never;
+            log?: never;
+            create_task?: never;
+            task_status?: never;
+            task_status_response?: never;
+            task_result?: never;
+            task_cancel?: never;
+            register_middleware?: never;
+            register_middleware_response?: never;
+            middleware_intercept?: never;
+            middleware_intercept_response?: never;
+            stream_header?: never;
+            stream_chunk?: never;
+            raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: SamplingResponse;
+            list_roots_request?: never;
+            list_roots_response?: never;
+        } | {
+            reload?: never;
+            list_tools?: never;
+            call_tool?: never;
+            reload_response?: never;
+            tool_list?: never;
+            call_result?: never;
+            enable_tools?: never;
+            disable_tools?: never;
+            set_allowed?: never;
+            set_blocked?: never;
+            get_active_tools?: never;
+            batch?: never;
+            active_tools?: never;
+            progress?: never;
+            cancel?: never;
+            log?: never;
+            create_task?: never;
+            task_status?: never;
+            task_status_response?: never;
+            task_result?: never;
+            task_cancel?: never;
+            register_middleware?: never;
+            register_middleware_response?: never;
+            middleware_intercept?: never;
+            middleware_intercept_response?: never;
+            stream_header?: never;
+            stream_chunk?: never;
+            raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: ListRootsRequest;
+            list_roots_response?: never;
+        } | {
+            reload?: never;
+            list_tools?: never;
+            call_tool?: never;
+            reload_response?: never;
+            tool_list?: never;
+            call_result?: never;
+            enable_tools?: never;
+            disable_tools?: never;
+            set_allowed?: never;
+            set_blocked?: never;
+            get_active_tools?: never;
+            batch?: never;
+            active_tools?: never;
+            progress?: never;
+            cancel?: never;
+            log?: never;
+            create_task?: never;
+            task_status?: never;
+            task_status_response?: never;
+            task_result?: never;
+            task_cancel?: never;
+            register_middleware?: never;
+            register_middleware_response?: never;
+            middleware_intercept?: never;
+            middleware_intercept_response?: never;
+            stream_header?: never;
+            stream_chunk?: never;
+            raw_header?: never;
+            list_resources_request?: never;
+            resource_list_response?: never;
+            list_resource_templates_request?: never;
+            resource_template_list_response?: never;
+            read_resource_request?: never;
+            read_resource_response?: never;
+            resource_changed?: never;
+            list_prompts_request?: never;
+            prompt_list_response?: never;
+            get_prompt_request?: never;
+            get_prompt_response?: never;
+            completion_request?: never;
+            completion_response?: never;
+            sampling_request?: never;
+            sampling_response?: never;
+            list_roots_request?: never;
+            list_roots_response?: ListRootsResponse;
         })))) {
             super();
             pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
@@ -909,6 +2167,57 @@ export namespace protomcp {
                 }
                 if ("raw_header" in data && data.raw_header != undefined) {
                     this.raw_header = data.raw_header;
+                }
+                if ("list_resources_request" in data && data.list_resources_request != undefined) {
+                    this.list_resources_request = data.list_resources_request;
+                }
+                if ("resource_list_response" in data && data.resource_list_response != undefined) {
+                    this.resource_list_response = data.resource_list_response;
+                }
+                if ("list_resource_templates_request" in data && data.list_resource_templates_request != undefined) {
+                    this.list_resource_templates_request = data.list_resource_templates_request;
+                }
+                if ("resource_template_list_response" in data && data.resource_template_list_response != undefined) {
+                    this.resource_template_list_response = data.resource_template_list_response;
+                }
+                if ("read_resource_request" in data && data.read_resource_request != undefined) {
+                    this.read_resource_request = data.read_resource_request;
+                }
+                if ("read_resource_response" in data && data.read_resource_response != undefined) {
+                    this.read_resource_response = data.read_resource_response;
+                }
+                if ("resource_changed" in data && data.resource_changed != undefined) {
+                    this.resource_changed = data.resource_changed;
+                }
+                if ("list_prompts_request" in data && data.list_prompts_request != undefined) {
+                    this.list_prompts_request = data.list_prompts_request;
+                }
+                if ("prompt_list_response" in data && data.prompt_list_response != undefined) {
+                    this.prompt_list_response = data.prompt_list_response;
+                }
+                if ("get_prompt_request" in data && data.get_prompt_request != undefined) {
+                    this.get_prompt_request = data.get_prompt_request;
+                }
+                if ("get_prompt_response" in data && data.get_prompt_response != undefined) {
+                    this.get_prompt_response = data.get_prompt_response;
+                }
+                if ("completion_request" in data && data.completion_request != undefined) {
+                    this.completion_request = data.completion_request;
+                }
+                if ("completion_response" in data && data.completion_response != undefined) {
+                    this.completion_response = data.completion_response;
+                }
+                if ("sampling_request" in data && data.sampling_request != undefined) {
+                    this.sampling_request = data.sampling_request;
+                }
+                if ("sampling_response" in data && data.sampling_response != undefined) {
+                    this.sampling_response = data.sampling_response;
+                }
+                if ("list_roots_request" in data && data.list_roots_request != undefined) {
+                    this.list_roots_request = data.list_roots_request;
+                }
+                if ("list_roots_response" in data && data.list_roots_response != undefined) {
+                    this.list_roots_response = data.list_roots_response;
                 }
                 if ("request_id" in data && data.request_id != undefined) {
                     this.request_id = data.request_id;
@@ -1170,6 +2479,159 @@ export namespace protomcp {
         get has_raw_header() {
             return pb_1.Message.getField(this, 30) != null;
         }
+        get list_resources_request() {
+            return pb_1.Message.getWrapperField(this, ListResourcesRequest, 31) as ListResourcesRequest;
+        }
+        set list_resources_request(value: ListResourcesRequest) {
+            pb_1.Message.setOneofWrapperField(this, 31, this.#one_of_decls[0], value);
+        }
+        get has_list_resources_request() {
+            return pb_1.Message.getField(this, 31) != null;
+        }
+        get resource_list_response() {
+            return pb_1.Message.getWrapperField(this, ResourceListResponse, 32) as ResourceListResponse;
+        }
+        set resource_list_response(value: ResourceListResponse) {
+            pb_1.Message.setOneofWrapperField(this, 32, this.#one_of_decls[0], value);
+        }
+        get has_resource_list_response() {
+            return pb_1.Message.getField(this, 32) != null;
+        }
+        get list_resource_templates_request() {
+            return pb_1.Message.getWrapperField(this, ListResourceTemplatesRequest, 33) as ListResourceTemplatesRequest;
+        }
+        set list_resource_templates_request(value: ListResourceTemplatesRequest) {
+            pb_1.Message.setOneofWrapperField(this, 33, this.#one_of_decls[0], value);
+        }
+        get has_list_resource_templates_request() {
+            return pb_1.Message.getField(this, 33) != null;
+        }
+        get resource_template_list_response() {
+            return pb_1.Message.getWrapperField(this, ResourceTemplateListResponse, 34) as ResourceTemplateListResponse;
+        }
+        set resource_template_list_response(value: ResourceTemplateListResponse) {
+            pb_1.Message.setOneofWrapperField(this, 34, this.#one_of_decls[0], value);
+        }
+        get has_resource_template_list_response() {
+            return pb_1.Message.getField(this, 34) != null;
+        }
+        get read_resource_request() {
+            return pb_1.Message.getWrapperField(this, ReadResourceRequest, 35) as ReadResourceRequest;
+        }
+        set read_resource_request(value: ReadResourceRequest) {
+            pb_1.Message.setOneofWrapperField(this, 35, this.#one_of_decls[0], value);
+        }
+        get has_read_resource_request() {
+            return pb_1.Message.getField(this, 35) != null;
+        }
+        get read_resource_response() {
+            return pb_1.Message.getWrapperField(this, ReadResourceResponse, 36) as ReadResourceResponse;
+        }
+        set read_resource_response(value: ReadResourceResponse) {
+            pb_1.Message.setOneofWrapperField(this, 36, this.#one_of_decls[0], value);
+        }
+        get has_read_resource_response() {
+            return pb_1.Message.getField(this, 36) != null;
+        }
+        get resource_changed() {
+            return pb_1.Message.getWrapperField(this, ResourceChangedNotification, 37) as ResourceChangedNotification;
+        }
+        set resource_changed(value: ResourceChangedNotification) {
+            pb_1.Message.setOneofWrapperField(this, 37, this.#one_of_decls[0], value);
+        }
+        get has_resource_changed() {
+            return pb_1.Message.getField(this, 37) != null;
+        }
+        get list_prompts_request() {
+            return pb_1.Message.getWrapperField(this, ListPromptsRequest, 40) as ListPromptsRequest;
+        }
+        set list_prompts_request(value: ListPromptsRequest) {
+            pb_1.Message.setOneofWrapperField(this, 40, this.#one_of_decls[0], value);
+        }
+        get has_list_prompts_request() {
+            return pb_1.Message.getField(this, 40) != null;
+        }
+        get prompt_list_response() {
+            return pb_1.Message.getWrapperField(this, PromptListResponse, 41) as PromptListResponse;
+        }
+        set prompt_list_response(value: PromptListResponse) {
+            pb_1.Message.setOneofWrapperField(this, 41, this.#one_of_decls[0], value);
+        }
+        get has_prompt_list_response() {
+            return pb_1.Message.getField(this, 41) != null;
+        }
+        get get_prompt_request() {
+            return pb_1.Message.getWrapperField(this, GetPromptRequest, 42) as GetPromptRequest;
+        }
+        set get_prompt_request(value: GetPromptRequest) {
+            pb_1.Message.setOneofWrapperField(this, 42, this.#one_of_decls[0], value);
+        }
+        get has_get_prompt_request() {
+            return pb_1.Message.getField(this, 42) != null;
+        }
+        get get_prompt_response() {
+            return pb_1.Message.getWrapperField(this, GetPromptResponse, 43) as GetPromptResponse;
+        }
+        set get_prompt_response(value: GetPromptResponse) {
+            pb_1.Message.setOneofWrapperField(this, 43, this.#one_of_decls[0], value);
+        }
+        get has_get_prompt_response() {
+            return pb_1.Message.getField(this, 43) != null;
+        }
+        get completion_request() {
+            return pb_1.Message.getWrapperField(this, CompletionRequest, 50) as CompletionRequest;
+        }
+        set completion_request(value: CompletionRequest) {
+            pb_1.Message.setOneofWrapperField(this, 50, this.#one_of_decls[0], value);
+        }
+        get has_completion_request() {
+            return pb_1.Message.getField(this, 50) != null;
+        }
+        get completion_response() {
+            return pb_1.Message.getWrapperField(this, CompletionResponse, 51) as CompletionResponse;
+        }
+        set completion_response(value: CompletionResponse) {
+            pb_1.Message.setOneofWrapperField(this, 51, this.#one_of_decls[0], value);
+        }
+        get has_completion_response() {
+            return pb_1.Message.getField(this, 51) != null;
+        }
+        get sampling_request() {
+            return pb_1.Message.getWrapperField(this, SamplingRequest, 60) as SamplingRequest;
+        }
+        set sampling_request(value: SamplingRequest) {
+            pb_1.Message.setOneofWrapperField(this, 60, this.#one_of_decls[0], value);
+        }
+        get has_sampling_request() {
+            return pb_1.Message.getField(this, 60) != null;
+        }
+        get sampling_response() {
+            return pb_1.Message.getWrapperField(this, SamplingResponse, 61) as SamplingResponse;
+        }
+        set sampling_response(value: SamplingResponse) {
+            pb_1.Message.setOneofWrapperField(this, 61, this.#one_of_decls[0], value);
+        }
+        get has_sampling_response() {
+            return pb_1.Message.getField(this, 61) != null;
+        }
+        get list_roots_request() {
+            return pb_1.Message.getWrapperField(this, ListRootsRequest, 62) as ListRootsRequest;
+        }
+        set list_roots_request(value: ListRootsRequest) {
+            pb_1.Message.setOneofWrapperField(this, 62, this.#one_of_decls[0], value);
+        }
+        get has_list_roots_request() {
+            return pb_1.Message.getField(this, 62) != null;
+        }
+        get list_roots_response() {
+            return pb_1.Message.getWrapperField(this, ListRootsResponse, 63) as ListRootsResponse;
+        }
+        set list_roots_response(value: ListRootsResponse) {
+            pb_1.Message.setOneofWrapperField(this, 63, this.#one_of_decls[0], value);
+        }
+        get has_list_roots_response() {
+            return pb_1.Message.getField(this, 63) != null;
+        }
         get request_id() {
             return pb_1.Message.getFieldWithDefault(this, 14, "") as string;
         }
@@ -1184,7 +2646,7 @@ export namespace protomcp {
         }
         get msg() {
             const cases: {
-                [index: number]: "none" | "reload" | "list_tools" | "call_tool" | "reload_response" | "tool_list" | "call_result" | "enable_tools" | "disable_tools" | "set_allowed" | "set_blocked" | "get_active_tools" | "batch" | "active_tools" | "progress" | "cancel" | "log" | "create_task" | "task_status" | "task_status_response" | "task_result" | "task_cancel" | "register_middleware" | "register_middleware_response" | "middleware_intercept" | "middleware_intercept_response" | "stream_header" | "stream_chunk" | "raw_header";
+                [index: number]: "none" | "reload" | "list_tools" | "call_tool" | "reload_response" | "tool_list" | "call_result" | "enable_tools" | "disable_tools" | "set_allowed" | "set_blocked" | "get_active_tools" | "batch" | "active_tools" | "progress" | "cancel" | "log" | "create_task" | "task_status" | "task_status_response" | "task_result" | "task_cancel" | "register_middleware" | "register_middleware_response" | "middleware_intercept" | "middleware_intercept_response" | "stream_header" | "stream_chunk" | "raw_header" | "list_resources_request" | "resource_list_response" | "list_resource_templates_request" | "resource_template_list_response" | "read_resource_request" | "read_resource_response" | "resource_changed" | "list_prompts_request" | "prompt_list_response" | "get_prompt_request" | "get_prompt_response" | "completion_request" | "completion_response" | "sampling_request" | "sampling_response" | "list_roots_request" | "list_roots_response";
             } = {
                 0: "none",
                 1: "reload",
@@ -1214,9 +2676,26 @@ export namespace protomcp {
                 27: "middleware_intercept_response",
                 28: "stream_header",
                 29: "stream_chunk",
-                30: "raw_header"
+                30: "raw_header",
+                31: "list_resources_request",
+                32: "resource_list_response",
+                33: "list_resource_templates_request",
+                34: "resource_template_list_response",
+                35: "read_resource_request",
+                36: "read_resource_response",
+                37: "resource_changed",
+                40: "list_prompts_request",
+                41: "prompt_list_response",
+                42: "get_prompt_request",
+                43: "get_prompt_response",
+                50: "completion_request",
+                51: "completion_response",
+                60: "sampling_request",
+                61: "sampling_response",
+                62: "list_roots_request",
+                63: "list_roots_response"
             };
-            return cases[pb_1.Message.computeOneofCase(this, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30])];
+            return cases[pb_1.Message.computeOneofCase(this, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 40, 41, 42, 43, 50, 51, 60, 61, 62, 63])];
         }
         static fromObject(data: {
             reload?: ReturnType<typeof ReloadRequest.prototype.toObject>;
@@ -1247,6 +2726,23 @@ export namespace protomcp {
             stream_header?: ReturnType<typeof StreamHeader.prototype.toObject>;
             stream_chunk?: ReturnType<typeof StreamChunk.prototype.toObject>;
             raw_header?: ReturnType<typeof RawHeader.prototype.toObject>;
+            list_resources_request?: ReturnType<typeof ListResourcesRequest.prototype.toObject>;
+            resource_list_response?: ReturnType<typeof ResourceListResponse.prototype.toObject>;
+            list_resource_templates_request?: ReturnType<typeof ListResourceTemplatesRequest.prototype.toObject>;
+            resource_template_list_response?: ReturnType<typeof ResourceTemplateListResponse.prototype.toObject>;
+            read_resource_request?: ReturnType<typeof ReadResourceRequest.prototype.toObject>;
+            read_resource_response?: ReturnType<typeof ReadResourceResponse.prototype.toObject>;
+            resource_changed?: ReturnType<typeof ResourceChangedNotification.prototype.toObject>;
+            list_prompts_request?: ReturnType<typeof ListPromptsRequest.prototype.toObject>;
+            prompt_list_response?: ReturnType<typeof PromptListResponse.prototype.toObject>;
+            get_prompt_request?: ReturnType<typeof GetPromptRequest.prototype.toObject>;
+            get_prompt_response?: ReturnType<typeof GetPromptResponse.prototype.toObject>;
+            completion_request?: ReturnType<typeof CompletionRequest.prototype.toObject>;
+            completion_response?: ReturnType<typeof CompletionResponse.prototype.toObject>;
+            sampling_request?: ReturnType<typeof SamplingRequest.prototype.toObject>;
+            sampling_response?: ReturnType<typeof SamplingResponse.prototype.toObject>;
+            list_roots_request?: ReturnType<typeof ListRootsRequest.prototype.toObject>;
+            list_roots_response?: ReturnType<typeof ListRootsResponse.prototype.toObject>;
             request_id?: string;
             namespace?: string;
         }): Envelope {
@@ -1335,6 +2831,57 @@ export namespace protomcp {
             if (data.raw_header != null) {
                 message.raw_header = RawHeader.fromObject(data.raw_header);
             }
+            if (data.list_resources_request != null) {
+                message.list_resources_request = ListResourcesRequest.fromObject(data.list_resources_request);
+            }
+            if (data.resource_list_response != null) {
+                message.resource_list_response = ResourceListResponse.fromObject(data.resource_list_response);
+            }
+            if (data.list_resource_templates_request != null) {
+                message.list_resource_templates_request = ListResourceTemplatesRequest.fromObject(data.list_resource_templates_request);
+            }
+            if (data.resource_template_list_response != null) {
+                message.resource_template_list_response = ResourceTemplateListResponse.fromObject(data.resource_template_list_response);
+            }
+            if (data.read_resource_request != null) {
+                message.read_resource_request = ReadResourceRequest.fromObject(data.read_resource_request);
+            }
+            if (data.read_resource_response != null) {
+                message.read_resource_response = ReadResourceResponse.fromObject(data.read_resource_response);
+            }
+            if (data.resource_changed != null) {
+                message.resource_changed = ResourceChangedNotification.fromObject(data.resource_changed);
+            }
+            if (data.list_prompts_request != null) {
+                message.list_prompts_request = ListPromptsRequest.fromObject(data.list_prompts_request);
+            }
+            if (data.prompt_list_response != null) {
+                message.prompt_list_response = PromptListResponse.fromObject(data.prompt_list_response);
+            }
+            if (data.get_prompt_request != null) {
+                message.get_prompt_request = GetPromptRequest.fromObject(data.get_prompt_request);
+            }
+            if (data.get_prompt_response != null) {
+                message.get_prompt_response = GetPromptResponse.fromObject(data.get_prompt_response);
+            }
+            if (data.completion_request != null) {
+                message.completion_request = CompletionRequest.fromObject(data.completion_request);
+            }
+            if (data.completion_response != null) {
+                message.completion_response = CompletionResponse.fromObject(data.completion_response);
+            }
+            if (data.sampling_request != null) {
+                message.sampling_request = SamplingRequest.fromObject(data.sampling_request);
+            }
+            if (data.sampling_response != null) {
+                message.sampling_response = SamplingResponse.fromObject(data.sampling_response);
+            }
+            if (data.list_roots_request != null) {
+                message.list_roots_request = ListRootsRequest.fromObject(data.list_roots_request);
+            }
+            if (data.list_roots_response != null) {
+                message.list_roots_response = ListRootsResponse.fromObject(data.list_roots_response);
+            }
             if (data.request_id != null) {
                 message.request_id = data.request_id;
             }
@@ -1373,6 +2920,23 @@ export namespace protomcp {
                 stream_header?: ReturnType<typeof StreamHeader.prototype.toObject>;
                 stream_chunk?: ReturnType<typeof StreamChunk.prototype.toObject>;
                 raw_header?: ReturnType<typeof RawHeader.prototype.toObject>;
+                list_resources_request?: ReturnType<typeof ListResourcesRequest.prototype.toObject>;
+                resource_list_response?: ReturnType<typeof ResourceListResponse.prototype.toObject>;
+                list_resource_templates_request?: ReturnType<typeof ListResourceTemplatesRequest.prototype.toObject>;
+                resource_template_list_response?: ReturnType<typeof ResourceTemplateListResponse.prototype.toObject>;
+                read_resource_request?: ReturnType<typeof ReadResourceRequest.prototype.toObject>;
+                read_resource_response?: ReturnType<typeof ReadResourceResponse.prototype.toObject>;
+                resource_changed?: ReturnType<typeof ResourceChangedNotification.prototype.toObject>;
+                list_prompts_request?: ReturnType<typeof ListPromptsRequest.prototype.toObject>;
+                prompt_list_response?: ReturnType<typeof PromptListResponse.prototype.toObject>;
+                get_prompt_request?: ReturnType<typeof GetPromptRequest.prototype.toObject>;
+                get_prompt_response?: ReturnType<typeof GetPromptResponse.prototype.toObject>;
+                completion_request?: ReturnType<typeof CompletionRequest.prototype.toObject>;
+                completion_response?: ReturnType<typeof CompletionResponse.prototype.toObject>;
+                sampling_request?: ReturnType<typeof SamplingRequest.prototype.toObject>;
+                sampling_response?: ReturnType<typeof SamplingResponse.prototype.toObject>;
+                list_roots_request?: ReturnType<typeof ListRootsRequest.prototype.toObject>;
+                list_roots_response?: ReturnType<typeof ListRootsResponse.prototype.toObject>;
                 request_id?: string;
                 namespace?: string;
             } = {};
@@ -1460,6 +3024,57 @@ export namespace protomcp {
             if (this.raw_header != null) {
                 data.raw_header = this.raw_header.toObject();
             }
+            if (this.list_resources_request != null) {
+                data.list_resources_request = this.list_resources_request.toObject();
+            }
+            if (this.resource_list_response != null) {
+                data.resource_list_response = this.resource_list_response.toObject();
+            }
+            if (this.list_resource_templates_request != null) {
+                data.list_resource_templates_request = this.list_resource_templates_request.toObject();
+            }
+            if (this.resource_template_list_response != null) {
+                data.resource_template_list_response = this.resource_template_list_response.toObject();
+            }
+            if (this.read_resource_request != null) {
+                data.read_resource_request = this.read_resource_request.toObject();
+            }
+            if (this.read_resource_response != null) {
+                data.read_resource_response = this.read_resource_response.toObject();
+            }
+            if (this.resource_changed != null) {
+                data.resource_changed = this.resource_changed.toObject();
+            }
+            if (this.list_prompts_request != null) {
+                data.list_prompts_request = this.list_prompts_request.toObject();
+            }
+            if (this.prompt_list_response != null) {
+                data.prompt_list_response = this.prompt_list_response.toObject();
+            }
+            if (this.get_prompt_request != null) {
+                data.get_prompt_request = this.get_prompt_request.toObject();
+            }
+            if (this.get_prompt_response != null) {
+                data.get_prompt_response = this.get_prompt_response.toObject();
+            }
+            if (this.completion_request != null) {
+                data.completion_request = this.completion_request.toObject();
+            }
+            if (this.completion_response != null) {
+                data.completion_response = this.completion_response.toObject();
+            }
+            if (this.sampling_request != null) {
+                data.sampling_request = this.sampling_request.toObject();
+            }
+            if (this.sampling_response != null) {
+                data.sampling_response = this.sampling_response.toObject();
+            }
+            if (this.list_roots_request != null) {
+                data.list_roots_request = this.list_roots_request.toObject();
+            }
+            if (this.list_roots_response != null) {
+                data.list_roots_response = this.list_roots_response.toObject();
+            }
             if (this.request_id != null) {
                 data.request_id = this.request_id;
             }
@@ -1528,6 +3143,40 @@ export namespace protomcp {
                 writer.writeMessage(29, this.stream_chunk, () => this.stream_chunk.serialize(writer));
             if (this.has_raw_header)
                 writer.writeMessage(30, this.raw_header, () => this.raw_header.serialize(writer));
+            if (this.has_list_resources_request)
+                writer.writeMessage(31, this.list_resources_request, () => this.list_resources_request.serialize(writer));
+            if (this.has_resource_list_response)
+                writer.writeMessage(32, this.resource_list_response, () => this.resource_list_response.serialize(writer));
+            if (this.has_list_resource_templates_request)
+                writer.writeMessage(33, this.list_resource_templates_request, () => this.list_resource_templates_request.serialize(writer));
+            if (this.has_resource_template_list_response)
+                writer.writeMessage(34, this.resource_template_list_response, () => this.resource_template_list_response.serialize(writer));
+            if (this.has_read_resource_request)
+                writer.writeMessage(35, this.read_resource_request, () => this.read_resource_request.serialize(writer));
+            if (this.has_read_resource_response)
+                writer.writeMessage(36, this.read_resource_response, () => this.read_resource_response.serialize(writer));
+            if (this.has_resource_changed)
+                writer.writeMessage(37, this.resource_changed, () => this.resource_changed.serialize(writer));
+            if (this.has_list_prompts_request)
+                writer.writeMessage(40, this.list_prompts_request, () => this.list_prompts_request.serialize(writer));
+            if (this.has_prompt_list_response)
+                writer.writeMessage(41, this.prompt_list_response, () => this.prompt_list_response.serialize(writer));
+            if (this.has_get_prompt_request)
+                writer.writeMessage(42, this.get_prompt_request, () => this.get_prompt_request.serialize(writer));
+            if (this.has_get_prompt_response)
+                writer.writeMessage(43, this.get_prompt_response, () => this.get_prompt_response.serialize(writer));
+            if (this.has_completion_request)
+                writer.writeMessage(50, this.completion_request, () => this.completion_request.serialize(writer));
+            if (this.has_completion_response)
+                writer.writeMessage(51, this.completion_response, () => this.completion_response.serialize(writer));
+            if (this.has_sampling_request)
+                writer.writeMessage(60, this.sampling_request, () => this.sampling_request.serialize(writer));
+            if (this.has_sampling_response)
+                writer.writeMessage(61, this.sampling_response, () => this.sampling_response.serialize(writer));
+            if (this.has_list_roots_request)
+                writer.writeMessage(62, this.list_roots_request, () => this.list_roots_request.serialize(writer));
+            if (this.has_list_roots_response)
+                writer.writeMessage(63, this.list_roots_response, () => this.list_roots_response.serialize(writer));
             if (this.request_id.length)
                 writer.writeString(14, this.request_id);
             if (this.namespace.length)
@@ -1624,6 +3273,57 @@ export namespace protomcp {
                         break;
                     case 30:
                         reader.readMessage(message.raw_header, () => message.raw_header = RawHeader.deserialize(reader));
+                        break;
+                    case 31:
+                        reader.readMessage(message.list_resources_request, () => message.list_resources_request = ListResourcesRequest.deserialize(reader));
+                        break;
+                    case 32:
+                        reader.readMessage(message.resource_list_response, () => message.resource_list_response = ResourceListResponse.deserialize(reader));
+                        break;
+                    case 33:
+                        reader.readMessage(message.list_resource_templates_request, () => message.list_resource_templates_request = ListResourceTemplatesRequest.deserialize(reader));
+                        break;
+                    case 34:
+                        reader.readMessage(message.resource_template_list_response, () => message.resource_template_list_response = ResourceTemplateListResponse.deserialize(reader));
+                        break;
+                    case 35:
+                        reader.readMessage(message.read_resource_request, () => message.read_resource_request = ReadResourceRequest.deserialize(reader));
+                        break;
+                    case 36:
+                        reader.readMessage(message.read_resource_response, () => message.read_resource_response = ReadResourceResponse.deserialize(reader));
+                        break;
+                    case 37:
+                        reader.readMessage(message.resource_changed, () => message.resource_changed = ResourceChangedNotification.deserialize(reader));
+                        break;
+                    case 40:
+                        reader.readMessage(message.list_prompts_request, () => message.list_prompts_request = ListPromptsRequest.deserialize(reader));
+                        break;
+                    case 41:
+                        reader.readMessage(message.prompt_list_response, () => message.prompt_list_response = PromptListResponse.deserialize(reader));
+                        break;
+                    case 42:
+                        reader.readMessage(message.get_prompt_request, () => message.get_prompt_request = GetPromptRequest.deserialize(reader));
+                        break;
+                    case 43:
+                        reader.readMessage(message.get_prompt_response, () => message.get_prompt_response = GetPromptResponse.deserialize(reader));
+                        break;
+                    case 50:
+                        reader.readMessage(message.completion_request, () => message.completion_request = CompletionRequest.deserialize(reader));
+                        break;
+                    case 51:
+                        reader.readMessage(message.completion_response, () => message.completion_response = CompletionResponse.deserialize(reader));
+                        break;
+                    case 60:
+                        reader.readMessage(message.sampling_request, () => message.sampling_request = SamplingRequest.deserialize(reader));
+                        break;
+                    case 61:
+                        reader.readMessage(message.sampling_response, () => message.sampling_response = SamplingResponse.deserialize(reader));
+                        break;
+                    case 62:
+                        reader.readMessage(message.list_roots_request, () => message.list_roots_request = ListRootsRequest.deserialize(reader));
+                        break;
+                    case 63:
+                        reader.readMessage(message.list_roots_response, () => message.list_roots_response = ListRootsResponse.deserialize(reader));
                         break;
                     case 14:
                         message.request_id = reader.readString();
@@ -4526,6 +6226,8 @@ export namespace protomcp {
             request_id?: string;
             field_name?: string;
             size?: number;
+            compression?: string;
+            uncompressed_size?: number;
         }) {
             super();
             pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
@@ -4538,6 +6240,12 @@ export namespace protomcp {
                 }
                 if ("size" in data && data.size != undefined) {
                     this.size = data.size;
+                }
+                if ("compression" in data && data.compression != undefined) {
+                    this.compression = data.compression;
+                }
+                if ("uncompressed_size" in data && data.uncompressed_size != undefined) {
+                    this.uncompressed_size = data.uncompressed_size;
                 }
             }
         }
@@ -4559,10 +6267,24 @@ export namespace protomcp {
         set size(value: number) {
             pb_1.Message.setField(this, 3, value);
         }
+        get compression() {
+            return pb_1.Message.getFieldWithDefault(this, 4, "") as string;
+        }
+        set compression(value: string) {
+            pb_1.Message.setField(this, 4, value);
+        }
+        get uncompressed_size() {
+            return pb_1.Message.getFieldWithDefault(this, 5, 0) as number;
+        }
+        set uncompressed_size(value: number) {
+            pb_1.Message.setField(this, 5, value);
+        }
         static fromObject(data: {
             request_id?: string;
             field_name?: string;
             size?: number;
+            compression?: string;
+            uncompressed_size?: number;
         }): RawHeader {
             const message = new RawHeader({});
             if (data.request_id != null) {
@@ -4574,6 +6296,12 @@ export namespace protomcp {
             if (data.size != null) {
                 message.size = data.size;
             }
+            if (data.compression != null) {
+                message.compression = data.compression;
+            }
+            if (data.uncompressed_size != null) {
+                message.uncompressed_size = data.uncompressed_size;
+            }
             return message;
         }
         toObject() {
@@ -4581,6 +6309,8 @@ export namespace protomcp {
                 request_id?: string;
                 field_name?: string;
                 size?: number;
+                compression?: string;
+                uncompressed_size?: number;
             } = {};
             if (this.request_id != null) {
                 data.request_id = this.request_id;
@@ -4590,6 +6320,12 @@ export namespace protomcp {
             }
             if (this.size != null) {
                 data.size = this.size;
+            }
+            if (this.compression != null) {
+                data.compression = this.compression;
+            }
+            if (this.uncompressed_size != null) {
+                data.uncompressed_size = this.uncompressed_size;
             }
             return data;
         }
@@ -4603,6 +6339,10 @@ export namespace protomcp {
                 writer.writeString(2, this.field_name);
             if (this.size != 0)
                 writer.writeUint64(3, this.size);
+            if (this.compression.length)
+                writer.writeString(4, this.compression);
+            if (this.uncompressed_size != 0)
+                writer.writeUint64(5, this.uncompressed_size);
             if (!w)
                 return writer.getResultBuffer();
         }
@@ -4621,6 +6361,12 @@ export namespace protomcp {
                     case 3:
                         message.size = reader.readUint64();
                         break;
+                    case 4:
+                        message.compression = reader.readString();
+                        break;
+                    case 5:
+                        message.uncompressed_size = reader.readUint64();
+                        break;
                     default: reader.skipField();
                 }
             }
@@ -4631,6 +6377,2196 @@ export namespace protomcp {
         }
         static deserializeBinary(bytes: Uint8Array): RawHeader {
             return RawHeader.deserialize(bytes);
+        }
+    }
+    export class ResourceDefinition extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            uri?: string;
+            name?: string;
+            description?: string;
+            mime_type?: string;
+            size?: number;
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                if ("uri" in data && data.uri != undefined) {
+                    this.uri = data.uri;
+                }
+                if ("name" in data && data.name != undefined) {
+                    this.name = data.name;
+                }
+                if ("description" in data && data.description != undefined) {
+                    this.description = data.description;
+                }
+                if ("mime_type" in data && data.mime_type != undefined) {
+                    this.mime_type = data.mime_type;
+                }
+                if ("size" in data && data.size != undefined) {
+                    this.size = data.size;
+                }
+            }
+        }
+        get uri() {
+            return pb_1.Message.getFieldWithDefault(this, 1, "") as string;
+        }
+        set uri(value: string) {
+            pb_1.Message.setField(this, 1, value);
+        }
+        get name() {
+            return pb_1.Message.getFieldWithDefault(this, 2, "") as string;
+        }
+        set name(value: string) {
+            pb_1.Message.setField(this, 2, value);
+        }
+        get description() {
+            return pb_1.Message.getFieldWithDefault(this, 3, "") as string;
+        }
+        set description(value: string) {
+            pb_1.Message.setField(this, 3, value);
+        }
+        get mime_type() {
+            return pb_1.Message.getFieldWithDefault(this, 4, "") as string;
+        }
+        set mime_type(value: string) {
+            pb_1.Message.setField(this, 4, value);
+        }
+        get size() {
+            return pb_1.Message.getFieldWithDefault(this, 5, 0) as number;
+        }
+        set size(value: number) {
+            pb_1.Message.setField(this, 5, value);
+        }
+        static fromObject(data: {
+            uri?: string;
+            name?: string;
+            description?: string;
+            mime_type?: string;
+            size?: number;
+        }): ResourceDefinition {
+            const message = new ResourceDefinition({});
+            if (data.uri != null) {
+                message.uri = data.uri;
+            }
+            if (data.name != null) {
+                message.name = data.name;
+            }
+            if (data.description != null) {
+                message.description = data.description;
+            }
+            if (data.mime_type != null) {
+                message.mime_type = data.mime_type;
+            }
+            if (data.size != null) {
+                message.size = data.size;
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                uri?: string;
+                name?: string;
+                description?: string;
+                mime_type?: string;
+                size?: number;
+            } = {};
+            if (this.uri != null) {
+                data.uri = this.uri;
+            }
+            if (this.name != null) {
+                data.name = this.name;
+            }
+            if (this.description != null) {
+                data.description = this.description;
+            }
+            if (this.mime_type != null) {
+                data.mime_type = this.mime_type;
+            }
+            if (this.size != null) {
+                data.size = this.size;
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.uri.length)
+                writer.writeString(1, this.uri);
+            if (this.name.length)
+                writer.writeString(2, this.name);
+            if (this.description.length)
+                writer.writeString(3, this.description);
+            if (this.mime_type.length)
+                writer.writeString(4, this.mime_type);
+            if (this.size != 0)
+                writer.writeInt64(5, this.size);
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): ResourceDefinition {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new ResourceDefinition();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        message.uri = reader.readString();
+                        break;
+                    case 2:
+                        message.name = reader.readString();
+                        break;
+                    case 3:
+                        message.description = reader.readString();
+                        break;
+                    case 4:
+                        message.mime_type = reader.readString();
+                        break;
+                    case 5:
+                        message.size = reader.readInt64();
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): ResourceDefinition {
+            return ResourceDefinition.deserialize(bytes);
+        }
+    }
+    export class ResourceTemplateDefinition extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            uri_template?: string;
+            name?: string;
+            description?: string;
+            mime_type?: string;
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                if ("uri_template" in data && data.uri_template != undefined) {
+                    this.uri_template = data.uri_template;
+                }
+                if ("name" in data && data.name != undefined) {
+                    this.name = data.name;
+                }
+                if ("description" in data && data.description != undefined) {
+                    this.description = data.description;
+                }
+                if ("mime_type" in data && data.mime_type != undefined) {
+                    this.mime_type = data.mime_type;
+                }
+            }
+        }
+        get uri_template() {
+            return pb_1.Message.getFieldWithDefault(this, 1, "") as string;
+        }
+        set uri_template(value: string) {
+            pb_1.Message.setField(this, 1, value);
+        }
+        get name() {
+            return pb_1.Message.getFieldWithDefault(this, 2, "") as string;
+        }
+        set name(value: string) {
+            pb_1.Message.setField(this, 2, value);
+        }
+        get description() {
+            return pb_1.Message.getFieldWithDefault(this, 3, "") as string;
+        }
+        set description(value: string) {
+            pb_1.Message.setField(this, 3, value);
+        }
+        get mime_type() {
+            return pb_1.Message.getFieldWithDefault(this, 4, "") as string;
+        }
+        set mime_type(value: string) {
+            pb_1.Message.setField(this, 4, value);
+        }
+        static fromObject(data: {
+            uri_template?: string;
+            name?: string;
+            description?: string;
+            mime_type?: string;
+        }): ResourceTemplateDefinition {
+            const message = new ResourceTemplateDefinition({});
+            if (data.uri_template != null) {
+                message.uri_template = data.uri_template;
+            }
+            if (data.name != null) {
+                message.name = data.name;
+            }
+            if (data.description != null) {
+                message.description = data.description;
+            }
+            if (data.mime_type != null) {
+                message.mime_type = data.mime_type;
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                uri_template?: string;
+                name?: string;
+                description?: string;
+                mime_type?: string;
+            } = {};
+            if (this.uri_template != null) {
+                data.uri_template = this.uri_template;
+            }
+            if (this.name != null) {
+                data.name = this.name;
+            }
+            if (this.description != null) {
+                data.description = this.description;
+            }
+            if (this.mime_type != null) {
+                data.mime_type = this.mime_type;
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.uri_template.length)
+                writer.writeString(1, this.uri_template);
+            if (this.name.length)
+                writer.writeString(2, this.name);
+            if (this.description.length)
+                writer.writeString(3, this.description);
+            if (this.mime_type.length)
+                writer.writeString(4, this.mime_type);
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): ResourceTemplateDefinition {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new ResourceTemplateDefinition();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        message.uri_template = reader.readString();
+                        break;
+                    case 2:
+                        message.name = reader.readString();
+                        break;
+                    case 3:
+                        message.description = reader.readString();
+                        break;
+                    case 4:
+                        message.mime_type = reader.readString();
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): ResourceTemplateDefinition {
+            return ResourceTemplateDefinition.deserialize(bytes);
+        }
+    }
+    export class ListResourcesRequest extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {}) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") { }
+        }
+        static fromObject(data: {}): ListResourcesRequest {
+            const message = new ListResourcesRequest({});
+            return message;
+        }
+        toObject() {
+            const data: {} = {};
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): ListResourcesRequest {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new ListResourcesRequest();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): ListResourcesRequest {
+            return ListResourcesRequest.deserialize(bytes);
+        }
+    }
+    export class ResourceListResponse extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            resources?: ResourceDefinition[];
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [1], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                if ("resources" in data && data.resources != undefined) {
+                    this.resources = data.resources;
+                }
+            }
+        }
+        get resources() {
+            return pb_1.Message.getRepeatedWrapperField(this, ResourceDefinition, 1) as ResourceDefinition[];
+        }
+        set resources(value: ResourceDefinition[]) {
+            pb_1.Message.setRepeatedWrapperField(this, 1, value);
+        }
+        static fromObject(data: {
+            resources?: ReturnType<typeof ResourceDefinition.prototype.toObject>[];
+        }): ResourceListResponse {
+            const message = new ResourceListResponse({});
+            if (data.resources != null) {
+                message.resources = data.resources.map(item => ResourceDefinition.fromObject(item));
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                resources?: ReturnType<typeof ResourceDefinition.prototype.toObject>[];
+            } = {};
+            if (this.resources != null) {
+                data.resources = this.resources.map((item: ResourceDefinition) => item.toObject());
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.resources.length)
+                writer.writeRepeatedMessage(1, this.resources, (item: ResourceDefinition) => item.serialize(writer));
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): ResourceListResponse {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new ResourceListResponse();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        reader.readMessage(message.resources, () => pb_1.Message.addToRepeatedWrapperField(message, 1, ResourceDefinition.deserialize(reader), ResourceDefinition));
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): ResourceListResponse {
+            return ResourceListResponse.deserialize(bytes);
+        }
+    }
+    export class ListResourceTemplatesRequest extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {}) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") { }
+        }
+        static fromObject(data: {}): ListResourceTemplatesRequest {
+            const message = new ListResourceTemplatesRequest({});
+            return message;
+        }
+        toObject() {
+            const data: {} = {};
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): ListResourceTemplatesRequest {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new ListResourceTemplatesRequest();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): ListResourceTemplatesRequest {
+            return ListResourceTemplatesRequest.deserialize(bytes);
+        }
+    }
+    export class ResourceTemplateListResponse extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            templates?: ResourceTemplateDefinition[];
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [1], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                if ("templates" in data && data.templates != undefined) {
+                    this.templates = data.templates;
+                }
+            }
+        }
+        get templates() {
+            return pb_1.Message.getRepeatedWrapperField(this, ResourceTemplateDefinition, 1) as ResourceTemplateDefinition[];
+        }
+        set templates(value: ResourceTemplateDefinition[]) {
+            pb_1.Message.setRepeatedWrapperField(this, 1, value);
+        }
+        static fromObject(data: {
+            templates?: ReturnType<typeof ResourceTemplateDefinition.prototype.toObject>[];
+        }): ResourceTemplateListResponse {
+            const message = new ResourceTemplateListResponse({});
+            if (data.templates != null) {
+                message.templates = data.templates.map(item => ResourceTemplateDefinition.fromObject(item));
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                templates?: ReturnType<typeof ResourceTemplateDefinition.prototype.toObject>[];
+            } = {};
+            if (this.templates != null) {
+                data.templates = this.templates.map((item: ResourceTemplateDefinition) => item.toObject());
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.templates.length)
+                writer.writeRepeatedMessage(1, this.templates, (item: ResourceTemplateDefinition) => item.serialize(writer));
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): ResourceTemplateListResponse {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new ResourceTemplateListResponse();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        reader.readMessage(message.templates, () => pb_1.Message.addToRepeatedWrapperField(message, 1, ResourceTemplateDefinition.deserialize(reader), ResourceTemplateDefinition));
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): ResourceTemplateListResponse {
+            return ResourceTemplateListResponse.deserialize(bytes);
+        }
+    }
+    export class ReadResourceRequest extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            uri?: string;
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                if ("uri" in data && data.uri != undefined) {
+                    this.uri = data.uri;
+                }
+            }
+        }
+        get uri() {
+            return pb_1.Message.getFieldWithDefault(this, 1, "") as string;
+        }
+        set uri(value: string) {
+            pb_1.Message.setField(this, 1, value);
+        }
+        static fromObject(data: {
+            uri?: string;
+        }): ReadResourceRequest {
+            const message = new ReadResourceRequest({});
+            if (data.uri != null) {
+                message.uri = data.uri;
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                uri?: string;
+            } = {};
+            if (this.uri != null) {
+                data.uri = this.uri;
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.uri.length)
+                writer.writeString(1, this.uri);
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): ReadResourceRequest {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new ReadResourceRequest();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        message.uri = reader.readString();
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): ReadResourceRequest {
+            return ReadResourceRequest.deserialize(bytes);
+        }
+    }
+    export class ResourceContent extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            uri?: string;
+            mime_type?: string;
+            text?: string;
+            blob?: Uint8Array;
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                if ("uri" in data && data.uri != undefined) {
+                    this.uri = data.uri;
+                }
+                if ("mime_type" in data && data.mime_type != undefined) {
+                    this.mime_type = data.mime_type;
+                }
+                if ("text" in data && data.text != undefined) {
+                    this.text = data.text;
+                }
+                if ("blob" in data && data.blob != undefined) {
+                    this.blob = data.blob;
+                }
+            }
+        }
+        get uri() {
+            return pb_1.Message.getFieldWithDefault(this, 1, "") as string;
+        }
+        set uri(value: string) {
+            pb_1.Message.setField(this, 1, value);
+        }
+        get mime_type() {
+            return pb_1.Message.getFieldWithDefault(this, 2, "") as string;
+        }
+        set mime_type(value: string) {
+            pb_1.Message.setField(this, 2, value);
+        }
+        get text() {
+            return pb_1.Message.getFieldWithDefault(this, 3, "") as string;
+        }
+        set text(value: string) {
+            pb_1.Message.setField(this, 3, value);
+        }
+        get blob() {
+            return pb_1.Message.getFieldWithDefault(this, 4, new Uint8Array(0)) as Uint8Array;
+        }
+        set blob(value: Uint8Array) {
+            pb_1.Message.setField(this, 4, value);
+        }
+        static fromObject(data: {
+            uri?: string;
+            mime_type?: string;
+            text?: string;
+            blob?: Uint8Array;
+        }): ResourceContent {
+            const message = new ResourceContent({});
+            if (data.uri != null) {
+                message.uri = data.uri;
+            }
+            if (data.mime_type != null) {
+                message.mime_type = data.mime_type;
+            }
+            if (data.text != null) {
+                message.text = data.text;
+            }
+            if (data.blob != null) {
+                message.blob = data.blob;
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                uri?: string;
+                mime_type?: string;
+                text?: string;
+                blob?: Uint8Array;
+            } = {};
+            if (this.uri != null) {
+                data.uri = this.uri;
+            }
+            if (this.mime_type != null) {
+                data.mime_type = this.mime_type;
+            }
+            if (this.text != null) {
+                data.text = this.text;
+            }
+            if (this.blob != null) {
+                data.blob = this.blob;
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.uri.length)
+                writer.writeString(1, this.uri);
+            if (this.mime_type.length)
+                writer.writeString(2, this.mime_type);
+            if (this.text.length)
+                writer.writeString(3, this.text);
+            if (this.blob.length)
+                writer.writeBytes(4, this.blob);
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): ResourceContent {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new ResourceContent();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        message.uri = reader.readString();
+                        break;
+                    case 2:
+                        message.mime_type = reader.readString();
+                        break;
+                    case 3:
+                        message.text = reader.readString();
+                        break;
+                    case 4:
+                        message.blob = reader.readBytes();
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): ResourceContent {
+            return ResourceContent.deserialize(bytes);
+        }
+    }
+    export class ReadResourceResponse extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            contents?: ResourceContent[];
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [1], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                if ("contents" in data && data.contents != undefined) {
+                    this.contents = data.contents;
+                }
+            }
+        }
+        get contents() {
+            return pb_1.Message.getRepeatedWrapperField(this, ResourceContent, 1) as ResourceContent[];
+        }
+        set contents(value: ResourceContent[]) {
+            pb_1.Message.setRepeatedWrapperField(this, 1, value);
+        }
+        static fromObject(data: {
+            contents?: ReturnType<typeof ResourceContent.prototype.toObject>[];
+        }): ReadResourceResponse {
+            const message = new ReadResourceResponse({});
+            if (data.contents != null) {
+                message.contents = data.contents.map(item => ResourceContent.fromObject(item));
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                contents?: ReturnType<typeof ResourceContent.prototype.toObject>[];
+            } = {};
+            if (this.contents != null) {
+                data.contents = this.contents.map((item: ResourceContent) => item.toObject());
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.contents.length)
+                writer.writeRepeatedMessage(1, this.contents, (item: ResourceContent) => item.serialize(writer));
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): ReadResourceResponse {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new ReadResourceResponse();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        reader.readMessage(message.contents, () => pb_1.Message.addToRepeatedWrapperField(message, 1, ResourceContent.deserialize(reader), ResourceContent));
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): ReadResourceResponse {
+            return ReadResourceResponse.deserialize(bytes);
+        }
+    }
+    export class ResourceChangedNotification extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            uri?: string;
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                if ("uri" in data && data.uri != undefined) {
+                    this.uri = data.uri;
+                }
+            }
+        }
+        get uri() {
+            return pb_1.Message.getFieldWithDefault(this, 1, "") as string;
+        }
+        set uri(value: string) {
+            pb_1.Message.setField(this, 1, value);
+        }
+        static fromObject(data: {
+            uri?: string;
+        }): ResourceChangedNotification {
+            const message = new ResourceChangedNotification({});
+            if (data.uri != null) {
+                message.uri = data.uri;
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                uri?: string;
+            } = {};
+            if (this.uri != null) {
+                data.uri = this.uri;
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.uri.length)
+                writer.writeString(1, this.uri);
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): ResourceChangedNotification {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new ResourceChangedNotification();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        message.uri = reader.readString();
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): ResourceChangedNotification {
+            return ResourceChangedNotification.deserialize(bytes);
+        }
+    }
+    export class PromptArgument extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            name?: string;
+            description?: string;
+            required?: boolean;
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                if ("name" in data && data.name != undefined) {
+                    this.name = data.name;
+                }
+                if ("description" in data && data.description != undefined) {
+                    this.description = data.description;
+                }
+                if ("required" in data && data.required != undefined) {
+                    this.required = data.required;
+                }
+            }
+        }
+        get name() {
+            return pb_1.Message.getFieldWithDefault(this, 1, "") as string;
+        }
+        set name(value: string) {
+            pb_1.Message.setField(this, 1, value);
+        }
+        get description() {
+            return pb_1.Message.getFieldWithDefault(this, 2, "") as string;
+        }
+        set description(value: string) {
+            pb_1.Message.setField(this, 2, value);
+        }
+        get required() {
+            return pb_1.Message.getFieldWithDefault(this, 3, false) as boolean;
+        }
+        set required(value: boolean) {
+            pb_1.Message.setField(this, 3, value);
+        }
+        static fromObject(data: {
+            name?: string;
+            description?: string;
+            required?: boolean;
+        }): PromptArgument {
+            const message = new PromptArgument({});
+            if (data.name != null) {
+                message.name = data.name;
+            }
+            if (data.description != null) {
+                message.description = data.description;
+            }
+            if (data.required != null) {
+                message.required = data.required;
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                name?: string;
+                description?: string;
+                required?: boolean;
+            } = {};
+            if (this.name != null) {
+                data.name = this.name;
+            }
+            if (this.description != null) {
+                data.description = this.description;
+            }
+            if (this.required != null) {
+                data.required = this.required;
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.name.length)
+                writer.writeString(1, this.name);
+            if (this.description.length)
+                writer.writeString(2, this.description);
+            if (this.required != false)
+                writer.writeBool(3, this.required);
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): PromptArgument {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new PromptArgument();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        message.name = reader.readString();
+                        break;
+                    case 2:
+                        message.description = reader.readString();
+                        break;
+                    case 3:
+                        message.required = reader.readBool();
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): PromptArgument {
+            return PromptArgument.deserialize(bytes);
+        }
+    }
+    export class PromptDefinition extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            name?: string;
+            description?: string;
+            arguments?: PromptArgument[];
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [3], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                if ("name" in data && data.name != undefined) {
+                    this.name = data.name;
+                }
+                if ("description" in data && data.description != undefined) {
+                    this.description = data.description;
+                }
+                if ("arguments" in data && data.arguments != undefined) {
+                    this.arguments = data.arguments;
+                }
+            }
+        }
+        get name() {
+            return pb_1.Message.getFieldWithDefault(this, 1, "") as string;
+        }
+        set name(value: string) {
+            pb_1.Message.setField(this, 1, value);
+        }
+        get description() {
+            return pb_1.Message.getFieldWithDefault(this, 2, "") as string;
+        }
+        set description(value: string) {
+            pb_1.Message.setField(this, 2, value);
+        }
+        get arguments() {
+            return pb_1.Message.getRepeatedWrapperField(this, PromptArgument, 3) as PromptArgument[];
+        }
+        set arguments(value: PromptArgument[]) {
+            pb_1.Message.setRepeatedWrapperField(this, 3, value);
+        }
+        static fromObject(data: {
+            name?: string;
+            description?: string;
+            arguments?: ReturnType<typeof PromptArgument.prototype.toObject>[];
+        }): PromptDefinition {
+            const message = new PromptDefinition({});
+            if (data.name != null) {
+                message.name = data.name;
+            }
+            if (data.description != null) {
+                message.description = data.description;
+            }
+            if (data.arguments != null) {
+                message.arguments = data.arguments.map(item => PromptArgument.fromObject(item));
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                name?: string;
+                description?: string;
+                arguments?: ReturnType<typeof PromptArgument.prototype.toObject>[];
+            } = {};
+            if (this.name != null) {
+                data.name = this.name;
+            }
+            if (this.description != null) {
+                data.description = this.description;
+            }
+            if (this.arguments != null) {
+                data.arguments = this.arguments.map((item: PromptArgument) => item.toObject());
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.name.length)
+                writer.writeString(1, this.name);
+            if (this.description.length)
+                writer.writeString(2, this.description);
+            if (this.arguments.length)
+                writer.writeRepeatedMessage(3, this.arguments, (item: PromptArgument) => item.serialize(writer));
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): PromptDefinition {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new PromptDefinition();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        message.name = reader.readString();
+                        break;
+                    case 2:
+                        message.description = reader.readString();
+                        break;
+                    case 3:
+                        reader.readMessage(message.arguments, () => pb_1.Message.addToRepeatedWrapperField(message, 3, PromptArgument.deserialize(reader), PromptArgument));
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): PromptDefinition {
+            return PromptDefinition.deserialize(bytes);
+        }
+    }
+    export class ListPromptsRequest extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {}) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") { }
+        }
+        static fromObject(data: {}): ListPromptsRequest {
+            const message = new ListPromptsRequest({});
+            return message;
+        }
+        toObject() {
+            const data: {} = {};
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): ListPromptsRequest {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new ListPromptsRequest();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): ListPromptsRequest {
+            return ListPromptsRequest.deserialize(bytes);
+        }
+    }
+    export class PromptListResponse extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            prompts?: PromptDefinition[];
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [1], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                if ("prompts" in data && data.prompts != undefined) {
+                    this.prompts = data.prompts;
+                }
+            }
+        }
+        get prompts() {
+            return pb_1.Message.getRepeatedWrapperField(this, PromptDefinition, 1) as PromptDefinition[];
+        }
+        set prompts(value: PromptDefinition[]) {
+            pb_1.Message.setRepeatedWrapperField(this, 1, value);
+        }
+        static fromObject(data: {
+            prompts?: ReturnType<typeof PromptDefinition.prototype.toObject>[];
+        }): PromptListResponse {
+            const message = new PromptListResponse({});
+            if (data.prompts != null) {
+                message.prompts = data.prompts.map(item => PromptDefinition.fromObject(item));
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                prompts?: ReturnType<typeof PromptDefinition.prototype.toObject>[];
+            } = {};
+            if (this.prompts != null) {
+                data.prompts = this.prompts.map((item: PromptDefinition) => item.toObject());
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.prompts.length)
+                writer.writeRepeatedMessage(1, this.prompts, (item: PromptDefinition) => item.serialize(writer));
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): PromptListResponse {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new PromptListResponse();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        reader.readMessage(message.prompts, () => pb_1.Message.addToRepeatedWrapperField(message, 1, PromptDefinition.deserialize(reader), PromptDefinition));
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): PromptListResponse {
+            return PromptListResponse.deserialize(bytes);
+        }
+    }
+    export class GetPromptRequest extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            name?: string;
+            arguments_json?: string;
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                if ("name" in data && data.name != undefined) {
+                    this.name = data.name;
+                }
+                if ("arguments_json" in data && data.arguments_json != undefined) {
+                    this.arguments_json = data.arguments_json;
+                }
+            }
+        }
+        get name() {
+            return pb_1.Message.getFieldWithDefault(this, 1, "") as string;
+        }
+        set name(value: string) {
+            pb_1.Message.setField(this, 1, value);
+        }
+        get arguments_json() {
+            return pb_1.Message.getFieldWithDefault(this, 2, "") as string;
+        }
+        set arguments_json(value: string) {
+            pb_1.Message.setField(this, 2, value);
+        }
+        static fromObject(data: {
+            name?: string;
+            arguments_json?: string;
+        }): GetPromptRequest {
+            const message = new GetPromptRequest({});
+            if (data.name != null) {
+                message.name = data.name;
+            }
+            if (data.arguments_json != null) {
+                message.arguments_json = data.arguments_json;
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                name?: string;
+                arguments_json?: string;
+            } = {};
+            if (this.name != null) {
+                data.name = this.name;
+            }
+            if (this.arguments_json != null) {
+                data.arguments_json = this.arguments_json;
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.name.length)
+                writer.writeString(1, this.name);
+            if (this.arguments_json.length)
+                writer.writeString(2, this.arguments_json);
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): GetPromptRequest {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new GetPromptRequest();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        message.name = reader.readString();
+                        break;
+                    case 2:
+                        message.arguments_json = reader.readString();
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): GetPromptRequest {
+            return GetPromptRequest.deserialize(bytes);
+        }
+    }
+    export class PromptMessage extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            role?: string;
+            content_json?: string;
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                if ("role" in data && data.role != undefined) {
+                    this.role = data.role;
+                }
+                if ("content_json" in data && data.content_json != undefined) {
+                    this.content_json = data.content_json;
+                }
+            }
+        }
+        get role() {
+            return pb_1.Message.getFieldWithDefault(this, 1, "") as string;
+        }
+        set role(value: string) {
+            pb_1.Message.setField(this, 1, value);
+        }
+        get content_json() {
+            return pb_1.Message.getFieldWithDefault(this, 2, "") as string;
+        }
+        set content_json(value: string) {
+            pb_1.Message.setField(this, 2, value);
+        }
+        static fromObject(data: {
+            role?: string;
+            content_json?: string;
+        }): PromptMessage {
+            const message = new PromptMessage({});
+            if (data.role != null) {
+                message.role = data.role;
+            }
+            if (data.content_json != null) {
+                message.content_json = data.content_json;
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                role?: string;
+                content_json?: string;
+            } = {};
+            if (this.role != null) {
+                data.role = this.role;
+            }
+            if (this.content_json != null) {
+                data.content_json = this.content_json;
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.role.length)
+                writer.writeString(1, this.role);
+            if (this.content_json.length)
+                writer.writeString(2, this.content_json);
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): PromptMessage {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new PromptMessage();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        message.role = reader.readString();
+                        break;
+                    case 2:
+                        message.content_json = reader.readString();
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): PromptMessage {
+            return PromptMessage.deserialize(bytes);
+        }
+    }
+    export class GetPromptResponse extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            description?: string;
+            messages?: PromptMessage[];
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [2], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                if ("description" in data && data.description != undefined) {
+                    this.description = data.description;
+                }
+                if ("messages" in data && data.messages != undefined) {
+                    this.messages = data.messages;
+                }
+            }
+        }
+        get description() {
+            return pb_1.Message.getFieldWithDefault(this, 1, "") as string;
+        }
+        set description(value: string) {
+            pb_1.Message.setField(this, 1, value);
+        }
+        get messages() {
+            return pb_1.Message.getRepeatedWrapperField(this, PromptMessage, 2) as PromptMessage[];
+        }
+        set messages(value: PromptMessage[]) {
+            pb_1.Message.setRepeatedWrapperField(this, 2, value);
+        }
+        static fromObject(data: {
+            description?: string;
+            messages?: ReturnType<typeof PromptMessage.prototype.toObject>[];
+        }): GetPromptResponse {
+            const message = new GetPromptResponse({});
+            if (data.description != null) {
+                message.description = data.description;
+            }
+            if (data.messages != null) {
+                message.messages = data.messages.map(item => PromptMessage.fromObject(item));
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                description?: string;
+                messages?: ReturnType<typeof PromptMessage.prototype.toObject>[];
+            } = {};
+            if (this.description != null) {
+                data.description = this.description;
+            }
+            if (this.messages != null) {
+                data.messages = this.messages.map((item: PromptMessage) => item.toObject());
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.description.length)
+                writer.writeString(1, this.description);
+            if (this.messages.length)
+                writer.writeRepeatedMessage(2, this.messages, (item: PromptMessage) => item.serialize(writer));
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): GetPromptResponse {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new GetPromptResponse();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        message.description = reader.readString();
+                        break;
+                    case 2:
+                        reader.readMessage(message.messages, () => pb_1.Message.addToRepeatedWrapperField(message, 2, PromptMessage.deserialize(reader), PromptMessage));
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): GetPromptResponse {
+            return GetPromptResponse.deserialize(bytes);
+        }
+    }
+    export class CompletionRequest extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            ref_type?: string;
+            ref_name?: string;
+            argument_name?: string;
+            argument_value?: string;
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                if ("ref_type" in data && data.ref_type != undefined) {
+                    this.ref_type = data.ref_type;
+                }
+                if ("ref_name" in data && data.ref_name != undefined) {
+                    this.ref_name = data.ref_name;
+                }
+                if ("argument_name" in data && data.argument_name != undefined) {
+                    this.argument_name = data.argument_name;
+                }
+                if ("argument_value" in data && data.argument_value != undefined) {
+                    this.argument_value = data.argument_value;
+                }
+            }
+        }
+        get ref_type() {
+            return pb_1.Message.getFieldWithDefault(this, 1, "") as string;
+        }
+        set ref_type(value: string) {
+            pb_1.Message.setField(this, 1, value);
+        }
+        get ref_name() {
+            return pb_1.Message.getFieldWithDefault(this, 2, "") as string;
+        }
+        set ref_name(value: string) {
+            pb_1.Message.setField(this, 2, value);
+        }
+        get argument_name() {
+            return pb_1.Message.getFieldWithDefault(this, 3, "") as string;
+        }
+        set argument_name(value: string) {
+            pb_1.Message.setField(this, 3, value);
+        }
+        get argument_value() {
+            return pb_1.Message.getFieldWithDefault(this, 4, "") as string;
+        }
+        set argument_value(value: string) {
+            pb_1.Message.setField(this, 4, value);
+        }
+        static fromObject(data: {
+            ref_type?: string;
+            ref_name?: string;
+            argument_name?: string;
+            argument_value?: string;
+        }): CompletionRequest {
+            const message = new CompletionRequest({});
+            if (data.ref_type != null) {
+                message.ref_type = data.ref_type;
+            }
+            if (data.ref_name != null) {
+                message.ref_name = data.ref_name;
+            }
+            if (data.argument_name != null) {
+                message.argument_name = data.argument_name;
+            }
+            if (data.argument_value != null) {
+                message.argument_value = data.argument_value;
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                ref_type?: string;
+                ref_name?: string;
+                argument_name?: string;
+                argument_value?: string;
+            } = {};
+            if (this.ref_type != null) {
+                data.ref_type = this.ref_type;
+            }
+            if (this.ref_name != null) {
+                data.ref_name = this.ref_name;
+            }
+            if (this.argument_name != null) {
+                data.argument_name = this.argument_name;
+            }
+            if (this.argument_value != null) {
+                data.argument_value = this.argument_value;
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.ref_type.length)
+                writer.writeString(1, this.ref_type);
+            if (this.ref_name.length)
+                writer.writeString(2, this.ref_name);
+            if (this.argument_name.length)
+                writer.writeString(3, this.argument_name);
+            if (this.argument_value.length)
+                writer.writeString(4, this.argument_value);
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): CompletionRequest {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new CompletionRequest();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        message.ref_type = reader.readString();
+                        break;
+                    case 2:
+                        message.ref_name = reader.readString();
+                        break;
+                    case 3:
+                        message.argument_name = reader.readString();
+                        break;
+                    case 4:
+                        message.argument_value = reader.readString();
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): CompletionRequest {
+            return CompletionRequest.deserialize(bytes);
+        }
+    }
+    export class CompletionResponse extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            values?: string[];
+            total?: number;
+            has_more?: boolean;
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [1], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                if ("values" in data && data.values != undefined) {
+                    this.values = data.values;
+                }
+                if ("total" in data && data.total != undefined) {
+                    this.total = data.total;
+                }
+                if ("has_more" in data && data.has_more != undefined) {
+                    this.has_more = data.has_more;
+                }
+            }
+        }
+        get values() {
+            return pb_1.Message.getFieldWithDefault(this, 1, []) as string[];
+        }
+        set values(value: string[]) {
+            pb_1.Message.setField(this, 1, value);
+        }
+        get total() {
+            return pb_1.Message.getFieldWithDefault(this, 2, 0) as number;
+        }
+        set total(value: number) {
+            pb_1.Message.setField(this, 2, value);
+        }
+        get has_more() {
+            return pb_1.Message.getFieldWithDefault(this, 3, false) as boolean;
+        }
+        set has_more(value: boolean) {
+            pb_1.Message.setField(this, 3, value);
+        }
+        static fromObject(data: {
+            values?: string[];
+            total?: number;
+            has_more?: boolean;
+        }): CompletionResponse {
+            const message = new CompletionResponse({});
+            if (data.values != null) {
+                message.values = data.values;
+            }
+            if (data.total != null) {
+                message.total = data.total;
+            }
+            if (data.has_more != null) {
+                message.has_more = data.has_more;
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                values?: string[];
+                total?: number;
+                has_more?: boolean;
+            } = {};
+            if (this.values != null) {
+                data.values = this.values;
+            }
+            if (this.total != null) {
+                data.total = this.total;
+            }
+            if (this.has_more != null) {
+                data.has_more = this.has_more;
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.values.length)
+                writer.writeRepeatedString(1, this.values);
+            if (this.total != 0)
+                writer.writeInt32(2, this.total);
+            if (this.has_more != false)
+                writer.writeBool(3, this.has_more);
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): CompletionResponse {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new CompletionResponse();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        pb_1.Message.addToRepeatedField(message, 1, reader.readString());
+                        break;
+                    case 2:
+                        message.total = reader.readInt32();
+                        break;
+                    case 3:
+                        message.has_more = reader.readBool();
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): CompletionResponse {
+            return CompletionResponse.deserialize(bytes);
+        }
+    }
+    export class SamplingRequest extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            messages_json?: string;
+            model_preferences_json?: string;
+            system_prompt?: string;
+            max_tokens?: number;
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                if ("messages_json" in data && data.messages_json != undefined) {
+                    this.messages_json = data.messages_json;
+                }
+                if ("model_preferences_json" in data && data.model_preferences_json != undefined) {
+                    this.model_preferences_json = data.model_preferences_json;
+                }
+                if ("system_prompt" in data && data.system_prompt != undefined) {
+                    this.system_prompt = data.system_prompt;
+                }
+                if ("max_tokens" in data && data.max_tokens != undefined) {
+                    this.max_tokens = data.max_tokens;
+                }
+            }
+        }
+        get messages_json() {
+            return pb_1.Message.getFieldWithDefault(this, 1, "") as string;
+        }
+        set messages_json(value: string) {
+            pb_1.Message.setField(this, 1, value);
+        }
+        get model_preferences_json() {
+            return pb_1.Message.getFieldWithDefault(this, 2, "") as string;
+        }
+        set model_preferences_json(value: string) {
+            pb_1.Message.setField(this, 2, value);
+        }
+        get system_prompt() {
+            return pb_1.Message.getFieldWithDefault(this, 3, "") as string;
+        }
+        set system_prompt(value: string) {
+            pb_1.Message.setField(this, 3, value);
+        }
+        get max_tokens() {
+            return pb_1.Message.getFieldWithDefault(this, 4, 0) as number;
+        }
+        set max_tokens(value: number) {
+            pb_1.Message.setField(this, 4, value);
+        }
+        static fromObject(data: {
+            messages_json?: string;
+            model_preferences_json?: string;
+            system_prompt?: string;
+            max_tokens?: number;
+        }): SamplingRequest {
+            const message = new SamplingRequest({});
+            if (data.messages_json != null) {
+                message.messages_json = data.messages_json;
+            }
+            if (data.model_preferences_json != null) {
+                message.model_preferences_json = data.model_preferences_json;
+            }
+            if (data.system_prompt != null) {
+                message.system_prompt = data.system_prompt;
+            }
+            if (data.max_tokens != null) {
+                message.max_tokens = data.max_tokens;
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                messages_json?: string;
+                model_preferences_json?: string;
+                system_prompt?: string;
+                max_tokens?: number;
+            } = {};
+            if (this.messages_json != null) {
+                data.messages_json = this.messages_json;
+            }
+            if (this.model_preferences_json != null) {
+                data.model_preferences_json = this.model_preferences_json;
+            }
+            if (this.system_prompt != null) {
+                data.system_prompt = this.system_prompt;
+            }
+            if (this.max_tokens != null) {
+                data.max_tokens = this.max_tokens;
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.messages_json.length)
+                writer.writeString(1, this.messages_json);
+            if (this.model_preferences_json.length)
+                writer.writeString(2, this.model_preferences_json);
+            if (this.system_prompt.length)
+                writer.writeString(3, this.system_prompt);
+            if (this.max_tokens != 0)
+                writer.writeInt32(4, this.max_tokens);
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): SamplingRequest {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new SamplingRequest();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        message.messages_json = reader.readString();
+                        break;
+                    case 2:
+                        message.model_preferences_json = reader.readString();
+                        break;
+                    case 3:
+                        message.system_prompt = reader.readString();
+                        break;
+                    case 4:
+                        message.max_tokens = reader.readInt32();
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): SamplingRequest {
+            return SamplingRequest.deserialize(bytes);
+        }
+    }
+    export class SamplingResponse extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            role?: string;
+            content_json?: string;
+            model?: string;
+            stop_reason?: string;
+            error?: string;
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                if ("role" in data && data.role != undefined) {
+                    this.role = data.role;
+                }
+                if ("content_json" in data && data.content_json != undefined) {
+                    this.content_json = data.content_json;
+                }
+                if ("model" in data && data.model != undefined) {
+                    this.model = data.model;
+                }
+                if ("stop_reason" in data && data.stop_reason != undefined) {
+                    this.stop_reason = data.stop_reason;
+                }
+                if ("error" in data && data.error != undefined) {
+                    this.error = data.error;
+                }
+            }
+        }
+        get role() {
+            return pb_1.Message.getFieldWithDefault(this, 1, "") as string;
+        }
+        set role(value: string) {
+            pb_1.Message.setField(this, 1, value);
+        }
+        get content_json() {
+            return pb_1.Message.getFieldWithDefault(this, 2, "") as string;
+        }
+        set content_json(value: string) {
+            pb_1.Message.setField(this, 2, value);
+        }
+        get model() {
+            return pb_1.Message.getFieldWithDefault(this, 3, "") as string;
+        }
+        set model(value: string) {
+            pb_1.Message.setField(this, 3, value);
+        }
+        get stop_reason() {
+            return pb_1.Message.getFieldWithDefault(this, 4, "") as string;
+        }
+        set stop_reason(value: string) {
+            pb_1.Message.setField(this, 4, value);
+        }
+        get error() {
+            return pb_1.Message.getFieldWithDefault(this, 5, "") as string;
+        }
+        set error(value: string) {
+            pb_1.Message.setField(this, 5, value);
+        }
+        static fromObject(data: {
+            role?: string;
+            content_json?: string;
+            model?: string;
+            stop_reason?: string;
+            error?: string;
+        }): SamplingResponse {
+            const message = new SamplingResponse({});
+            if (data.role != null) {
+                message.role = data.role;
+            }
+            if (data.content_json != null) {
+                message.content_json = data.content_json;
+            }
+            if (data.model != null) {
+                message.model = data.model;
+            }
+            if (data.stop_reason != null) {
+                message.stop_reason = data.stop_reason;
+            }
+            if (data.error != null) {
+                message.error = data.error;
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                role?: string;
+                content_json?: string;
+                model?: string;
+                stop_reason?: string;
+                error?: string;
+            } = {};
+            if (this.role != null) {
+                data.role = this.role;
+            }
+            if (this.content_json != null) {
+                data.content_json = this.content_json;
+            }
+            if (this.model != null) {
+                data.model = this.model;
+            }
+            if (this.stop_reason != null) {
+                data.stop_reason = this.stop_reason;
+            }
+            if (this.error != null) {
+                data.error = this.error;
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.role.length)
+                writer.writeString(1, this.role);
+            if (this.content_json.length)
+                writer.writeString(2, this.content_json);
+            if (this.model.length)
+                writer.writeString(3, this.model);
+            if (this.stop_reason.length)
+                writer.writeString(4, this.stop_reason);
+            if (this.error.length)
+                writer.writeString(5, this.error);
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): SamplingResponse {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new SamplingResponse();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        message.role = reader.readString();
+                        break;
+                    case 2:
+                        message.content_json = reader.readString();
+                        break;
+                    case 3:
+                        message.model = reader.readString();
+                        break;
+                    case 4:
+                        message.stop_reason = reader.readString();
+                        break;
+                    case 5:
+                        message.error = reader.readString();
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): SamplingResponse {
+            return SamplingResponse.deserialize(bytes);
+        }
+    }
+    export class ListRootsRequest extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {}) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") { }
+        }
+        static fromObject(data: {}): ListRootsRequest {
+            const message = new ListRootsRequest({});
+            return message;
+        }
+        toObject() {
+            const data: {} = {};
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): ListRootsRequest {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new ListRootsRequest();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): ListRootsRequest {
+            return ListRootsRequest.deserialize(bytes);
+        }
+    }
+    export class RootDef extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            uri?: string;
+            name?: string;
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                if ("uri" in data && data.uri != undefined) {
+                    this.uri = data.uri;
+                }
+                if ("name" in data && data.name != undefined) {
+                    this.name = data.name;
+                }
+            }
+        }
+        get uri() {
+            return pb_1.Message.getFieldWithDefault(this, 1, "") as string;
+        }
+        set uri(value: string) {
+            pb_1.Message.setField(this, 1, value);
+        }
+        get name() {
+            return pb_1.Message.getFieldWithDefault(this, 2, "") as string;
+        }
+        set name(value: string) {
+            pb_1.Message.setField(this, 2, value);
+        }
+        static fromObject(data: {
+            uri?: string;
+            name?: string;
+        }): RootDef {
+            const message = new RootDef({});
+            if (data.uri != null) {
+                message.uri = data.uri;
+            }
+            if (data.name != null) {
+                message.name = data.name;
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                uri?: string;
+                name?: string;
+            } = {};
+            if (this.uri != null) {
+                data.uri = this.uri;
+            }
+            if (this.name != null) {
+                data.name = this.name;
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.uri.length)
+                writer.writeString(1, this.uri);
+            if (this.name.length)
+                writer.writeString(2, this.name);
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): RootDef {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new RootDef();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        message.uri = reader.readString();
+                        break;
+                    case 2:
+                        message.name = reader.readString();
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): RootDef {
+            return RootDef.deserialize(bytes);
+        }
+    }
+    export class ListRootsResponse extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            roots?: RootDef[];
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [1], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                if ("roots" in data && data.roots != undefined) {
+                    this.roots = data.roots;
+                }
+            }
+        }
+        get roots() {
+            return pb_1.Message.getRepeatedWrapperField(this, RootDef, 1) as RootDef[];
+        }
+        set roots(value: RootDef[]) {
+            pb_1.Message.setRepeatedWrapperField(this, 1, value);
+        }
+        static fromObject(data: {
+            roots?: ReturnType<typeof RootDef.prototype.toObject>[];
+        }): ListRootsResponse {
+            const message = new ListRootsResponse({});
+            if (data.roots != null) {
+                message.roots = data.roots.map(item => RootDef.fromObject(item));
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                roots?: ReturnType<typeof RootDef.prototype.toObject>[];
+            } = {};
+            if (this.roots != null) {
+                data.roots = this.roots.map((item: RootDef) => item.toObject());
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.roots.length)
+                writer.writeRepeatedMessage(1, this.roots, (item: RootDef) => item.serialize(writer));
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): ListRootsResponse {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new ListRootsResponse();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        reader.readMessage(message.roots, () => pb_1.Message.addToRepeatedWrapperField(message, 1, RootDef.deserialize(reader), RootDef));
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): ListRootsResponse {
+            return ListRootsResponse.deserialize(bytes);
         }
     }
 }

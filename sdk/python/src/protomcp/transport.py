@@ -50,11 +50,22 @@ class Transport:
 
     def send_raw(self, request_id: str, field_name: str, data: bytes):
         """Send a large field as a RawHeader + raw bytes (no protobuf wrapping on payload)."""
+        compression = ""
+        uncompressed_size = 0
+        threshold = int(os.environ.get("PROTOMCP_COMPRESS_THRESHOLD", "65536"))
+        if len(data) > threshold:
+            import zstandard
+            compressor = zstandard.ZstdCompressor()
+            uncompressed_size = len(data)
+            data = compressor.compress(data)
+            compression = "zstd"
         header = pb.Envelope(
             raw_header=pb.RawHeader(
                 request_id=request_id,
                 field_name=field_name,
                 size=len(data),
+                compression=compression,
+                uncompressed_size=uncompressed_size,
             ),
         )
         # Send the protobuf header normally

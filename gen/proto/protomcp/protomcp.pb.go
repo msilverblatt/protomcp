@@ -55,6 +55,23 @@ type Envelope struct {
 	//	*Envelope_StreamHeader
 	//	*Envelope_StreamChunk
 	//	*Envelope_RawHeader
+	//	*Envelope_ListResourcesRequest
+	//	*Envelope_ResourceListResponse
+	//	*Envelope_ListResourceTemplatesRequest
+	//	*Envelope_ResourceTemplateListResponse
+	//	*Envelope_ReadResourceRequest
+	//	*Envelope_ReadResourceResponse
+	//	*Envelope_ResourceChanged
+	//	*Envelope_ListPromptsRequest
+	//	*Envelope_PromptListResponse
+	//	*Envelope_GetPromptRequest
+	//	*Envelope_GetPromptResponse
+	//	*Envelope_CompletionRequest
+	//	*Envelope_CompletionResponse
+	//	*Envelope_SamplingRequest
+	//	*Envelope_SamplingResponse
+	//	*Envelope_ListRootsRequest
+	//	*Envelope_ListRootsResponse
 	Msg isEnvelope_Msg `protobuf_oneof:"msg"`
 	// Correlation ID for matching requests to responses.
 	RequestId string `protobuf:"bytes,14,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
@@ -353,6 +370,159 @@ func (x *Envelope) GetRawHeader() *RawHeader {
 	return nil
 }
 
+func (x *Envelope) GetListResourcesRequest() *ListResourcesRequest {
+	if x != nil {
+		if x, ok := x.Msg.(*Envelope_ListResourcesRequest); ok {
+			return x.ListResourcesRequest
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetResourceListResponse() *ResourceListResponse {
+	if x != nil {
+		if x, ok := x.Msg.(*Envelope_ResourceListResponse); ok {
+			return x.ResourceListResponse
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetListResourceTemplatesRequest() *ListResourceTemplatesRequest {
+	if x != nil {
+		if x, ok := x.Msg.(*Envelope_ListResourceTemplatesRequest); ok {
+			return x.ListResourceTemplatesRequest
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetResourceTemplateListResponse() *ResourceTemplateListResponse {
+	if x != nil {
+		if x, ok := x.Msg.(*Envelope_ResourceTemplateListResponse); ok {
+			return x.ResourceTemplateListResponse
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetReadResourceRequest() *ReadResourceRequest {
+	if x != nil {
+		if x, ok := x.Msg.(*Envelope_ReadResourceRequest); ok {
+			return x.ReadResourceRequest
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetReadResourceResponse() *ReadResourceResponse {
+	if x != nil {
+		if x, ok := x.Msg.(*Envelope_ReadResourceResponse); ok {
+			return x.ReadResourceResponse
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetResourceChanged() *ResourceChangedNotification {
+	if x != nil {
+		if x, ok := x.Msg.(*Envelope_ResourceChanged); ok {
+			return x.ResourceChanged
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetListPromptsRequest() *ListPromptsRequest {
+	if x != nil {
+		if x, ok := x.Msg.(*Envelope_ListPromptsRequest); ok {
+			return x.ListPromptsRequest
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetPromptListResponse() *PromptListResponse {
+	if x != nil {
+		if x, ok := x.Msg.(*Envelope_PromptListResponse); ok {
+			return x.PromptListResponse
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetGetPromptRequest() *GetPromptRequest {
+	if x != nil {
+		if x, ok := x.Msg.(*Envelope_GetPromptRequest); ok {
+			return x.GetPromptRequest
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetGetPromptResponse() *GetPromptResponse {
+	if x != nil {
+		if x, ok := x.Msg.(*Envelope_GetPromptResponse); ok {
+			return x.GetPromptResponse
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetCompletionRequest() *CompletionRequest {
+	if x != nil {
+		if x, ok := x.Msg.(*Envelope_CompletionRequest); ok {
+			return x.CompletionRequest
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetCompletionResponse() *CompletionResponse {
+	if x != nil {
+		if x, ok := x.Msg.(*Envelope_CompletionResponse); ok {
+			return x.CompletionResponse
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetSamplingRequest() *SamplingRequest {
+	if x != nil {
+		if x, ok := x.Msg.(*Envelope_SamplingRequest); ok {
+			return x.SamplingRequest
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetSamplingResponse() *SamplingResponse {
+	if x != nil {
+		if x, ok := x.Msg.(*Envelope_SamplingResponse); ok {
+			return x.SamplingResponse
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetListRootsRequest() *ListRootsRequest {
+	if x != nil {
+		if x, ok := x.Msg.(*Envelope_ListRootsRequest); ok {
+			return x.ListRootsRequest
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetListRootsResponse() *ListRootsResponse {
+	if x != nil {
+		if x, ok := x.Msg.(*Envelope_ListRootsResponse); ok {
+			return x.ListRootsResponse
+		}
+	}
+	return nil
+}
+
 func (x *Envelope) GetRequestId() string {
 	if x != nil {
 		return x.RequestId
@@ -489,6 +659,79 @@ type Envelope_RawHeader struct {
 	RawHeader *RawHeader `protobuf:"bytes,30,opt,name=raw_header,json=rawHeader,proto3,oneof"`
 }
 
+type Envelope_ListResourcesRequest struct {
+	// Resources
+	ListResourcesRequest *ListResourcesRequest `protobuf:"bytes,31,opt,name=list_resources_request,json=listResourcesRequest,proto3,oneof"`
+}
+
+type Envelope_ResourceListResponse struct {
+	ResourceListResponse *ResourceListResponse `protobuf:"bytes,32,opt,name=resource_list_response,json=resourceListResponse,proto3,oneof"`
+}
+
+type Envelope_ListResourceTemplatesRequest struct {
+	ListResourceTemplatesRequest *ListResourceTemplatesRequest `protobuf:"bytes,33,opt,name=list_resource_templates_request,json=listResourceTemplatesRequest,proto3,oneof"`
+}
+
+type Envelope_ResourceTemplateListResponse struct {
+	ResourceTemplateListResponse *ResourceTemplateListResponse `protobuf:"bytes,34,opt,name=resource_template_list_response,json=resourceTemplateListResponse,proto3,oneof"`
+}
+
+type Envelope_ReadResourceRequest struct {
+	ReadResourceRequest *ReadResourceRequest `protobuf:"bytes,35,opt,name=read_resource_request,json=readResourceRequest,proto3,oneof"`
+}
+
+type Envelope_ReadResourceResponse struct {
+	ReadResourceResponse *ReadResourceResponse `protobuf:"bytes,36,opt,name=read_resource_response,json=readResourceResponse,proto3,oneof"`
+}
+
+type Envelope_ResourceChanged struct {
+	ResourceChanged *ResourceChangedNotification `protobuf:"bytes,37,opt,name=resource_changed,json=resourceChanged,proto3,oneof"`
+}
+
+type Envelope_ListPromptsRequest struct {
+	// Prompts
+	ListPromptsRequest *ListPromptsRequest `protobuf:"bytes,40,opt,name=list_prompts_request,json=listPromptsRequest,proto3,oneof"`
+}
+
+type Envelope_PromptListResponse struct {
+	PromptListResponse *PromptListResponse `protobuf:"bytes,41,opt,name=prompt_list_response,json=promptListResponse,proto3,oneof"`
+}
+
+type Envelope_GetPromptRequest struct {
+	GetPromptRequest *GetPromptRequest `protobuf:"bytes,42,opt,name=get_prompt_request,json=getPromptRequest,proto3,oneof"`
+}
+
+type Envelope_GetPromptResponse struct {
+	GetPromptResponse *GetPromptResponse `protobuf:"bytes,43,opt,name=get_prompt_response,json=getPromptResponse,proto3,oneof"`
+}
+
+type Envelope_CompletionRequest struct {
+	// Completions
+	CompletionRequest *CompletionRequest `protobuf:"bytes,50,opt,name=completion_request,json=completionRequest,proto3,oneof"`
+}
+
+type Envelope_CompletionResponse struct {
+	CompletionResponse *CompletionResponse `protobuf:"bytes,51,opt,name=completion_response,json=completionResponse,proto3,oneof"`
+}
+
+type Envelope_SamplingRequest struct {
+	// Sampling (bidirectional: SDK process -> Go -> MCP client)
+	SamplingRequest *SamplingRequest `protobuf:"bytes,60,opt,name=sampling_request,json=samplingRequest,proto3,oneof"`
+}
+
+type Envelope_SamplingResponse struct {
+	SamplingResponse *SamplingResponse `protobuf:"bytes,61,opt,name=sampling_response,json=samplingResponse,proto3,oneof"`
+}
+
+type Envelope_ListRootsRequest struct {
+	// Roots
+	ListRootsRequest *ListRootsRequest `protobuf:"bytes,62,opt,name=list_roots_request,json=listRootsRequest,proto3,oneof"`
+}
+
+type Envelope_ListRootsResponse struct {
+	ListRootsResponse *ListRootsResponse `protobuf:"bytes,63,opt,name=list_roots_response,json=listRootsResponse,proto3,oneof"`
+}
+
 func (*Envelope_Reload) isEnvelope_Msg() {}
 
 func (*Envelope_ListTools) isEnvelope_Msg() {}
@@ -544,6 +787,40 @@ func (*Envelope_StreamHeader) isEnvelope_Msg() {}
 func (*Envelope_StreamChunk) isEnvelope_Msg() {}
 
 func (*Envelope_RawHeader) isEnvelope_Msg() {}
+
+func (*Envelope_ListResourcesRequest) isEnvelope_Msg() {}
+
+func (*Envelope_ResourceListResponse) isEnvelope_Msg() {}
+
+func (*Envelope_ListResourceTemplatesRequest) isEnvelope_Msg() {}
+
+func (*Envelope_ResourceTemplateListResponse) isEnvelope_Msg() {}
+
+func (*Envelope_ReadResourceRequest) isEnvelope_Msg() {}
+
+func (*Envelope_ReadResourceResponse) isEnvelope_Msg() {}
+
+func (*Envelope_ResourceChanged) isEnvelope_Msg() {}
+
+func (*Envelope_ListPromptsRequest) isEnvelope_Msg() {}
+
+func (*Envelope_PromptListResponse) isEnvelope_Msg() {}
+
+func (*Envelope_GetPromptRequest) isEnvelope_Msg() {}
+
+func (*Envelope_GetPromptResponse) isEnvelope_Msg() {}
+
+func (*Envelope_CompletionRequest) isEnvelope_Msg() {}
+
+func (*Envelope_CompletionResponse) isEnvelope_Msg() {}
+
+func (*Envelope_SamplingRequest) isEnvelope_Msg() {}
+
+func (*Envelope_SamplingResponse) isEnvelope_Msg() {}
+
+func (*Envelope_ListRootsRequest) isEnvelope_Msg() {}
+
+func (*Envelope_ListRootsResponse) isEnvelope_Msg() {}
 
 type ReloadRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -2154,12 +2431,14 @@ func (x *StreamChunk) GetFinal() bool {
 // RawHeader signals that the next N bytes on the socket are raw (not protobuf-wrapped).
 // This avoids protobuf serialization overhead for large payloads.
 type RawHeader struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"` // which request this payload belongs to
-	FieldName     string                 `protobuf:"bytes,2,opt,name=field_name,json=fieldName,proto3" json:"field_name,omitempty"` // which field, e.g. "result_json"
-	Size          uint64                 `protobuf:"varint,3,opt,name=size,proto3" json:"size,omitempty"`                           // exact byte count that follows
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	RequestId        string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`                       // which request this payload belongs to
+	FieldName        string                 `protobuf:"bytes,2,opt,name=field_name,json=fieldName,proto3" json:"field_name,omitempty"`                       // which field, e.g. "result_json"
+	Size             uint64                 `protobuf:"varint,3,opt,name=size,proto3" json:"size,omitempty"`                                                 // exact byte count that follows
+	Compression      string                 `protobuf:"bytes,4,opt,name=compression,proto3" json:"compression,omitempty"`                                    // compression algorithm, e.g. "zstd" or "" (none)
+	UncompressedSize uint64                 `protobuf:"varint,5,opt,name=uncompressed_size,json=uncompressedSize,proto3" json:"uncompressed_size,omitempty"` // original size before compression (0 if uncompressed)
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *RawHeader) Reset() {
@@ -2213,11 +2492,1289 @@ func (x *RawHeader) GetSize() uint64 {
 	return 0
 }
 
+func (x *RawHeader) GetCompression() string {
+	if x != nil {
+		return x.Compression
+	}
+	return ""
+}
+
+func (x *RawHeader) GetUncompressedSize() uint64 {
+	if x != nil {
+		return x.UncompressedSize
+	}
+	return 0
+}
+
+type ResourceDefinition struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Uri           string                 `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	MimeType      string                 `protobuf:"bytes,4,opt,name=mime_type,json=mimeType,proto3" json:"mime_type,omitempty"`
+	Size          int64                  `protobuf:"varint,5,opt,name=size,proto3" json:"size,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResourceDefinition) Reset() {
+	*x = ResourceDefinition{}
+	mi := &file_protomcp_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResourceDefinition) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResourceDefinition) ProtoMessage() {}
+
+func (x *ResourceDefinition) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResourceDefinition.ProtoReflect.Descriptor instead.
+func (*ResourceDefinition) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *ResourceDefinition) GetUri() string {
+	if x != nil {
+		return x.Uri
+	}
+	return ""
+}
+
+func (x *ResourceDefinition) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ResourceDefinition) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *ResourceDefinition) GetMimeType() string {
+	if x != nil {
+		return x.MimeType
+	}
+	return ""
+}
+
+func (x *ResourceDefinition) GetSize() int64 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+type ResourceTemplateDefinition struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UriTemplate   string                 `protobuf:"bytes,1,opt,name=uri_template,json=uriTemplate,proto3" json:"uri_template,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	MimeType      string                 `protobuf:"bytes,4,opt,name=mime_type,json=mimeType,proto3" json:"mime_type,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResourceTemplateDefinition) Reset() {
+	*x = ResourceTemplateDefinition{}
+	mi := &file_protomcp_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResourceTemplateDefinition) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResourceTemplateDefinition) ProtoMessage() {}
+
+func (x *ResourceTemplateDefinition) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResourceTemplateDefinition.ProtoReflect.Descriptor instead.
+func (*ResourceTemplateDefinition) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *ResourceTemplateDefinition) GetUriTemplate() string {
+	if x != nil {
+		return x.UriTemplate
+	}
+	return ""
+}
+
+func (x *ResourceTemplateDefinition) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ResourceTemplateDefinition) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *ResourceTemplateDefinition) GetMimeType() string {
+	if x != nil {
+		return x.MimeType
+	}
+	return ""
+}
+
+type ListResourcesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListResourcesRequest) Reset() {
+	*x = ListResourcesRequest{}
+	mi := &file_protomcp_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListResourcesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListResourcesRequest) ProtoMessage() {}
+
+func (x *ListResourcesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListResourcesRequest.ProtoReflect.Descriptor instead.
+func (*ListResourcesRequest) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{33}
+}
+
+type ResourceListResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Resources     []*ResourceDefinition  `protobuf:"bytes,1,rep,name=resources,proto3" json:"resources,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResourceListResponse) Reset() {
+	*x = ResourceListResponse{}
+	mi := &file_protomcp_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResourceListResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResourceListResponse) ProtoMessage() {}
+
+func (x *ResourceListResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResourceListResponse.ProtoReflect.Descriptor instead.
+func (*ResourceListResponse) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *ResourceListResponse) GetResources() []*ResourceDefinition {
+	if x != nil {
+		return x.Resources
+	}
+	return nil
+}
+
+type ListResourceTemplatesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListResourceTemplatesRequest) Reset() {
+	*x = ListResourceTemplatesRequest{}
+	mi := &file_protomcp_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListResourceTemplatesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListResourceTemplatesRequest) ProtoMessage() {}
+
+func (x *ListResourceTemplatesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListResourceTemplatesRequest.ProtoReflect.Descriptor instead.
+func (*ListResourceTemplatesRequest) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{35}
+}
+
+type ResourceTemplateListResponse struct {
+	state         protoimpl.MessageState        `protogen:"open.v1"`
+	Templates     []*ResourceTemplateDefinition `protobuf:"bytes,1,rep,name=templates,proto3" json:"templates,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResourceTemplateListResponse) Reset() {
+	*x = ResourceTemplateListResponse{}
+	mi := &file_protomcp_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResourceTemplateListResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResourceTemplateListResponse) ProtoMessage() {}
+
+func (x *ResourceTemplateListResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResourceTemplateListResponse.ProtoReflect.Descriptor instead.
+func (*ResourceTemplateListResponse) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *ResourceTemplateListResponse) GetTemplates() []*ResourceTemplateDefinition {
+	if x != nil {
+		return x.Templates
+	}
+	return nil
+}
+
+type ReadResourceRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Uri           string                 `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReadResourceRequest) Reset() {
+	*x = ReadResourceRequest{}
+	mi := &file_protomcp_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReadResourceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReadResourceRequest) ProtoMessage() {}
+
+func (x *ReadResourceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReadResourceRequest.ProtoReflect.Descriptor instead.
+func (*ReadResourceRequest) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *ReadResourceRequest) GetUri() string {
+	if x != nil {
+		return x.Uri
+	}
+	return ""
+}
+
+type ResourceContent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Uri           string                 `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
+	MimeType      string                 `protobuf:"bytes,2,opt,name=mime_type,json=mimeType,proto3" json:"mime_type,omitempty"`
+	Text          string                 `protobuf:"bytes,3,opt,name=text,proto3" json:"text,omitempty"`
+	Blob          []byte                 `protobuf:"bytes,4,opt,name=blob,proto3" json:"blob,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResourceContent) Reset() {
+	*x = ResourceContent{}
+	mi := &file_protomcp_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResourceContent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResourceContent) ProtoMessage() {}
+
+func (x *ResourceContent) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResourceContent.ProtoReflect.Descriptor instead.
+func (*ResourceContent) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *ResourceContent) GetUri() string {
+	if x != nil {
+		return x.Uri
+	}
+	return ""
+}
+
+func (x *ResourceContent) GetMimeType() string {
+	if x != nil {
+		return x.MimeType
+	}
+	return ""
+}
+
+func (x *ResourceContent) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
+func (x *ResourceContent) GetBlob() []byte {
+	if x != nil {
+		return x.Blob
+	}
+	return nil
+}
+
+type ReadResourceResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Contents      []*ResourceContent     `protobuf:"bytes,1,rep,name=contents,proto3" json:"contents,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReadResourceResponse) Reset() {
+	*x = ReadResourceResponse{}
+	mi := &file_protomcp_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReadResourceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReadResourceResponse) ProtoMessage() {}
+
+func (x *ReadResourceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReadResourceResponse.ProtoReflect.Descriptor instead.
+func (*ReadResourceResponse) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *ReadResourceResponse) GetContents() []*ResourceContent {
+	if x != nil {
+		return x.Contents
+	}
+	return nil
+}
+
+type ResourceChangedNotification struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Uri           string                 `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResourceChangedNotification) Reset() {
+	*x = ResourceChangedNotification{}
+	mi := &file_protomcp_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResourceChangedNotification) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResourceChangedNotification) ProtoMessage() {}
+
+func (x *ResourceChangedNotification) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResourceChangedNotification.ProtoReflect.Descriptor instead.
+func (*ResourceChangedNotification) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *ResourceChangedNotification) GetUri() string {
+	if x != nil {
+		return x.Uri
+	}
+	return ""
+}
+
+type PromptArgument struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	Required      bool                   `protobuf:"varint,3,opt,name=required,proto3" json:"required,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PromptArgument) Reset() {
+	*x = PromptArgument{}
+	mi := &file_protomcp_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PromptArgument) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PromptArgument) ProtoMessage() {}
+
+func (x *PromptArgument) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PromptArgument.ProtoReflect.Descriptor instead.
+func (*PromptArgument) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *PromptArgument) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *PromptArgument) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *PromptArgument) GetRequired() bool {
+	if x != nil {
+		return x.Required
+	}
+	return false
+}
+
+type PromptDefinition struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	Arguments     []*PromptArgument      `protobuf:"bytes,3,rep,name=arguments,proto3" json:"arguments,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PromptDefinition) Reset() {
+	*x = PromptDefinition{}
+	mi := &file_protomcp_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PromptDefinition) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PromptDefinition) ProtoMessage() {}
+
+func (x *PromptDefinition) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PromptDefinition.ProtoReflect.Descriptor instead.
+func (*PromptDefinition) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *PromptDefinition) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *PromptDefinition) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *PromptDefinition) GetArguments() []*PromptArgument {
+	if x != nil {
+		return x.Arguments
+	}
+	return nil
+}
+
+type ListPromptsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPromptsRequest) Reset() {
+	*x = ListPromptsRequest{}
+	mi := &file_protomcp_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPromptsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPromptsRequest) ProtoMessage() {}
+
+func (x *ListPromptsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPromptsRequest.ProtoReflect.Descriptor instead.
+func (*ListPromptsRequest) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{43}
+}
+
+type PromptListResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Prompts       []*PromptDefinition    `protobuf:"bytes,1,rep,name=prompts,proto3" json:"prompts,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PromptListResponse) Reset() {
+	*x = PromptListResponse{}
+	mi := &file_protomcp_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PromptListResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PromptListResponse) ProtoMessage() {}
+
+func (x *PromptListResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PromptListResponse.ProtoReflect.Descriptor instead.
+func (*PromptListResponse) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *PromptListResponse) GetPrompts() []*PromptDefinition {
+	if x != nil {
+		return x.Prompts
+	}
+	return nil
+}
+
+type GetPromptRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	ArgumentsJson string                 `protobuf:"bytes,2,opt,name=arguments_json,json=argumentsJson,proto3" json:"arguments_json,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPromptRequest) Reset() {
+	*x = GetPromptRequest{}
+	mi := &file_protomcp_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPromptRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPromptRequest) ProtoMessage() {}
+
+func (x *GetPromptRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPromptRequest.ProtoReflect.Descriptor instead.
+func (*GetPromptRequest) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *GetPromptRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *GetPromptRequest) GetArgumentsJson() string {
+	if x != nil {
+		return x.ArgumentsJson
+	}
+	return ""
+}
+
+type PromptMessage struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Role          string                 `protobuf:"bytes,1,opt,name=role,proto3" json:"role,omitempty"`
+	ContentJson   string                 `protobuf:"bytes,2,opt,name=content_json,json=contentJson,proto3" json:"content_json,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PromptMessage) Reset() {
+	*x = PromptMessage{}
+	mi := &file_protomcp_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PromptMessage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PromptMessage) ProtoMessage() {}
+
+func (x *PromptMessage) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PromptMessage.ProtoReflect.Descriptor instead.
+func (*PromptMessage) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{46}
+}
+
+func (x *PromptMessage) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+func (x *PromptMessage) GetContentJson() string {
+	if x != nil {
+		return x.ContentJson
+	}
+	return ""
+}
+
+type GetPromptResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Description   string                 `protobuf:"bytes,1,opt,name=description,proto3" json:"description,omitempty"`
+	Messages      []*PromptMessage       `protobuf:"bytes,2,rep,name=messages,proto3" json:"messages,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPromptResponse) Reset() {
+	*x = GetPromptResponse{}
+	mi := &file_protomcp_proto_msgTypes[47]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPromptResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPromptResponse) ProtoMessage() {}
+
+func (x *GetPromptResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[47]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPromptResponse.ProtoReflect.Descriptor instead.
+func (*GetPromptResponse) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{47}
+}
+
+func (x *GetPromptResponse) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *GetPromptResponse) GetMessages() []*PromptMessage {
+	if x != nil {
+		return x.Messages
+	}
+	return nil
+}
+
+type CompletionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RefType       string                 `protobuf:"bytes,1,opt,name=ref_type,json=refType,proto3" json:"ref_type,omitempty"`
+	RefName       string                 `protobuf:"bytes,2,opt,name=ref_name,json=refName,proto3" json:"ref_name,omitempty"`
+	ArgumentName  string                 `protobuf:"bytes,3,opt,name=argument_name,json=argumentName,proto3" json:"argument_name,omitempty"`
+	ArgumentValue string                 `protobuf:"bytes,4,opt,name=argument_value,json=argumentValue,proto3" json:"argument_value,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CompletionRequest) Reset() {
+	*x = CompletionRequest{}
+	mi := &file_protomcp_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompletionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompletionRequest) ProtoMessage() {}
+
+func (x *CompletionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompletionRequest.ProtoReflect.Descriptor instead.
+func (*CompletionRequest) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{48}
+}
+
+func (x *CompletionRequest) GetRefType() string {
+	if x != nil {
+		return x.RefType
+	}
+	return ""
+}
+
+func (x *CompletionRequest) GetRefName() string {
+	if x != nil {
+		return x.RefName
+	}
+	return ""
+}
+
+func (x *CompletionRequest) GetArgumentName() string {
+	if x != nil {
+		return x.ArgumentName
+	}
+	return ""
+}
+
+func (x *CompletionRequest) GetArgumentValue() string {
+	if x != nil {
+		return x.ArgumentValue
+	}
+	return ""
+}
+
+type CompletionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Values        []string               `protobuf:"bytes,1,rep,name=values,proto3" json:"values,omitempty"`
+	Total         int32                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	HasMore       bool                   `protobuf:"varint,3,opt,name=has_more,json=hasMore,proto3" json:"has_more,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CompletionResponse) Reset() {
+	*x = CompletionResponse{}
+	mi := &file_protomcp_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompletionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompletionResponse) ProtoMessage() {}
+
+func (x *CompletionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompletionResponse.ProtoReflect.Descriptor instead.
+func (*CompletionResponse) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *CompletionResponse) GetValues() []string {
+	if x != nil {
+		return x.Values
+	}
+	return nil
+}
+
+func (x *CompletionResponse) GetTotal() int32 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+func (x *CompletionResponse) GetHasMore() bool {
+	if x != nil {
+		return x.HasMore
+	}
+	return false
+}
+
+type SamplingRequest struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	MessagesJson         string                 `protobuf:"bytes,1,opt,name=messages_json,json=messagesJson,proto3" json:"messages_json,omitempty"`
+	ModelPreferencesJson string                 `protobuf:"bytes,2,opt,name=model_preferences_json,json=modelPreferencesJson,proto3" json:"model_preferences_json,omitempty"`
+	SystemPrompt         string                 `protobuf:"bytes,3,opt,name=system_prompt,json=systemPrompt,proto3" json:"system_prompt,omitempty"`
+	MaxTokens            int32                  `protobuf:"varint,4,opt,name=max_tokens,json=maxTokens,proto3" json:"max_tokens,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *SamplingRequest) Reset() {
+	*x = SamplingRequest{}
+	mi := &file_protomcp_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SamplingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SamplingRequest) ProtoMessage() {}
+
+func (x *SamplingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SamplingRequest.ProtoReflect.Descriptor instead.
+func (*SamplingRequest) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{50}
+}
+
+func (x *SamplingRequest) GetMessagesJson() string {
+	if x != nil {
+		return x.MessagesJson
+	}
+	return ""
+}
+
+func (x *SamplingRequest) GetModelPreferencesJson() string {
+	if x != nil {
+		return x.ModelPreferencesJson
+	}
+	return ""
+}
+
+func (x *SamplingRequest) GetSystemPrompt() string {
+	if x != nil {
+		return x.SystemPrompt
+	}
+	return ""
+}
+
+func (x *SamplingRequest) GetMaxTokens() int32 {
+	if x != nil {
+		return x.MaxTokens
+	}
+	return 0
+}
+
+type SamplingResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Role          string                 `protobuf:"bytes,1,opt,name=role,proto3" json:"role,omitempty"`
+	ContentJson   string                 `protobuf:"bytes,2,opt,name=content_json,json=contentJson,proto3" json:"content_json,omitempty"`
+	Model         string                 `protobuf:"bytes,3,opt,name=model,proto3" json:"model,omitempty"`
+	StopReason    string                 `protobuf:"bytes,4,opt,name=stop_reason,json=stopReason,proto3" json:"stop_reason,omitempty"`
+	Error         string                 `protobuf:"bytes,5,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SamplingResponse) Reset() {
+	*x = SamplingResponse{}
+	mi := &file_protomcp_proto_msgTypes[51]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SamplingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SamplingResponse) ProtoMessage() {}
+
+func (x *SamplingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[51]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SamplingResponse.ProtoReflect.Descriptor instead.
+func (*SamplingResponse) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{51}
+}
+
+func (x *SamplingResponse) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+func (x *SamplingResponse) GetContentJson() string {
+	if x != nil {
+		return x.ContentJson
+	}
+	return ""
+}
+
+func (x *SamplingResponse) GetModel() string {
+	if x != nil {
+		return x.Model
+	}
+	return ""
+}
+
+func (x *SamplingResponse) GetStopReason() string {
+	if x != nil {
+		return x.StopReason
+	}
+	return ""
+}
+
+func (x *SamplingResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+type ListRootsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListRootsRequest) Reset() {
+	*x = ListRootsRequest{}
+	mi := &file_protomcp_proto_msgTypes[52]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListRootsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListRootsRequest) ProtoMessage() {}
+
+func (x *ListRootsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[52]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListRootsRequest.ProtoReflect.Descriptor instead.
+func (*ListRootsRequest) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{52}
+}
+
+type RootDef struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Uri           string                 `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RootDef) Reset() {
+	*x = RootDef{}
+	mi := &file_protomcp_proto_msgTypes[53]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RootDef) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RootDef) ProtoMessage() {}
+
+func (x *RootDef) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[53]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RootDef.ProtoReflect.Descriptor instead.
+func (*RootDef) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{53}
+}
+
+func (x *RootDef) GetUri() string {
+	if x != nil {
+		return x.Uri
+	}
+	return ""
+}
+
+func (x *RootDef) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type ListRootsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Roots         []*RootDef             `protobuf:"bytes,1,rep,name=roots,proto3" json:"roots,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListRootsResponse) Reset() {
+	*x = ListRootsResponse{}
+	mi := &file_protomcp_proto_msgTypes[54]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListRootsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListRootsResponse) ProtoMessage() {}
+
+func (x *ListRootsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_protomcp_proto_msgTypes[54]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListRootsResponse.ProtoReflect.Descriptor instead.
+func (*ListRootsResponse) Descriptor() ([]byte, []int) {
+	return file_protomcp_proto_rawDescGZIP(), []int{54}
+}
+
+func (x *ListRootsResponse) GetRoots() []*RootDef {
+	if x != nil {
+		return x.Roots
+	}
+	return nil
+}
+
 var File_protomcp_proto protoreflect.FileDescriptor
 
 const file_protomcp_proto_rawDesc = "" +
 	"\n" +
-	"\x0eprotomcp.proto\x12\bprotomcp\"\xb0\x0f\n" +
+	"\x0eprotomcp.proto\x12\bprotomcp\"\xcf\x1a\n" +
 	"\bEnvelope\x121\n" +
 	"\x06reload\x18\x01 \x01(\v2\x17.protomcp.ReloadRequestH\x00R\x06reload\x12;\n" +
 	"\n" +
@@ -2256,7 +3813,24 @@ const file_protomcp_proto_rawDesc = "" +
 	"\rstream_header\x18\x1c \x01(\v2\x16.protomcp.StreamHeaderH\x00R\fstreamHeader\x12:\n" +
 	"\fstream_chunk\x18\x1d \x01(\v2\x15.protomcp.StreamChunkH\x00R\vstreamChunk\x124\n" +
 	"\n" +
-	"raw_header\x18\x1e \x01(\v2\x13.protomcp.RawHeaderH\x00R\trawHeader\x12\x1d\n" +
+	"raw_header\x18\x1e \x01(\v2\x13.protomcp.RawHeaderH\x00R\trawHeader\x12V\n" +
+	"\x16list_resources_request\x18\x1f \x01(\v2\x1e.protomcp.ListResourcesRequestH\x00R\x14listResourcesRequest\x12V\n" +
+	"\x16resource_list_response\x18  \x01(\v2\x1e.protomcp.ResourceListResponseH\x00R\x14resourceListResponse\x12o\n" +
+	"\x1flist_resource_templates_request\x18! \x01(\v2&.protomcp.ListResourceTemplatesRequestH\x00R\x1clistResourceTemplatesRequest\x12o\n" +
+	"\x1fresource_template_list_response\x18\" \x01(\v2&.protomcp.ResourceTemplateListResponseH\x00R\x1cresourceTemplateListResponse\x12S\n" +
+	"\x15read_resource_request\x18# \x01(\v2\x1d.protomcp.ReadResourceRequestH\x00R\x13readResourceRequest\x12V\n" +
+	"\x16read_resource_response\x18$ \x01(\v2\x1e.protomcp.ReadResourceResponseH\x00R\x14readResourceResponse\x12R\n" +
+	"\x10resource_changed\x18% \x01(\v2%.protomcp.ResourceChangedNotificationH\x00R\x0fresourceChanged\x12P\n" +
+	"\x14list_prompts_request\x18( \x01(\v2\x1c.protomcp.ListPromptsRequestH\x00R\x12listPromptsRequest\x12P\n" +
+	"\x14prompt_list_response\x18) \x01(\v2\x1c.protomcp.PromptListResponseH\x00R\x12promptListResponse\x12J\n" +
+	"\x12get_prompt_request\x18* \x01(\v2\x1a.protomcp.GetPromptRequestH\x00R\x10getPromptRequest\x12M\n" +
+	"\x13get_prompt_response\x18+ \x01(\v2\x1b.protomcp.GetPromptResponseH\x00R\x11getPromptResponse\x12L\n" +
+	"\x12completion_request\x182 \x01(\v2\x1b.protomcp.CompletionRequestH\x00R\x11completionRequest\x12O\n" +
+	"\x13completion_response\x183 \x01(\v2\x1c.protomcp.CompletionResponseH\x00R\x12completionResponse\x12F\n" +
+	"\x10sampling_request\x18< \x01(\v2\x19.protomcp.SamplingRequestH\x00R\x0fsamplingRequest\x12I\n" +
+	"\x11sampling_response\x18= \x01(\v2\x1a.protomcp.SamplingResponseH\x00R\x10samplingResponse\x12J\n" +
+	"\x12list_roots_request\x18> \x01(\v2\x1a.protomcp.ListRootsRequestH\x00R\x10listRootsRequest\x12M\n" +
+	"\x13list_roots_response\x18? \x01(\v2\x1b.protomcp.ListRootsResponseH\x00R\x11listRootsResponse\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x0e \x01(\tR\trequestId\x12\x1c\n" +
 	"\tnamespace\x18\x0f \x01(\tR\tnamespaceB\x05\n" +
@@ -2376,13 +3950,91 @@ const file_protomcp_proto_rawDesc = "" +
 	"chunk_size\x18\x03 \x01(\rR\tchunkSize\"7\n" +
 	"\vStreamChunk\x12\x12\n" +
 	"\x04data\x18\x01 \x01(\fR\x04data\x12\x14\n" +
-	"\x05final\x18\x02 \x01(\bR\x05final\"]\n" +
+	"\x05final\x18\x02 \x01(\bR\x05final\"\xac\x01\n" +
 	"\tRawHeader\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x01 \x01(\tR\trequestId\x12\x1d\n" +
 	"\n" +
 	"field_name\x18\x02 \x01(\tR\tfieldName\x12\x12\n" +
-	"\x04size\x18\x03 \x01(\x04R\x04sizeB5Z3github.com/msilverblatt/protomcp/gen/proto/protomcpb\x06proto3"
+	"\x04size\x18\x03 \x01(\x04R\x04size\x12 \n" +
+	"\vcompression\x18\x04 \x01(\tR\vcompression\x12+\n" +
+	"\x11uncompressed_size\x18\x05 \x01(\x04R\x10uncompressedSize\"\x8d\x01\n" +
+	"\x12ResourceDefinition\x12\x10\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x1b\n" +
+	"\tmime_type\x18\x04 \x01(\tR\bmimeType\x12\x12\n" +
+	"\x04size\x18\x05 \x01(\x03R\x04size\"\x92\x01\n" +
+	"\x1aResourceTemplateDefinition\x12!\n" +
+	"\furi_template\x18\x01 \x01(\tR\vuriTemplate\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x1b\n" +
+	"\tmime_type\x18\x04 \x01(\tR\bmimeType\"\x16\n" +
+	"\x14ListResourcesRequest\"R\n" +
+	"\x14ResourceListResponse\x12:\n" +
+	"\tresources\x18\x01 \x03(\v2\x1c.protomcp.ResourceDefinitionR\tresources\"\x1e\n" +
+	"\x1cListResourceTemplatesRequest\"b\n" +
+	"\x1cResourceTemplateListResponse\x12B\n" +
+	"\ttemplates\x18\x01 \x03(\v2$.protomcp.ResourceTemplateDefinitionR\ttemplates\"'\n" +
+	"\x13ReadResourceRequest\x12\x10\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\"h\n" +
+	"\x0fResourceContent\x12\x10\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\x12\x1b\n" +
+	"\tmime_type\x18\x02 \x01(\tR\bmimeType\x12\x12\n" +
+	"\x04text\x18\x03 \x01(\tR\x04text\x12\x12\n" +
+	"\x04blob\x18\x04 \x01(\fR\x04blob\"M\n" +
+	"\x14ReadResourceResponse\x125\n" +
+	"\bcontents\x18\x01 \x03(\v2\x19.protomcp.ResourceContentR\bcontents\"/\n" +
+	"\x1bResourceChangedNotification\x12\x10\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\"b\n" +
+	"\x0ePromptArgument\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x1a\n" +
+	"\brequired\x18\x03 \x01(\bR\brequired\"\x80\x01\n" +
+	"\x10PromptDefinition\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\x126\n" +
+	"\targuments\x18\x03 \x03(\v2\x18.protomcp.PromptArgumentR\targuments\"\x14\n" +
+	"\x12ListPromptsRequest\"J\n" +
+	"\x12PromptListResponse\x124\n" +
+	"\aprompts\x18\x01 \x03(\v2\x1a.protomcp.PromptDefinitionR\aprompts\"M\n" +
+	"\x10GetPromptRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12%\n" +
+	"\x0earguments_json\x18\x02 \x01(\tR\rargumentsJson\"F\n" +
+	"\rPromptMessage\x12\x12\n" +
+	"\x04role\x18\x01 \x01(\tR\x04role\x12!\n" +
+	"\fcontent_json\x18\x02 \x01(\tR\vcontentJson\"j\n" +
+	"\x11GetPromptResponse\x12 \n" +
+	"\vdescription\x18\x01 \x01(\tR\vdescription\x123\n" +
+	"\bmessages\x18\x02 \x03(\v2\x17.protomcp.PromptMessageR\bmessages\"\x95\x01\n" +
+	"\x11CompletionRequest\x12\x19\n" +
+	"\bref_type\x18\x01 \x01(\tR\arefType\x12\x19\n" +
+	"\bref_name\x18\x02 \x01(\tR\arefName\x12#\n" +
+	"\rargument_name\x18\x03 \x01(\tR\fargumentName\x12%\n" +
+	"\x0eargument_value\x18\x04 \x01(\tR\rargumentValue\"]\n" +
+	"\x12CompletionResponse\x12\x16\n" +
+	"\x06values\x18\x01 \x03(\tR\x06values\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x05R\x05total\x12\x19\n" +
+	"\bhas_more\x18\x03 \x01(\bR\ahasMore\"\xb0\x01\n" +
+	"\x0fSamplingRequest\x12#\n" +
+	"\rmessages_json\x18\x01 \x01(\tR\fmessagesJson\x124\n" +
+	"\x16model_preferences_json\x18\x02 \x01(\tR\x14modelPreferencesJson\x12#\n" +
+	"\rsystem_prompt\x18\x03 \x01(\tR\fsystemPrompt\x12\x1d\n" +
+	"\n" +
+	"max_tokens\x18\x04 \x01(\x05R\tmaxTokens\"\x96\x01\n" +
+	"\x10SamplingResponse\x12\x12\n" +
+	"\x04role\x18\x01 \x01(\tR\x04role\x12!\n" +
+	"\fcontent_json\x18\x02 \x01(\tR\vcontentJson\x12\x14\n" +
+	"\x05model\x18\x03 \x01(\tR\x05model\x12\x1f\n" +
+	"\vstop_reason\x18\x04 \x01(\tR\n" +
+	"stopReason\x12\x14\n" +
+	"\x05error\x18\x05 \x01(\tR\x05error\"\x12\n" +
+	"\x10ListRootsRequest\"/\n" +
+	"\aRootDef\x12\x10\n" +
+	"\x03uri\x18\x01 \x01(\tR\x03uri\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\"<\n" +
+	"\x11ListRootsResponse\x12'\n" +
+	"\x05roots\x18\x01 \x03(\v2\x11.protomcp.RootDefR\x05rootsB5Z3github.com/msilverblatt/protomcp/gen/proto/protomcpb\x06proto3"
 
 var (
 	file_protomcp_proto_rawDescOnce sync.Once
@@ -2396,39 +4048,63 @@ func file_protomcp_proto_rawDescGZIP() []byte {
 	return file_protomcp_proto_rawDescData
 }
 
-var file_protomcp_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
+var file_protomcp_proto_msgTypes = make([]protoimpl.MessageInfo, 55)
 var file_protomcp_proto_goTypes = []any{
-	(*Envelope)(nil),                    // 0: protomcp.Envelope
-	(*ReloadRequest)(nil),               // 1: protomcp.ReloadRequest
-	(*ListToolsRequest)(nil),            // 2: protomcp.ListToolsRequest
-	(*CallToolRequest)(nil),             // 3: protomcp.CallToolRequest
-	(*ReloadResponse)(nil),              // 4: protomcp.ReloadResponse
-	(*ToolListResponse)(nil),            // 5: protomcp.ToolListResponse
-	(*ToolDefinition)(nil),              // 6: protomcp.ToolDefinition
-	(*CallToolResponse)(nil),            // 7: protomcp.CallToolResponse
-	(*ToolError)(nil),                   // 8: protomcp.ToolError
-	(*EnableToolsRequest)(nil),          // 9: protomcp.EnableToolsRequest
-	(*DisableToolsRequest)(nil),         // 10: protomcp.DisableToolsRequest
-	(*SetAllowedRequest)(nil),           // 11: protomcp.SetAllowedRequest
-	(*SetBlockedRequest)(nil),           // 12: protomcp.SetBlockedRequest
-	(*GetActiveToolsRequest)(nil),       // 13: protomcp.GetActiveToolsRequest
-	(*BatchUpdateRequest)(nil),          // 14: protomcp.BatchUpdateRequest
-	(*ActiveToolsResponse)(nil),         // 15: protomcp.ActiveToolsResponse
-	(*ProgressNotification)(nil),        // 16: protomcp.ProgressNotification
-	(*CancelRequest)(nil),               // 17: protomcp.CancelRequest
-	(*LogMessage)(nil),                  // 18: protomcp.LogMessage
-	(*CreateTaskResponse)(nil),          // 19: protomcp.CreateTaskResponse
-	(*TaskStatusRequest)(nil),           // 20: protomcp.TaskStatusRequest
-	(*TaskStatusResponse)(nil),          // 21: protomcp.TaskStatusResponse
-	(*TaskResultRequest)(nil),           // 22: protomcp.TaskResultRequest
-	(*TaskCancelRequest)(nil),           // 23: protomcp.TaskCancelRequest
-	(*RegisterMiddlewareRequest)(nil),   // 24: protomcp.RegisterMiddlewareRequest
-	(*RegisterMiddlewareResponse)(nil),  // 25: protomcp.RegisterMiddlewareResponse
-	(*MiddlewareInterceptRequest)(nil),  // 26: protomcp.MiddlewareInterceptRequest
-	(*MiddlewareInterceptResponse)(nil), // 27: protomcp.MiddlewareInterceptResponse
-	(*StreamHeader)(nil),                // 28: protomcp.StreamHeader
-	(*StreamChunk)(nil),                 // 29: protomcp.StreamChunk
-	(*RawHeader)(nil),                   // 30: protomcp.RawHeader
+	(*Envelope)(nil),                     // 0: protomcp.Envelope
+	(*ReloadRequest)(nil),                // 1: protomcp.ReloadRequest
+	(*ListToolsRequest)(nil),             // 2: protomcp.ListToolsRequest
+	(*CallToolRequest)(nil),              // 3: protomcp.CallToolRequest
+	(*ReloadResponse)(nil),               // 4: protomcp.ReloadResponse
+	(*ToolListResponse)(nil),             // 5: protomcp.ToolListResponse
+	(*ToolDefinition)(nil),               // 6: protomcp.ToolDefinition
+	(*CallToolResponse)(nil),             // 7: protomcp.CallToolResponse
+	(*ToolError)(nil),                    // 8: protomcp.ToolError
+	(*EnableToolsRequest)(nil),           // 9: protomcp.EnableToolsRequest
+	(*DisableToolsRequest)(nil),          // 10: protomcp.DisableToolsRequest
+	(*SetAllowedRequest)(nil),            // 11: protomcp.SetAllowedRequest
+	(*SetBlockedRequest)(nil),            // 12: protomcp.SetBlockedRequest
+	(*GetActiveToolsRequest)(nil),        // 13: protomcp.GetActiveToolsRequest
+	(*BatchUpdateRequest)(nil),           // 14: protomcp.BatchUpdateRequest
+	(*ActiveToolsResponse)(nil),          // 15: protomcp.ActiveToolsResponse
+	(*ProgressNotification)(nil),         // 16: protomcp.ProgressNotification
+	(*CancelRequest)(nil),                // 17: protomcp.CancelRequest
+	(*LogMessage)(nil),                   // 18: protomcp.LogMessage
+	(*CreateTaskResponse)(nil),           // 19: protomcp.CreateTaskResponse
+	(*TaskStatusRequest)(nil),            // 20: protomcp.TaskStatusRequest
+	(*TaskStatusResponse)(nil),           // 21: protomcp.TaskStatusResponse
+	(*TaskResultRequest)(nil),            // 22: protomcp.TaskResultRequest
+	(*TaskCancelRequest)(nil),            // 23: protomcp.TaskCancelRequest
+	(*RegisterMiddlewareRequest)(nil),    // 24: protomcp.RegisterMiddlewareRequest
+	(*RegisterMiddlewareResponse)(nil),   // 25: protomcp.RegisterMiddlewareResponse
+	(*MiddlewareInterceptRequest)(nil),   // 26: protomcp.MiddlewareInterceptRequest
+	(*MiddlewareInterceptResponse)(nil),  // 27: protomcp.MiddlewareInterceptResponse
+	(*StreamHeader)(nil),                 // 28: protomcp.StreamHeader
+	(*StreamChunk)(nil),                  // 29: protomcp.StreamChunk
+	(*RawHeader)(nil),                    // 30: protomcp.RawHeader
+	(*ResourceDefinition)(nil),           // 31: protomcp.ResourceDefinition
+	(*ResourceTemplateDefinition)(nil),   // 32: protomcp.ResourceTemplateDefinition
+	(*ListResourcesRequest)(nil),         // 33: protomcp.ListResourcesRequest
+	(*ResourceListResponse)(nil),         // 34: protomcp.ResourceListResponse
+	(*ListResourceTemplatesRequest)(nil), // 35: protomcp.ListResourceTemplatesRequest
+	(*ResourceTemplateListResponse)(nil), // 36: protomcp.ResourceTemplateListResponse
+	(*ReadResourceRequest)(nil),          // 37: protomcp.ReadResourceRequest
+	(*ResourceContent)(nil),              // 38: protomcp.ResourceContent
+	(*ReadResourceResponse)(nil),         // 39: protomcp.ReadResourceResponse
+	(*ResourceChangedNotification)(nil),  // 40: protomcp.ResourceChangedNotification
+	(*PromptArgument)(nil),               // 41: protomcp.PromptArgument
+	(*PromptDefinition)(nil),             // 42: protomcp.PromptDefinition
+	(*ListPromptsRequest)(nil),           // 43: protomcp.ListPromptsRequest
+	(*PromptListResponse)(nil),           // 44: protomcp.PromptListResponse
+	(*GetPromptRequest)(nil),             // 45: protomcp.GetPromptRequest
+	(*PromptMessage)(nil),                // 46: protomcp.PromptMessage
+	(*GetPromptResponse)(nil),            // 47: protomcp.GetPromptResponse
+	(*CompletionRequest)(nil),            // 48: protomcp.CompletionRequest
+	(*CompletionResponse)(nil),           // 49: protomcp.CompletionResponse
+	(*SamplingRequest)(nil),              // 50: protomcp.SamplingRequest
+	(*SamplingResponse)(nil),             // 51: protomcp.SamplingResponse
+	(*ListRootsRequest)(nil),             // 52: protomcp.ListRootsRequest
+	(*RootDef)(nil),                      // 53: protomcp.RootDef
+	(*ListRootsResponse)(nil),            // 54: protomcp.ListRootsResponse
 }
 var file_protomcp_proto_depIdxs = []int32{
 	1,  // 0: protomcp.Envelope.reload:type_name -> protomcp.ReloadRequest
@@ -2459,13 +4135,37 @@ var file_protomcp_proto_depIdxs = []int32{
 	28, // 25: protomcp.Envelope.stream_header:type_name -> protomcp.StreamHeader
 	29, // 26: protomcp.Envelope.stream_chunk:type_name -> protomcp.StreamChunk
 	30, // 27: protomcp.Envelope.raw_header:type_name -> protomcp.RawHeader
-	6,  // 28: protomcp.ToolListResponse.tools:type_name -> protomcp.ToolDefinition
-	8,  // 29: protomcp.CallToolResponse.error:type_name -> protomcp.ToolError
-	30, // [30:30] is the sub-list for method output_type
-	30, // [30:30] is the sub-list for method input_type
-	30, // [30:30] is the sub-list for extension type_name
-	30, // [30:30] is the sub-list for extension extendee
-	0,  // [0:30] is the sub-list for field type_name
+	33, // 28: protomcp.Envelope.list_resources_request:type_name -> protomcp.ListResourcesRequest
+	34, // 29: protomcp.Envelope.resource_list_response:type_name -> protomcp.ResourceListResponse
+	35, // 30: protomcp.Envelope.list_resource_templates_request:type_name -> protomcp.ListResourceTemplatesRequest
+	36, // 31: protomcp.Envelope.resource_template_list_response:type_name -> protomcp.ResourceTemplateListResponse
+	37, // 32: protomcp.Envelope.read_resource_request:type_name -> protomcp.ReadResourceRequest
+	39, // 33: protomcp.Envelope.read_resource_response:type_name -> protomcp.ReadResourceResponse
+	40, // 34: protomcp.Envelope.resource_changed:type_name -> protomcp.ResourceChangedNotification
+	43, // 35: protomcp.Envelope.list_prompts_request:type_name -> protomcp.ListPromptsRequest
+	44, // 36: protomcp.Envelope.prompt_list_response:type_name -> protomcp.PromptListResponse
+	45, // 37: protomcp.Envelope.get_prompt_request:type_name -> protomcp.GetPromptRequest
+	47, // 38: protomcp.Envelope.get_prompt_response:type_name -> protomcp.GetPromptResponse
+	48, // 39: protomcp.Envelope.completion_request:type_name -> protomcp.CompletionRequest
+	49, // 40: protomcp.Envelope.completion_response:type_name -> protomcp.CompletionResponse
+	50, // 41: protomcp.Envelope.sampling_request:type_name -> protomcp.SamplingRequest
+	51, // 42: protomcp.Envelope.sampling_response:type_name -> protomcp.SamplingResponse
+	52, // 43: protomcp.Envelope.list_roots_request:type_name -> protomcp.ListRootsRequest
+	54, // 44: protomcp.Envelope.list_roots_response:type_name -> protomcp.ListRootsResponse
+	6,  // 45: protomcp.ToolListResponse.tools:type_name -> protomcp.ToolDefinition
+	8,  // 46: protomcp.CallToolResponse.error:type_name -> protomcp.ToolError
+	31, // 47: protomcp.ResourceListResponse.resources:type_name -> protomcp.ResourceDefinition
+	32, // 48: protomcp.ResourceTemplateListResponse.templates:type_name -> protomcp.ResourceTemplateDefinition
+	38, // 49: protomcp.ReadResourceResponse.contents:type_name -> protomcp.ResourceContent
+	41, // 50: protomcp.PromptDefinition.arguments:type_name -> protomcp.PromptArgument
+	42, // 51: protomcp.PromptListResponse.prompts:type_name -> protomcp.PromptDefinition
+	46, // 52: protomcp.GetPromptResponse.messages:type_name -> protomcp.PromptMessage
+	53, // 53: protomcp.ListRootsResponse.roots:type_name -> protomcp.RootDef
+	54, // [54:54] is the sub-list for method output_type
+	54, // [54:54] is the sub-list for method input_type
+	54, // [54:54] is the sub-list for extension type_name
+	54, // [54:54] is the sub-list for extension extendee
+	0,  // [0:54] is the sub-list for field type_name
 }
 
 func init() { file_protomcp_proto_init() }
@@ -2502,6 +4202,23 @@ func file_protomcp_proto_init() {
 		(*Envelope_StreamHeader)(nil),
 		(*Envelope_StreamChunk)(nil),
 		(*Envelope_RawHeader)(nil),
+		(*Envelope_ListResourcesRequest)(nil),
+		(*Envelope_ResourceListResponse)(nil),
+		(*Envelope_ListResourceTemplatesRequest)(nil),
+		(*Envelope_ResourceTemplateListResponse)(nil),
+		(*Envelope_ReadResourceRequest)(nil),
+		(*Envelope_ReadResourceResponse)(nil),
+		(*Envelope_ResourceChanged)(nil),
+		(*Envelope_ListPromptsRequest)(nil),
+		(*Envelope_PromptListResponse)(nil),
+		(*Envelope_GetPromptRequest)(nil),
+		(*Envelope_GetPromptResponse)(nil),
+		(*Envelope_CompletionRequest)(nil),
+		(*Envelope_CompletionResponse)(nil),
+		(*Envelope_SamplingRequest)(nil),
+		(*Envelope_SamplingResponse)(nil),
+		(*Envelope_ListRootsRequest)(nil),
+		(*Envelope_ListRootsResponse)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -2509,7 +4226,7 @@ func file_protomcp_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_protomcp_proto_rawDesc), len(file_protomcp_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   31,
+			NumMessages:   55,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

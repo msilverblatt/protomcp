@@ -10,10 +10,13 @@ import inspect
 from protomcp.transport import Transport
 from protomcp.tool import get_registered_tools
 from protomcp.result import ToolResult
-from protomcp.context import ToolContext
+from protomcp.context import ToolContext, _deliver_sampling_response
 from protomcp.log import ServerLogger
 from protomcp.middleware import get_registered_middleware
 from protomcp import manager
+from protomcp.resource import get_registered_resources, get_registered_resource_templates, ResourceContent
+from protomcp.prompt import get_registered_prompts
+from protomcp.completion import get_completion_handler, CompletionResult
 
 log: ServerLogger = ServerLogger(send_fn=lambda msg: None)
 
@@ -48,6 +51,20 @@ def run():
             _handle_reload(transport, env, _mw_handlers)
         elif env.HasField("middleware_intercept"):
             _handle_middleware_intercept(transport, env, _mw_handlers)
+        elif env.HasField("list_resources_request"):
+            _handle_list_resources(transport, env)
+        elif env.HasField("read_resource_request"):
+            _handle_read_resource(transport, env)
+        elif env.HasField("list_resource_templates_request"):
+            _handle_list_resource_templates(transport, env)
+        elif env.HasField("list_prompts_request"):
+            _handle_list_prompts(transport, env)
+        elif env.HasField("get_prompt_request"):
+            _handle_get_prompt(transport, env)
+        elif env.HasField("completion_request"):
+            _handle_completion(transport, env)
+        elif env.HasField("sampling_response"):
+            _deliver_sampling_response(env.request_id, env.sampling_response)
 
 def _handle_list_tools(transport, env):
     tools = get_registered_tools()
@@ -203,4 +220,178 @@ def _handle_middleware_intercept(transport, env, mw_handlers):
         ),
         request_id=env.request_id,
     )
+    transport.send(resp)
+
+def _handle_list_resources(transport, env):
+    resources = get_registered_resources()
+    defs = [pb.ResourceDefinition(
+        uri=r.uri, name=r.name, description=r.description,
+        mime_type=r.mime_type, size=r.size,
+    ) for r in resources]
+    resp = pb.Envelope(
+        resource_list_response=pb.ResourceListResponse(resources=defs),
+        request_id=env.request_id,
+    )
+    transport.send(resp)
+
+def _handle_list_resource_templates(transport, env):
+    templates = get_registered_resource_templates()
+    defs = [pb.ResourceTemplateDefinition(
+        uri_template=t.uri_template, name=t.name,
+        description=t.description, mime_type=t.mime_type,
+    ) for t in templates]
+    resp = pb.Envelope(
+        resource_template_list_response=pb.ResourceTemplateListResponse(templates=defs),
+        request_id=env.request_id,
+    )
+    transport.send(resp)
+
+def _handle_read_resource(transport, env):
+    uri = env.read_resource_request.uri
+    resources = get_registered_resources()
+    templates = get_registered_resource_templates()
+
+    handler = None
+    for r in resources:
+        if r.uri == uri:
+            handler = r.handler
+            break
+    if handler is None:
+        for t in templates:
+            # Simple template matching — check if URI could match the template
+            handler = t.handler
+            break  # Templates need proper URI template matching; simplified for now
+
+    if handler is None:
+        resp = pb.Envelope(
+            read_resource_response=pb.ReadResourceResponse(contents=[
+                pb.ResourceContent(uri=uri, text=f"Resource not found: {uri}", mime_type="text/plain")
+            ]),
+            request_id=env.request_id,
+        )
+        transport.send(resp)
+        return
+
+    try:
+        result = handler(uri)
+        if isinstance(result, ResourceContent):
+            result = [result]
+        elif isinstance(result, str):
+            result = [ResourceContent(uri=uri, text=result)]
+
+        contents = []
+        for rc in result:
+            c = pb.ResourceContent(uri=rc.uri, mime_type=rc.mime_type)
+            if rc.blob:
+                c.blob = rc.blob
+            else:
+                c.text = rc.text
+            contents.append(c)
+
+        resp = pb.Envelope(
+            read_resource_response=pb.ReadResourceResponse(contents=contents),
+            request_id=env.request_id,
+        )
+    except Exception as e:
+        resp = pb.Envelope(
+            read_resource_response=pb.ReadResourceResponse(contents=[
+                pb.ResourceContent(uri=uri, text=str(e), mime_type="text/plain")
+            ]),
+            request_id=env.request_id,
+        )
+    transport.send(resp)
+
+def _handle_list_prompts(transport, env):
+    prompts = get_registered_prompts()
+    defs = []
+    for p in prompts:
+        args = [pb.PromptArgument(name=a.name, description=a.description, required=a.required) for a in p.arguments]
+        defs.append(pb.PromptDefinition(name=p.name, description=p.description, arguments=args))
+    resp = pb.Envelope(
+        prompt_list_response=pb.PromptListResponse(prompts=defs),
+        request_id=env.request_id,
+    )
+    transport.send(resp)
+
+def _handle_get_prompt(transport, env):
+    req = env.get_prompt_request
+    prompts = get_registered_prompts()
+    handler = None
+    for p in prompts:
+        if p.name == req.name:
+            handler = p.handler
+            break
+
+    if handler is None:
+        resp = pb.Envelope(
+            get_prompt_response=pb.GetPromptResponse(
+                description=f"Prompt not found: {req.name}",
+                messages=[pb.PromptMessage(role="assistant", content_json=json.dumps({"type": "text", "text": f"Prompt not found: {req.name}"}))],
+            ),
+            request_id=env.request_id,
+        )
+        transport.send(resp)
+        return
+
+    try:
+        args = json.loads(req.arguments_json) if req.arguments_json else {}
+        result = handler(**args)
+        if not isinstance(result, list):
+            result = [result]
+
+        messages = []
+        for msg in result:
+            content_json = json.dumps({"type": "text", "text": msg.content})
+            messages.append(pb.PromptMessage(role=msg.role, content_json=content_json))
+
+        resp = pb.Envelope(
+            get_prompt_response=pb.GetPromptResponse(description="", messages=messages),
+            request_id=env.request_id,
+        )
+    except Exception as e:
+        resp = pb.Envelope(
+            get_prompt_response=pb.GetPromptResponse(
+                description="Error",
+                messages=[pb.PromptMessage(role="assistant", content_json=json.dumps({"type": "text", "text": str(e)}))],
+            ),
+            request_id=env.request_id,
+        )
+    transport.send(resp)
+
+def _handle_completion(transport, env):
+    req = env.completion_request
+    handler = get_completion_handler(req.ref_type, req.ref_name, req.argument_name)
+
+    if handler is None:
+        resp = pb.Envelope(
+            completion_response=pb.CompletionResponse(values=[], total=0, has_more=False),
+            request_id=env.request_id,
+        )
+        transport.send(resp)
+        return
+
+    try:
+        result = handler(req.argument_value)
+        if isinstance(result, CompletionResult):
+            resp = pb.Envelope(
+                completion_response=pb.CompletionResponse(
+                    values=result.values, total=result.total, has_more=result.has_more,
+                ),
+                request_id=env.request_id,
+            )
+        elif isinstance(result, list):
+            resp = pb.Envelope(
+                completion_response=pb.CompletionResponse(values=result, total=len(result), has_more=False),
+                request_id=env.request_id,
+            )
+        else:
+            resp = pb.Envelope(
+                completion_response=pb.CompletionResponse(values=[], total=0, has_more=False),
+                request_id=env.request_id,
+            )
+    except Exception as e:
+        resp = pb.Envelope(
+            completion_response=pb.CompletionResponse(values=[], total=0, has_more=False),
+            request_id=env.request_id,
+        )
     transport.send(resp)
