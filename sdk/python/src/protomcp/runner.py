@@ -21,8 +21,12 @@ from protomcp.completion import get_completion_handler, CompletionResult
 from protomcp.server_context import resolve_contexts
 from protomcp.local_middleware import build_middleware_chain
 from protomcp.telemetry import emit_telemetry, ToolCallEvent
+from protomcp.sidecar import start_sidecars
+from protomcp.discovery import discover_handlers, get_config
 
 log: ServerLogger = ServerLogger(send_fn=lambda msg: None)
+
+_first_tool_call = True
 
 def run():
     socket_path = os.environ.get("PROTOMCP_SOCKET")
@@ -33,6 +37,8 @@ def run():
     transport = Transport(socket_path)
     transport.connect()
     manager._init(transport)
+
+    start_sidecars("server_start")
 
     global log
     log = ServerLogger(send_fn=transport.send)
@@ -94,6 +100,11 @@ def _handle_list_tools(transport, env):
     transport.send(resp)
 
 def _handle_call_tool(transport, env):
+    global _first_tool_call
+    if _first_tool_call:
+        _first_tool_call = False
+        start_sidecars("first_tool_call")
+
     req = env.call_tool
     tools = get_registered_tools()
     handler = None
