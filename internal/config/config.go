@@ -23,16 +23,20 @@ type Config struct {
 	Auth               []string
 	Strict             bool
 	Format             string
+	TestSubcommand     string // "list", "call", "scenario"
+	TestToolName       string // tool name for "call"
+	TestArgs           string // --args JSON string
+	ShowTrace          bool   // --trace flag (default true)
 }
 
 func Parse(args []string) (*Config, error) {
 	if len(args) < 1 {
-		return nil, fmt.Errorf("usage: pmcp <dev|run> <file> [flags]")
+		return nil, fmt.Errorf("usage: pmcp <dev|run|validate|test|playground> <file> [flags]")
 	}
 
 	cmd := args[0]
-	if cmd != "dev" && cmd != "run" && cmd != "validate" {
-		return nil, fmt.Errorf("unknown command %q: must be 'dev', 'run', or 'validate'", cmd)
+	if cmd != "dev" && cmd != "run" && cmd != "validate" && cmd != "test" && cmd != "playground" {
+		return nil, fmt.Errorf("unknown command %q: must be 'dev', 'run', 'validate', 'test', or 'playground'", cmd)
 	}
 
 	cfg := &Config{
@@ -42,6 +46,7 @@ func Parse(args []string) (*Config, error) {
 		LogLevel:    "info",
 		Host:        "localhost",
 		Port:        8080,
+		ShowTrace:   true,
 	}
 
 	i := 1
@@ -53,6 +58,27 @@ func Parse(args []string) (*Config, error) {
 		i++
 	} else {
 		return nil, fmt.Errorf("missing file argument")
+	}
+
+	// Parse test subcommands
+	if cfg.Command == "test" {
+		if i >= len(args) {
+			return nil, fmt.Errorf("missing test subcommand: must be 'list', 'call', or 'scenario'")
+		}
+		sub := args[i]
+		if sub != "list" && sub != "call" && sub != "scenario" {
+			return nil, fmt.Errorf("unknown test subcommand %q: must be 'list', 'call', or 'scenario'", sub)
+		}
+		cfg.TestSubcommand = sub
+		i++
+
+		if sub == "call" {
+			if i >= len(args) || strings.HasPrefix(args[i], "-") {
+				return nil, fmt.Errorf("missing tool name for 'test call'")
+			}
+			cfg.TestToolName = args[i]
+			i++
+		}
 	}
 
 	for i < len(args) {
@@ -131,6 +157,18 @@ func Parse(args []string) (*Config, error) {
 			cfg.Auth = append(cfg.Auth, args[i])
 		case "--strict":
 			cfg.Strict = true
+		case "--args":
+			i++
+			if i >= len(args) {
+				return nil, fmt.Errorf("--args requires a value")
+			}
+			cfg.TestArgs = args[i]
+		case "--trace":
+			cfg.ShowTrace = true
+		case "--trace=false":
+			cfg.ShowTrace = false
+		case "--trace=true":
+			cfg.ShowTrace = true
 		case "--format":
 			i++
 			if i >= len(args) {

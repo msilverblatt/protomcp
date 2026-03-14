@@ -106,3 +106,8 @@ def search_notes(query: str) -> ToolResult:
     import json
     matches = {nid: text for nid, text in NOTES.items() if query.lower() in text.lower()}
     return ToolResult(result=json.dumps(matches))
+
+
+if __name__ == "__main__":
+    from protomcp.runner import run
+    run()

@@ -23,8 +23,13 @@ func init() {
 	os.Setenv("PYTHONPATH", pythonPath)
 }
 
+func fixture(name string) string {
+	_, thisFile, _, _ := runtime.Caller(0)
+	return filepath.Join(filepath.Dir(thisFile), "fixtures", name)
+}
+
 func TestE2E_Initialize(t *testing.T) {
-	w, r, cleanup := StartProtomcp(t, "dev", "fixtures/simple_tool.py")
+	w, r, cleanup := StartProtomcp(t, "dev", fixture("simple_tool.py"))
 	defer cleanup()
 
 	resp := InitializeSession(t, w, r)
@@ -39,7 +44,7 @@ func TestE2E_Initialize(t *testing.T) {
 }
 
 func TestE2E_ToolsList(t *testing.T) {
-	w, r, cleanup := StartProtomcp(t, "dev", "fixtures/simple_tool.py")
+	w, r, cleanup := StartProtomcp(t, "dev", fixture("simple_tool.py"))
 	defer cleanup()
 
 	InitializeSession(t, w, r)
@@ -58,7 +63,7 @@ func TestE2E_ToolsList(t *testing.T) {
 }
 
 func TestE2E_ToolsCall(t *testing.T) {
-	w, r, cleanup := StartProtomcp(t, "dev", "fixtures/simple_tool.py")
+	w, r, cleanup := StartProtomcp(t, "dev", fixture("simple_tool.py"))
 	defer cleanup()
 
 	InitializeSession(t, w, r)
@@ -81,7 +86,7 @@ func TestE2E_ToolsCall(t *testing.T) {
 }
 
 func TestE2E_DynamicToolList(t *testing.T) {
-	w, r, cleanup := StartProtomcp(t, "dev", "fixtures/dynamic_tool.py")
+	w, r, cleanup := StartProtomcp(t, "dev", fixture("dynamic_tool.py"))
 	defer cleanup()
 
 	InitializeSession(t, w, r)

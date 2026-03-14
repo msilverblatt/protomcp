@@ -1,0 +1,126 @@
+---
+draft: false
+title: Testing & Playground
+description: Test your MCP server with built-in CLI tools and an interactive web playground.
+---
+
+protomcp includes built-in testing — no agent, no MCP client configuration, no external tools.
+
+## `pmcp test` — CLI
+
+### List everything
+
+```sh
+pmcp test server.py list
+```
+
+Shows all tools with parameter schemas, resources with URIs and MIME types, and prompts with arguments:
+
+```
+Tools (3):
+  add — Add two numbers
+    a (integer, required)
+    b (integer, required)
+
+  search_notes — Search meeting notes
+    query (string, required)
+
+Resources (1):
+  notes://index — List of available notes  [application/json]
+
+Prompts (1):
+  summarize_note — Summarize a meeting note
+    note_id (required) — ID of the note
+    style (optional) — Summary style
+```
+
+### Call a tool
+
+```sh
+pmcp test server.py call add --args '{"a": 2, "b": 3}'
+```
+
+Shows the result, timing, and the full protocol trace:
+
+```
+Tool: add
+Duration: 1ms
+Status: ok
+
+Result:
+  5
+
+Trace (5 messages):
+  [10:15:32.100] send initialize
+  [10:15:32.101] recv
+  [10:15:32.101] send notifications/initialized
+  [10:15:32.101] send tools/call
+  [10:15:32.102] recv
+```
+
+### Tool list changes
+
+If a tool call enables or disables other tools, the output shows it:
+
+```sh
+pmcp test server.py call login --args '{"token": "valid"}'
+```
+
+```
+Tools enabled: [create_record, delete_record]
+Tools disabled: [login]
+```
+
+### Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--args '{...}'` | `{}` | JSON arguments for `call` |
+| `--format json` | `text` | Machine-readable JSON output |
+| `--trace=false` | `true` | Suppress protocol trace |
+
+### JSON output
+
+```sh
+pmcp test server.py list --format json
+pmcp test server.py call add --args '{"a":1,"b":2}' --format json
+```
+
+Outputs structured JSON — useful for CI or scripting.
+
+---
+
+## `pmcp playground` — Interactive web UI
+
+```sh
+pmcp playground server.py --port 3000
+```
+
+Opens a web-based testing environment at `http://localhost:3000`.
+
+### Two-panel layout
+
+**Left panel — Interaction:**
+- Browse tools, resources, and prompts in tabbed view
+- Auto-generated forms from your JSON schemas
+- Call tools, read resources, get prompts with one click
+- Interaction history shows results like a chat
+
+**Right panel — Protocol trace:**
+- Every JSON-RPC message in both directions, timestamped
+- Color-coded: blue (outgoing), green (incoming), yellow (notifications)
+- Click any entry to expand the full JSON-RPC message
+- Auto-scrolls to latest unless you scroll up to inspect
+
+### Live features
+
+- **Hot reload**: save your file and the playground updates automatically
+- **Tool list changes**: when a tool call enables/disables tools, you see it happen in real-time
+- **Connection status**: green dot when connected, red when disconnected
+
+### Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--port` | `8080` | Port to serve on |
+| `--host` | `localhost` | Address to bind |

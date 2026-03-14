@@ -5,15 +5,36 @@ import (
 	"encoding/json"
 	"io"
 	"os/exec"
+	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/msilverblatt/protomcp/tests/testutil"
 )
 
+var (
+	pmcpBinary     string
+	pmcpBinaryOnce sync.Once
+)
+
+func getPMCPBinary(t *testing.T) string {
+	t.Helper()
+	pmcpBinaryOnce.Do(func() {
+		pmcpBinary = filepath.Join(testutil.RepoRoot(), "bin", "pmcp")
+		// Build the binary if it doesn't exist
+		cmd := exec.Command("go", "build", "-o", pmcpBinary, "./cmd/protomcp")
+		cmd.Dir = testutil.RepoRoot()
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("failed to build pmcp: %v\n%s", err, out)
+		}
+	})
+	return pmcpBinary
+}
+
 // StartProtomcp starts the protomcp binary with the given args.
 func StartProtomcp(t *testing.T, args ...string) (io.Writer, *bufio.Scanner, func()) {
 	t.Helper()
-	cmd := exec.Command("../../bin/pmcp", args...)
+	cmd := exec.Command(getPMCPBinary(t), args...)
 	stdin, _ := cmd.StdinPipe()
 	stdout, _ := cmd.StdoutPipe()
 	cmd.Stderr = nil

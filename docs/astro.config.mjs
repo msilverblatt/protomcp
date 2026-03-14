@@ -26,6 +26,7 @@ export default defineConfig({
             { label: 'Writing Tools (TypeScript)', slug: 'guides/writing-tools-typescript' },
             { label: 'Writing Tools (Go)', slug: 'guides/writing-tools-go' },
             { label: 'Writing Tools (Rust)', slug: 'guides/writing-tools-rust' },
+            { label: 'Testing & Playground', slug: 'guides/testing' },
             { label: 'Resources', slug: 'guides/resources' },
             { label: 'Prompts & Completions', slug: 'guides/prompts' },
             { label: 'Sampling', slug: 'guides/sampling' },

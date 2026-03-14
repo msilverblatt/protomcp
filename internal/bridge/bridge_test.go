@@ -128,7 +128,7 @@ func TestMakeToolHandler(t *testing.T) {
 		},
 	}
 
-	handler := makeToolHandler(backend, "echo")
+	handler := makeToolHandler(backend, "echo", nil)
 	// Create a minimal CallToolRequest
 	req := &mcp.CallToolRequest{
 		Params: &mcp.CallToolParamsRaw{
@@ -163,7 +163,7 @@ func TestMakeToolHandlerError(t *testing.T) {
 		},
 	}
 
-	handler := makeToolHandler(backend, "fail")
+	handler := makeToolHandler(backend, "fail", nil)
 	req := &mcp.CallToolRequest{
 		Params: &mcp.CallToolParamsRaw{
 			Name: "fail",

@@ -16,10 +16,11 @@ proto:
 		--ts_out=$(TS_GEN_DIR) \
 		-I$(PROTO_DIR) $(PROTO_DIR)/protomcp.proto
 
-build:
+playground-frontend:
+	cd internal/playground/frontend && npm run build
+
+build: playground-frontend
 	go build -o bin/pmcp ./cmd/protomcp
-	cd tests/bench/fixtures/go && go build -o ../../../../bin/go_bench_tool .
-	cd tests/bench/fixtures/rust_echo_tool && cargo build --release && cp target/release/rust_echo_tool ../../../../bin/rust_echo_tool
 
 test:
 	go test ./cmd/... ./internal/...
