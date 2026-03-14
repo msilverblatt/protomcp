@@ -13,6 +13,7 @@ export interface ToolDef<T extends z.ZodType = z.ZodType> {
   readOnlyHint: boolean;
   openWorldHint: boolean;
   taskSupport: boolean;
+  hidden?: boolean;
   handler: (args: z.infer<T>, ctx: ToolContext) => any;
 }
 
@@ -60,14 +61,24 @@ export function tool<T extends z.ZodObject<any>>(options: ToolOptions<T>): ToolD
 
 // Lazy reference to group module to avoid circular import at module load time.
 let _groupsToToolDefs: (() => ToolDef<any>[]) | null = null;
+let _workflowsToToolDefs: (() => ToolDef<any>[]) | null = null;
 
 export function _setGroupsToToolDefs(fn: () => ToolDef<any>[]): void {
   _groupsToToolDefs = fn;
 }
 
+export function _setWorkflowsToToolDefs(fn: () => ToolDef<any>[]): void {
+  _workflowsToToolDefs = fn;
+}
+
 export function getRegisteredTools(): ToolDef<any>[] {
   const groupDefs = _groupsToToolDefs ? _groupsToToolDefs() : [];
-  return [...registry, ...groupDefs];
+  const workflowDefs = _workflowsToToolDefs ? _workflowsToToolDefs() : [];
+  return [...registry, ...groupDefs, ...workflowDefs];
+}
+
+export function getHiddenToolNames(): string[] {
+  return getRegisteredTools().filter(t => t.hidden).map(t => t.name);
 }
 
 export function clearRegistry(): void {

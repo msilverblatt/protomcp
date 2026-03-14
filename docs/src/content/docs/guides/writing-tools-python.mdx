@@ -184,7 +184,7 @@ tool_manager.get_active_tools() -> list[str]
 tool_manager.batch(enable=None, disable=None, allow=None, block=None) -> list[str]
 ```
 
-`set_allowed` and `set_blocked` switch the tool list to allowlist/blocklist mode respectively. See [Tool List Modes](/concepts/tool-list-modes/).
+`set_allowed` and `set_blocked` switch the tool list to allowlist/blocklist mode respectively. See [Tool List Modes](/protomcp/concepts/tool-list-modes/).
 
 ### Batch operations
 
@@ -347,7 +347,7 @@ Call the handler directly — no need to run protomcp for unit tests.
 
 ## Resources
 
-Resources expose data that MCP clients can read. See the [Resources guide](/guides/resources/) for the full pattern.
+Resources expose data that MCP clients can read. See the [Resources guide](/protomcp/guides/resources/) for the full pattern.
 
 ```python
 from protomcp import resource, resource_template, ResourceContent
@@ -366,7 +366,7 @@ def read_user(uri: str) -> ResourceContent:
 
 ## Prompts
 
-Prompts define reusable message templates. See the [Prompts guide](/guides/prompts/) for the full pattern.
+Prompts define reusable message templates. See the [Prompts guide](/protomcp/guides/prompts/) for the full pattern.
 
 ```python
 from protomcp import prompt, PromptArg, PromptMessage
@@ -383,7 +383,7 @@ def summarize(topic: str) -> list[PromptMessage]:
 
 ## Completions
 
-Provide autocomplete for prompt and resource arguments. See [Prompts guide — Completions](/guides/prompts/#completions).
+Provide autocomplete for prompt and resource arguments. See [Prompts guide — Completions](/protomcp/guides/prompts/#completions).
 
 ```python
 from protomcp import completion, CompletionResult
@@ -398,7 +398,7 @@ def complete_topic(value: str) -> CompletionResult:
 
 ## Sampling
 
-Request LLM calls from the MCP client. See the [Sampling guide](/guides/sampling/).
+Request LLM calls from the MCP client. See the [Sampling guide](/protomcp/guides/sampling/).
 
 ```python
 @tool("Translate text")
@@ -637,6 +637,142 @@ def redis_sidecar():
 - **PID management**: PID files are stored in `~/.protomcp/sidecars/`.
 - **Graceful shutdown**: On exit, processes receive `SIGTERM` followed by `SIGKILL` if they do not stop within the shutdown timeout.
 - **Health checks**: If `health_check` is set, protomcp polls the URL until it returns 200 or the timeout expires.
+
+---
+
+## Workflows
+
+Workflows are server-defined state machines that guide an agent through a multi-step process. At each point in the workflow, the agent only sees the valid next steps — all other tools are hidden. This prevents the agent from skipping ahead or calling steps out of order.
+
+### Defining a workflow
+
+Use the `@workflow` class decorator and `@step` method decorators to define a workflow. Each step is a method on the class.
+
+```python
+from protomcp import workflow, step, StepResult, tool, ToolResult
+
+@workflow("deploy", allow_during=["status"])
+class DeployWorkflow:
+    def __init__(self):
+        self.pr_url = None
+
+    @step(initial=True, next=["approve", "reject"],
+          description="Review changes before deployment")
+    def review(self, pr_url: str) -> StepResult:
+        self.pr_url = pr_url
+        return StepResult(result=f"Reviewing {pr_url}: 5 files changed")
+
+    @step(next=["run_tests"],
+          description="Approve the changes for deployment")
+    def approve(self, reason: str) -> StepResult:
+        return StepResult(result=f"Approved: {reason}")
+
+    @step(terminal=True,
+          description="Reject the changes")
+    def reject(self, reason: str) -> StepResult:
+        return StepResult(result=f"Rejected: {reason}")
+
+    @step(next=["promote", "rollback"], no_cancel=True,
+          description="Run test suite against staging")
+    def run_tests(self) -> StepResult:
+        return StepResult(result="All 42 tests passed", next=["promote"])
+
+    @step(terminal=True, no_cancel=True,
+          description="Deploy to production")
+    def promote(self) -> StepResult:
+        return StepResult(result=f"Deployed {self.pr_url} to production")
+
+    @step(terminal=True,
+          description="Roll back staging deployment")
+    def rollback(self) -> StepResult:
+        return StepResult(result="Rolled back staging")
+```
+
+### `@workflow` parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | required | Unique workflow identifier. Steps are registered as `name.step_name` tools |
+| `description` | `str` | `""` | Human-readable description |
+| `allow_during` | `list[str]` | `None` | Glob patterns for external tools visible during the workflow |
+| `block_during` | `list[str]` | `None` | Glob patterns for external tools hidden during the workflow |
+
+### `@step` parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | method name | Step name. Defaults to the decorated method's name |
+| `description` | `str` | `""` | Human-readable description |
+| `initial` | `bool` | `False` | Mark as the entry point. Exactly one step must be initial |
+| `next` | `list[str]` | `None` | Valid next step names. Required for non-terminal steps |
+| `terminal` | `bool` | `False` | Mark as an exit point. Terminal steps must not have `next` |
+| `no_cancel` | `bool` | `False` | Prevent cancellation while at this step |
+| `allow_during` | `list[str]` | `None` | Step-level visibility override (replaces workflow-level, does not merge) |
+| `block_during` | `list[str]` | `None` | Step-level block override (replaces workflow-level, does not merge) |
+| `on_error` | `dict[type, str]` | `None` | Map exception types to step names for error-driven transitions |
+| `requires` | `list[str]` | `None` | Required field names — validation fails if missing or empty |
+| `enum_fields` | `dict[str, list]` | `None` | Map of field name to valid values |
+
+### Step lifecycle
+
+Every workflow must have exactly one `initial=True` step — this is the only step visible to the agent before the workflow starts. When the initial step is called, protomcp saves the current tool list, then restricts visibility to the declared `next` steps. This continues until a `terminal=True` step completes, at which point the original tool list is restored.
+
+### Dynamic `next` narrowing with `StepResult`
+
+A step handler returns a `StepResult`. The `next` field on the result can narrow the set of valid next steps at runtime, but it can only be a subset of the statically declared `next` on the `@step` decorator.
+
+```python
+@step(next=["promote", "rollback"], description="Run tests")
+def run_tests(self) -> StepResult:
+    if all_tests_passed():
+        return StepResult(result="Tests passed", next=["promote"])
+    return StepResult(result="Tests failed", next=["rollback"])
+```
+
+### `no_cancel` for committed steps
+
+Set `no_cancel=True` on a step to hide the cancel tool while the agent is choosing the next step. This is useful for steps that represent committed operations (e.g. a production deploy) where cancellation would leave the system in an inconsistent state.
+
+### Lifecycle hooks
+
+Define `on_cancel` and `on_complete` methods on the workflow class to run cleanup or audit logic.
+
+```python
+@workflow("deploy")
+class DeployWorkflow:
+    # ... steps ...
+
+    def on_cancel(self, current_step, history):
+        return f"Deploy cancelled at step '{current_step}'"
+
+    def on_complete(self, history):
+        steps = " -> ".join(s[0] for s in history)
+        print(f"[audit] Deploy complete: {steps}")
+```
+
+### Tool visibility: `allow_during` and `block_during`
+
+By default, all external tools are hidden during a workflow. Use `allow_during` and `block_during` with glob patterns to control which external tools remain visible.
+
+```python
+@workflow("deploy", allow_during=["status", "log_*"])
+class DeployWorkflow:
+    ...
+```
+
+Step-level `allow_during` / `block_during` **replaces** the workflow-level setting entirely (it does not merge). This lets individual steps expose a different set of external tools.
+
+### Error handling
+
+By default, if a step handler raises an exception, the workflow stays in the current state and the agent can retry. Use `on_error` to define exception-driven transitions to other steps:
+
+```python
+@step(next=["deploy"], on_error={TimeoutError: "rollback"},
+      description="Run smoke tests")
+def smoke_test(self) -> StepResult:
+    run_smoke_tests()  # may raise TimeoutError
+    return StepResult(result="Smoke tests passed")
+```
 
 ---
 

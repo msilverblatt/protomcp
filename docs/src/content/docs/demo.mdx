@@ -1,6 +1,6 @@
 ---
 title: Demo
-description: See pmcp in action — four focused demos showing tool calls, progress, dynamic tool lists, and hot reload.
+description: See pmcp in action — seven demos showing tool calls, progress, dynamic tool lists, hot reload, tool groups, workflows, and middleware.
 template: splash
 hero:
   tagline: Watch an AI agent use tools through pmcp — from chat to wire protocol.
@@ -420,6 +420,386 @@ A tool call fails. The developer fixes the bug and saves. pmcp hot-reloads the f
   </Fragment>
 </DemoSection>
 
+## Tool Groups
+
+Tool groups bundle related actions under one tool name. A `oneOf` discriminated union schema guides the agent to the right parameters for each action.
+
+<DemoSection
+  title="Tool Groups"
+  demoId="demo5"
+  timeline={[[1, 600], [2, 800], [3, 400], [4, 350], [5, 300], [6, 700], [7, 300], [8, 200], [9, 700]]}
+  sideEffects={[{ step: 8, action: "complete-tool", target: "d5-tc-data" }]}
+>
+  <Fragment slot="chat">
+    <div class="chat-item user-msg" data-step="1">
+      <div class="user-bubble">Add the sales dataset from /data/sales.csv</div>
+    </div>
+    <div class="chat-item ai-msg" data-step="2">
+      <div class="ai-bubble">I'll ingest that dataset.</div>
+    </div>
+    <div class="chat-item tool-card" data-step="3">
+      <div class="tc-bar tc-running" id="d5-tc-data-bar"></div>
+      <div class="tc-body">
+        <div class="tc-head">
+          <span class="tc-icon">⚡</span>
+          <span class="tc-name">data</span>
+          <span class="tc-status" id="d5-tc-data-status">running</span>
+        </div>
+        <div class="tc-args">{"{"} action: "add", data_path: "/data/sales.csv", auto_clean: true {"}"}</div>
+        <div class="tc-result" data-step="8">
+          <pre class="tc-json">Added 12,847 rows from sales.csv</pre>
+        </div>
+      </div>
+    </div>
+    <div class="chat-item ai-msg" data-step="9">
+      <div class="ai-bubble">Dataset loaded — <strong>12,847 rows</strong> ingested.</div>
+    </div>
+  </Fragment>
+  <Fragment slot="flow">
+    <div class="flow-item fi-out" data-step="4">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">Host→pmcp</span>
+      <span class="fi-detail">tools/call "data" (oneOf schema)</span>
+    </div>
+    <div class="flow-item fi-out" data-step="5">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">pmcp→App</span>
+      <span class="fi-detail">CallToolRequest</span>
+    </div>
+    <div class="flow-item fi-in" data-step="6">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">App→pmcp</span>
+      <span class="fi-detail">CallToolResult</span>
+    </div>
+    <div class="flow-item fi-in" data-step="7">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">pmcp→Host</span>
+      <span class="fi-detail">result: "12,847 rows added"</span>
+    </div>
+  </Fragment>
+</DemoSection>
+
+## Server-Defined Workflows
+
+Multi-step workflows where the tool surface changes at each step. Tools appear and disappear as the workflow progresses — the available tools _are_ the state machine.
+
+<DemoSection
+  title="Server-Defined Workflows"
+  demoId="demo6"
+  timeline={[[1, 600], [2, 800], [3, 400], [4, 350], [5, 300], [6, 700], [7, 300], [8, 400], [9, 100], [10, 800], [11, 400], [12, 350], [13, 300], [14, 700], [15, 300], [16, 400], [17, 100], [18, 400], [19, 350], [20, 300], [21, 700], [22, 300], [23, 400], [24, 100], [25, 400], [26, 350], [27, 300], [28, 700], [29, 300], [30, 700]]}
+  sideEffects={[
+    { step: 7, action: "complete-tool", target: "d6-tc-review" },
+    { step: 15, action: "complete-tool", target: "d6-tc-approve" },
+    { step: 22, action: "complete-tool", target: "d6-tc-tests" },
+    { step: 29, action: "complete-tool", target: "d6-tc-promote" }
+  ]}
+>
+  <Fragment slot="chat">
+    <div class="chat-item user-msg" data-step="1">
+      <div class="user-bubble">Deploy PR #142</div>
+    </div>
+    <div class="chat-item ai-msg" data-step="2">
+      <div class="ai-bubble">Starting deployment review.</div>
+    </div>
+    <div class="chat-item tool-card" data-step="3">
+      <div class="tc-bar tc-running" id="d6-tc-review-bar"></div>
+      <div class="tc-body">
+        <div class="tc-head">
+          <span class="tc-icon">⚡</span>
+          <span class="tc-name">deploy.review</span>
+          <span class="tc-status" id="d6-tc-review-status">running</span>
+        </div>
+        <div class="tc-args">{"{"} pr_url: "#142" {"}"}</div>
+        <div class="tc-result" data-step="7">
+          <pre class="tc-json">3 files changed</pre>
+        </div>
+      </div>
+    </div>
+    <div class="chat-item ai-msg" data-step="10">
+      <div class="ai-bubble">Changes look good. Approving.</div>
+    </div>
+    <div class="chat-item tool-card" data-step="11">
+      <div class="tc-bar tc-running" id="d6-tc-approve-bar"></div>
+      <div class="tc-body">
+        <div class="tc-head">
+          <span class="tc-icon">⚡</span>
+          <span class="tc-name">deploy.approve</span>
+          <span class="tc-status" id="d6-tc-approve-status">running</span>
+        </div>
+        <div class="tc-args">{"{"} reason: "Tests green, LGTM" {"}"}</div>
+        <div class="tc-result" data-step="15">
+          <pre class="tc-json">Approved</pre>
+        </div>
+      </div>
+    </div>
+    <div class="chat-item system-msg" data-step="16">
+      ⚡ Available tools changed: +deploy.run_tests −deploy.review −deploy.approve
+    </div>
+    <div class="chat-item tool-card" data-step="18">
+      <div class="tc-bar tc-running" id="d6-tc-tests-bar"></div>
+      <div class="tc-body">
+        <div class="tc-head">
+          <span class="tc-icon">⚡</span>
+          <span class="tc-name">deploy.run_tests</span>
+          <span class="tc-status" id="d6-tc-tests-status">running</span>
+        </div>
+        <div class="tc-args">{"{"} {"}"}</div>
+        <div class="tc-result" data-step="22">
+          <pre class="tc-json">42 tests passed</pre>
+        </div>
+      </div>
+    </div>
+    <div class="chat-item system-msg" data-step="23">
+      ⚡ Available tools changed: +deploy.promote −deploy.run_tests −deploy.cancel
+    </div>
+    <div class="chat-item tool-card" data-step="25">
+      <div class="tc-bar tc-running" id="d6-tc-promote-bar"></div>
+      <div class="tc-body">
+        <div class="tc-head">
+          <span class="tc-icon">⚡</span>
+          <span class="tc-name">deploy.promote</span>
+          <span class="tc-status" id="d6-tc-promote-status">running</span>
+        </div>
+        <div class="tc-args">{"{"} {"}"}</div>
+        <div class="tc-result" data-step="29">
+          <pre class="tc-json">Live in production</pre>
+        </div>
+      </div>
+    </div>
+    <div class="chat-item ai-msg" data-step="30">
+      <div class="ai-bubble">Deployed <strong>PR #142</strong> to production.</div>
+    </div>
+  </Fragment>
+  <Fragment slot="flow">
+    <div class="flow-item fi-out" data-step="4">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">Host→pmcp</span>
+      <span class="fi-detail">tools/call "deploy.review"</span>
+    </div>
+    <div class="flow-item fi-out" data-step="5">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">pmcp→App</span>
+      <span class="fi-detail">CallToolRequest</span>
+    </div>
+    <div class="flow-item fi-in" data-step="6">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">App→pmcp</span>
+      <span class="fi-detail">CallToolResult + set_allowed</span>
+    </div>
+    <div class="flow-item fi-in" data-step="7">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">pmcp→Host</span>
+      <span class="fi-detail">result: "3 files changed"</span>
+    </div>
+    <div class="flow-item fi-notify" data-step="8">
+      <span class="fi-arrow">⇢</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">pmcp→Host</span>
+      <span class="fi-detail">notifications/tools/list_changed</span>
+    </div>
+    <div class="flow-sep" data-step="9"></div>
+    <div class="flow-item fi-out" data-step="12">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">Host→pmcp</span>
+      <span class="fi-detail">tools/call "deploy.approve"</span>
+    </div>
+    <div class="flow-item fi-out" data-step="13">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">pmcp→App</span>
+      <span class="fi-detail">CallToolRequest</span>
+    </div>
+    <div class="flow-item fi-in" data-step="14">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">App→pmcp</span>
+      <span class="fi-detail">CallToolResult + set_allowed</span>
+    </div>
+    <div class="flow-item fi-notify" data-step="15">
+      <span class="fi-arrow">⇢</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">pmcp→Host</span>
+      <span class="fi-detail">notifications/tools/list_changed</span>
+    </div>
+    <div class="flow-sep" data-step="17"></div>
+    <div class="flow-item fi-out" data-step="19">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">Host→pmcp</span>
+      <span class="fi-detail">tools/call "deploy.run_tests"</span>
+    </div>
+    <div class="flow-item fi-out" data-step="20">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">pmcp→App</span>
+      <span class="fi-detail">CallToolRequest</span>
+    </div>
+    <div class="flow-item fi-in" data-step="21">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">App→pmcp</span>
+      <span class="fi-detail">CallToolResult + set_allowed</span>
+    </div>
+    <div class="flow-item fi-notify" data-step="22">
+      <span class="fi-arrow">⇢</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">pmcp→Host</span>
+      <span class="fi-detail">notifications/tools/list_changed</span>
+    </div>
+    <div class="flow-sep" data-step="24"></div>
+    <div class="flow-item fi-out" data-step="26">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">Host→pmcp</span>
+      <span class="fi-detail">tools/call "deploy.promote"</span>
+    </div>
+    <div class="flow-item fi-out" data-step="27">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">pmcp→App</span>
+      <span class="fi-detail">CallToolRequest</span>
+    </div>
+    <div class="flow-item fi-in" data-step="28">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">App→pmcp</span>
+      <span class="fi-detail">CallToolResult</span>
+    </div>
+    <div class="flow-item fi-in" data-step="29">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">pmcp→Host</span>
+      <span class="fi-detail">result: "Live in production"</span>
+    </div>
+  </Fragment>
+</DemoSection>
+
+## Local Middleware
+
+Middleware runs in-process — no round-trip to the Go bridge. Here it intercepts an error, formats it for the agent, and the agent recovers.
+
+<DemoSection
+  title="Local Middleware"
+  demoId="demo7"
+  timeline={[[1, 600], [2, 800], [3, 400], [4, 350], [5, 300], [6, 200], [7, 700], [8, 800], [9, 400], [10, 350], [11, 300], [12, 200], [13, 300], [14, 200], [15, 700]]}
+  sideEffects={[
+    { step: 6, action: "error-tool", target: "d7-tc-read-err" },
+    { step: 14, action: "complete-tool", target: "d7-tc-read-ok" }
+  ]}
+>
+  <Fragment slot="chat">
+    <div class="chat-item user-msg" data-step="1">
+      <div class="user-bubble">Read /etc/shadow</div>
+    </div>
+    <div class="chat-item ai-msg" data-step="2">
+      <div class="ai-bubble">Let me try that.</div>
+    </div>
+    <div class="chat-item tool-card" data-step="3">
+      <div class="tc-bar tc-running" id="d7-tc-read-err-bar"></div>
+      <div class="tc-body">
+        <div class="tc-head">
+          <span class="tc-icon">⚡</span>
+          <span class="tc-name">read_file</span>
+          <span class="tc-status" id="d7-tc-read-err-status">running</span>
+        </div>
+        <div class="tc-args">{"{"} path: "/etc/shadow" {"}"}</div>
+        <div class="tc-result" data-step="6">
+          <pre class="tc-json tc-error"><strong>Permission denied</strong>: /etc/shadow — try a file you own</pre>
+        </div>
+      </div>
+    </div>
+    <div class="chat-item ai-msg" data-step="8">
+      <div class="ai-bubble">I don't have permission. Let me try a different file.</div>
+    </div>
+    <div class="chat-item tool-card" data-step="9">
+      <div class="tc-bar tc-running" id="d7-tc-read-ok-bar"></div>
+      <div class="tc-body">
+        <div class="tc-head">
+          <span class="tc-icon">⚡</span>
+          <span class="tc-name">read_file</span>
+          <span class="tc-status" id="d7-tc-read-ok-status">running</span>
+        </div>
+        <div class="tc-args">{"{"} path: "~/.profile" {"}"}</div>
+        <div class="tc-result" data-step="14">
+          <pre class="tc-json"># .profile contents...</pre>
+        </div>
+      </div>
+    </div>
+    <div class="chat-item ai-msg" data-step="15">
+      <div class="ai-bubble">Here's your profile file.</div>
+    </div>
+  </Fragment>
+  <Fragment slot="flow">
+    <div class="flow-item fi-out" data-step="4">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">Host→pmcp</span>
+      <span class="fi-detail">tools/call "read_file"</span>
+    </div>
+    <div class="flow-item fi-notify fi-error" data-step="5">
+      <span class="fi-arrow">⟳</span>
+      <span class="fi-proto fi-internal">middleware</span>
+      <span class="fi-hop">in-process</span>
+      <span class="fi-detail">PermissionError → formatted message</span>
+    </div>
+    <div class="flow-item fi-in fi-error" data-step="6">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">pmcp→Host</span>
+      <span class="fi-detail">error: "Permission denied"</span>
+    </div>
+    <div class="flow-sep" data-step="7"></div>
+    <div class="flow-item fi-out" data-step="10">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">Host→pmcp</span>
+      <span class="fi-detail">tools/call "read_file"</span>
+    </div>
+    <div class="flow-item fi-out" data-step="11">
+      <span class="fi-arrow">→</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">pmcp→App</span>
+      <span class="fi-detail">CallToolRequest</span>
+    </div>
+    <div class="flow-item fi-in" data-step="12">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-protobuf">protobuf</span>
+      <span class="fi-hop">App→pmcp</span>
+      <span class="fi-detail">CallToolResult</span>
+    </div>
+    <div class="flow-item fi-in" data-step="13">
+      <span class="fi-arrow">←</span>
+      <span class="fi-proto fi-jsonrpc">JSON-RPC</span>
+      <span class="fi-hop">pmcp→Host</span>
+      <span class="fi-detail">result: ".profile contents"</span>
+    </div>
+  </Fragment>
+</DemoSection>
+
+## What's New
+
+protomcp now supports advanced features for building complex MCP servers:
+
+- **Tool Groups** — group related actions with per-action schemas (`oneOf` discriminated unions)
+- **Server-Defined Workflows** — multi-step state machines where the tool surface is the state
+- **Local Middleware** — in-process middleware chains for error formatting, timing, and more
+- **Declarative Validation** — required fields, enum fuzzy matching, cross-parameter rules
+- **Server Context** — shared parameter resolvers injected automatically
+- **Telemetry Sinks** — structured tool-call events to pluggable, fail-safe sinks
+- **Sidecar Management** — managed companion processes with health checks
+- **Handler Discovery** — auto-discover tool handlers from a directory
+
+See the [Python Guide](/protomcp/guides/writing-tools-python/) for the full API.
+
 ## Try It Yourself
 
 ```sh
@@ -427,5 +807,5 @@ brew install protomcp/tap/protomcp
 pmcp dev examples/python/basic.py
 ```
 
-Check out the [Quick Start](/getting-started/quick-start/) guide or browse the [examples](https://github.com/msilverblatt/protomcp/tree/master/examples).
+Check out the [Quick Start](/protomcp/getting-started/quick-start/) guide or browse the [examples](https://github.com/msilverblatt/protomcp/tree/master/examples).
 

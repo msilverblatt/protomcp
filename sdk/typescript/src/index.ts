@@ -18,4 +18,5 @@ export type { ToolCallEvent } from './telemetry.js';
 export { sidecar, startSidecars, stopAllSidecars, clearSidecarRegistry } from './sidecar.js';
 export type { SidecarOptions } from './sidecar.js';
 export { configure as configureDiscovery, discoverHandlers, getDiscoveryConfig, resetConfig as resetDiscoveryConfig } from './discovery.js';
+export { workflow, StepResult, getRegisteredWorkflows, clearWorkflowRegistry } from './workflow.js';
 export { run } from './runner.js';

@@ -225,6 +225,7 @@ fn group_to_union_def(group: &GroupDef) -> ToolDef {
         read_only: false,
         open_world: false,
         task_support: false,
+        hidden: false,
     }
 }
 
@@ -264,6 +265,7 @@ fn group_to_separate_defs(group: &GroupDef) -> Vec<ToolDef> {
             read_only: false,
             open_world: false,
             task_support: false,
+            hidden: false,
         });
     }
     defs

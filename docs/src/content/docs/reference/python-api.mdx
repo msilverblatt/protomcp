@@ -21,6 +21,7 @@ from protomcp.local_middleware import local_middleware
 from protomcp.server_context import server_context
 from protomcp.telemetry import telemetry_sink, ToolCallEvent
 from protomcp.sidecar import sidecar
+from protomcp.workflow import workflow, step, StepResult, get_registered_workflows, clear_workflow_registry
 from protomcp.discovery import configure
 ```
 
@@ -657,6 +658,138 @@ Returns a copy of the sidecar registry.
 ### `clear_sidecar_registry()`
 
 Clears the sidecar registry.
+
+---
+
+## `@workflow(...)`
+
+Class decorator that registers a workflow — a server-defined state machine composed of steps.
+
+```python
+from protomcp import workflow
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | required | Unique workflow identifier. Steps are registered as `name.step_name` tools |
+| `description` | `str` | `""` | Human-readable description |
+| `allow_during` | `list[str] \| None` | `None` | Glob patterns for external tools visible during the workflow |
+| `block_during` | `list[str] \| None` | `None` | Glob patterns for external tools hidden during the workflow |
+
+**Returns:** The original class (unmodified).
+
+The class may define `on_cancel(self, current_step, history)` and `on_complete(self, history)` lifecycle methods.
+
+```python
+@workflow("deploy", allow_during=["status"])
+class DeployWorkflow:
+    @step(initial=True, next=["approve"], description="Review changes")
+    def review(self, pr_url: str) -> StepResult:
+        return StepResult(result=f"Reviewing {pr_url}")
+
+    @step(terminal=True, description="Approve changes")
+    def approve(self, reason: str) -> StepResult:
+        return StepResult(result=f"Approved: {reason}")
+```
+
+---
+
+## `@step(...)`
+
+Method decorator that marks a method as a workflow step.
+
+```python
+from protomcp import step
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str \| None` | method name | Step name. Defaults to the decorated method's name if not provided |
+| `description` | `str` | `""` | Human-readable description |
+| `initial` | `bool` | `False` | Mark as the workflow entry point. Exactly one step must be initial |
+| `next` | `list[str] \| None` | `None` | Valid next step names. Required for non-terminal steps |
+| `terminal` | `bool` | `False` | Mark as a workflow exit point. Terminal steps must not have `next` |
+| `no_cancel` | `bool` | `False` | Prevent cancellation while at this step |
+| `allow_during` | `list[str] \| None` | `None` | Step-level visibility override (replaces workflow-level, does not merge) |
+| `block_during` | `list[str] \| None` | `None` | Step-level block override (replaces workflow-level, does not merge) |
+| `on_error` | `dict[type, str] \| None` | `None` | Map exception types to target step names for error-driven transitions |
+| `requires` | `list[str] \| None` | `None` | Required field names — validation fails if missing or empty |
+| `enum_fields` | `dict[str, list] \| None` | `None` | Map of field name to valid values |
+
+**Returns:** The original function (unmodified).
+
+```python
+@step(initial=True, next=["approve", "reject"], description="Review changes")
+def review(self, pr_url: str) -> StepResult:
+    return StepResult(result=f"Reviewing {pr_url}")
+```
+
+---
+
+## `StepResult`
+
+Returned by step handlers to provide the result and optionally narrow the next steps.
+
+```python
+from protomcp import StepResult
+```
+
+```python
+@dataclass
+class StepResult:
+    result: str = ""
+    next: list[str] | None = None
+```
+
+### Fields
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `result` | `str` | `""` | The result string returned to the agent |
+| `next` | `list[str] \| None` | `None` | Narrow the valid next steps at runtime. Must be a subset of the `@step` decorator's `next` list. If `None`, uses the full declared `next` list |
+
+```python
+return StepResult(result="Tests passed", next=["promote"])
+```
+
+---
+
+## `WorkflowDef`
+
+```python
+@dataclass
+class WorkflowDef:
+    name: str
+    description: str
+    steps: list[StepDef]
+    instance: Any
+    allow_during: list[str] | None = None
+    block_during: list[str] | None = None
+    on_cancel: Callable | None = None
+    on_complete: Callable | None = None
+```
+
+### `get_registered_workflows()`
+
+Returns a copy of the current workflow registry.
+
+```python
+from protomcp import get_registered_workflows
+workflows: list[WorkflowDef] = get_registered_workflows()
+```
+
+### `clear_workflow_registry()`
+
+Clears the workflow registry and any active workflow state.
+
+```python
+from protomcp import clear_workflow_registry
+clear_workflow_registry()
+```
 
 ---
 

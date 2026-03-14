@@ -16,6 +16,7 @@ type ToolDef struct {
 	ReadOnly     bool
 	OpenWorld    bool
 	TaskSupport  bool
+	Hidden       bool
 }
 
 type ToolOption func(*ToolDef)
@@ -126,6 +127,7 @@ func (td ToolDef) InputSchemaJSON() string {
 func GetRegisteredTools() []ToolDef {
 	all := append([]ToolDef{}, registry...)
 	all = append(all, GroupsToToolDefs()...)
+	all = append(all, WorkflowsToToolDefs()...)
 	return all
 }
 func ClearRegistry()                { registry = nil }

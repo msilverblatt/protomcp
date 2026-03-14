@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -200,11 +201,14 @@ func RuntimeCommand(file string) (string, []string) {
 	ext := filepath.Ext(file)
 	switch ext {
 	case ".py":
-		cmd := "python3"
 		if env := os.Getenv("PROTOMCP_PYTHON"); env != "" {
-			cmd = env
+			return env, []string{file}
 		}
-		return cmd, []string{file}
+		// Prefer uv if available and a pyproject.toml exists near the file
+		if hasUV() && findPyprojectToml(file) != "" {
+			return "uv", []string{"run", "python", file}
+		}
+		return "python3", []string{file}
 	case ".ts":
 		if env := os.Getenv("PROTOMCP_NODE"); env != "" {
 			return env, []string{file}
@@ -227,5 +231,30 @@ func RuntimeCommand(file string) (string, []string) {
 		return "cargo", []string{"run", "--manifest-path", manifest}
 	default:
 		return file, nil
+	}
+}
+
+// hasUV checks if the uv command is available on PATH.
+func hasUV() bool {
+	_, err := exec.LookPath("uv")
+	return err == nil
+}
+
+// findPyprojectToml walks up from the file's directory looking for pyproject.toml.
+func findPyprojectToml(file string) string {
+	dir, err := filepath.Abs(filepath.Dir(file))
+	if err != nil {
+		return ""
+	}
+	for {
+		candidate := filepath.Join(dir, "pyproject.toml")
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return ""
+		}
+		dir = parent
 	}
 }

@@ -1,9 +1,8 @@
 import json
 import threading
 import uuid
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'gen'))
-import protomcp_pb2 as pb
+
+import protomcp.protomcp_pb2 as pb
 
 # Global registry for pending sampling responses.
 # The runner's main loop will check incoming envelopes for SamplingResponse

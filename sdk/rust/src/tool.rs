@@ -46,6 +46,7 @@ pub struct ToolDef {
     pub read_only: bool,
     pub open_world: bool,
     pub task_support: bool,
+    pub hidden: bool,
 }
 
 pub struct ToolBuilder {
@@ -159,6 +160,7 @@ impl ToolBuilder {
             read_only: self.read_only,
             open_world: self.open_world,
             task_support: self.task_support,
+            hidden: false,
         };
 
         REGISTRY.lock().unwrap().push(td);

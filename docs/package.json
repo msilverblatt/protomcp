@@ -8,7 +8,9 @@
   },
   "dependencies": {
     "@astrojs/starlight": "^0.32.0",
+    "@beoe/rehype-mermaid": "^0.4.2",
     "astro": "^5.3.0",
+    "playwright": "^1.58.2",
     "sharp": "^0.33.0",
     "zod": "^3.25.76"
   }

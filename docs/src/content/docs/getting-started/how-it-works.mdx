@@ -97,7 +97,7 @@ All communication between protomcp and the tool process uses a simple framing:
 [4 bytes: uint32 big-endian length][N bytes: serialized protobuf Envelope]
 ```
 
-The `Envelope` message wraps all request and response types in a `oneof` field. See the [Protobuf Spec](/reference/protobuf-spec/) for full details.
+The `Envelope` message wraps all request and response types in a `oneof` field. See the [Protobuf Spec](/protomcp/reference/protobuf-spec/) for full details.
 
 ---
 
@@ -110,4 +110,4 @@ protomcp supports two transports for the MCP host side:
 | stdio | `--transport stdio` | MCP clients that spawn subprocesses (default) |
 | Streamable HTTP | `--transport http` | Remote or web-based MCP clients |
 
-See [Transports](/concepts/transports/) for details.
+See [Transports](/protomcp/concepts/transports/) for details.

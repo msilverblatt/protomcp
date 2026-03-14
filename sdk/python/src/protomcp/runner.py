@@ -3,8 +3,7 @@ import os
 import sys
 import time
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'gen'))
-import protomcp_pb2 as pb
+import protomcp.protomcp_pb2 as pb
 
 import inspect
 
