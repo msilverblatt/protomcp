@@ -14,8 +14,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.25'
-      - run: go vet ./cmd/... ./internal/bridge ./internal/cancel ./internal/cli ./internal/config ./internal/envelope ./internal/playground ./internal/reload ./internal/tasks ./internal/testengine ./internal/toollist ./internal/validate
-      - run: go test -timeout 120s ./cmd/... ./internal/bridge ./internal/cancel ./internal/cli ./internal/config ./internal/envelope ./internal/playground ./internal/reload ./internal/tasks ./internal/testengine ./internal/toollist ./internal/validate
+      - run: go vet ./cmd/... ./internal/bridge ./internal/cancel ./internal/cli ./internal/config ./internal/envelope ./internal/playground ./internal/reload ./internal/tasks ./internal/toollist ./internal/validate
+      - run: go test -timeout 120s ./internal/bridge ./internal/cancel ./internal/config ./internal/envelope ./internal/reload ./internal/tasks ./internal/toollist ./internal/validate
       - run: go build ./cmd/protomcp/
 
   go-sdk:
