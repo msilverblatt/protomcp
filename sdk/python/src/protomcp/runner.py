@@ -17,6 +17,7 @@ from protomcp import manager
 from protomcp.resource import get_registered_resources, get_registered_resource_templates, ResourceContent
 from protomcp.prompt import get_registered_prompts
 from protomcp.completion import get_completion_handler, CompletionResult
+from protomcp.server_context import resolve_contexts
 
 log: ServerLogger = ServerLogger(send_fn=lambda msg: None)
 
@@ -111,7 +112,12 @@ def _handle_call_tool(transport, env):
 
     try:
         args = json.loads(req.arguments_json) if req.arguments_json else {}
+        # Resolve server contexts and inject into args if handler accepts them
+        ctx_values = resolve_contexts(args)
         sig = inspect.signature(handler)
+        for param_name, value in ctx_values.items():
+            if param_name in sig.parameters:
+                args[param_name] = value
         if "ctx" in sig.parameters:
             ctx = ToolContext(
                 progress_token=req.progress_token,

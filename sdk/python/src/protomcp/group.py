@@ -194,6 +194,14 @@ def _dispatch_group_action(group: GroupDef, **kwargs) -> Any:
 
     for act in group.actions:
         if act.name == action_name:
+            # Resolve server contexts
+            from protomcp.server_context import resolve_contexts
+            ctx_values = resolve_contexts(kwargs)
+            sig = inspect.signature(act.handler)
+            for param_name, value in ctx_values.items():
+                if param_name in sig.parameters:
+                    kwargs[param_name] = value
+
             # Validate before calling handler
             validation_error = _validate_action(act, kwargs)
             if validation_error is not None:
