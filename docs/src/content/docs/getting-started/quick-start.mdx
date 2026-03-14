@@ -22,6 +22,12 @@ import { Steps } from '@astrojs/starlight/components';
 
    # TypeScript
    npm install protomcp zod
+
+   # Go
+   go get github.com/msilverblatt/protomcp/sdk/go
+
+   # Rust
+   cargo add protomcp tokio serde_json
    ```
 
 3. **Write a tool file**
@@ -127,5 +133,8 @@ import { Steps } from '@astrojs/starlight/components';
 
 - [Writing Tools (Python)](/guides/writing-tools-python/) — type hints, optional params, progress, logging
 - [Writing Tools (TypeScript)](/guides/writing-tools-typescript/) — Zod schemas, async handlers, progress, logging
+- [Writing Tools (Go)](/guides/writing-tools-go/) — functional options, `ToolResult`, progress
+- [Writing Tools (Rust)](/guides/writing-tools-rust/) — builder pattern, `ArgDef`, progress
 - [Dynamic Tool Lists](/guides/dynamic-tool-lists/) — enable/disable tools at runtime
+- [Custom Middleware](/guides/middleware/) — intercept tool calls with before/after hooks
 - [CLI Reference](/reference/cli/) — all flags and options

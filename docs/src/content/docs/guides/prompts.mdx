@@ -1,0 +1,141 @@
+---
+draft: false
+title: Prompts
+description: Define reusable message templates with arguments and autocomplete.
+---
+
+Prompts are reusable message templates that MCP clients can discover and fill in with arguments. They're useful for building structured conversations — summarization templates, code review checklists, analysis workflows.
+
+## How Prompts Work
+
+```
+MCP Client                    pmcp                     Your Code
+    │                          │                          │
+    ├─ prompts/list ──────────►│                          │
+    │                          ├─ ListPromptsRequest ────►│
+    │                          │◄─ PromptListResponse ───┤
+    │◄─ prompt list ───────────┤                          │
+    │                          │                          │
+    ├─ prompts/get(name) ─────►│                          │
+    │                          ├─ GetPromptRequest ──────►│
+    │                          │◄─ GetPromptResponse ────┤
+    │◄─ prompt messages ───────┤                          │
+```
+
+## Python
+
+### Basic Prompt
+
+```python
+from protomcp import prompt, PromptMessage
+
+@prompt(description="Generate a code review checklist")
+def code_review() -> list[PromptMessage]:
+    return [
+        PromptMessage(role="user", content="Review this code for:\n1. Security issues\n2. Performance\n3. Readability"),
+    ]
+```
+
+### Prompts with Arguments
+
+Arguments let the MCP client fill in values before sending the prompt:
+
+```python
+from protomcp import prompt, PromptArg, PromptMessage
+
+@prompt(
+    description="Summarize a document",
+    arguments=[
+        PromptArg(name="topic", description="What to summarize", required=True),
+        PromptArg(name="style", description="brief, detailed, or bullet"),
+        PromptArg(name="audience", description="Who the summary is for"),
+    ],
+)
+def summarize(topic: str, style: str = "brief", audience: str = "general") -> list[PromptMessage]:
+    return [
+        PromptMessage(
+            role="user",
+            content=f"Summarize {topic} in a {style} style for a {audience} audience.",
+        ),
+    ]
+```
+
+### Multi-Turn Prompts
+
+Return multiple messages to set up a conversation:
+
+```python
+@prompt(description="Debug a production issue", arguments=[PromptArg(name="error", required=True)])
+def debug_issue(error: str) -> list[PromptMessage]:
+    return [
+        PromptMessage(role="user", content=f"I'm seeing this error in production:\n\n{error}"),
+        PromptMessage(role="assistant", content="I'll help debug this. Let me analyze the error and ask some clarifying questions."),
+        PromptMessage(role="user", content="Please check for common causes first, then suggest specific debugging steps."),
+    ]
+```
+
+## TypeScript
+
+```typescript
+import { prompt } from 'protomcp';
+
+prompt({
+  name: 'summarize',
+  description: 'Summarize a document',
+  arguments: [
+    { name: 'topic', description: 'What to summarize', required: true },
+    { name: 'style', description: 'brief, detailed, or bullet' },
+  ],
+  handler: (args) => [
+    { role: 'user', content: `Summarize ${args.topic} in a ${args.style ?? 'brief'} style.` },
+  ],
+});
+```
+
+## Go
+
+```go
+protomcp.RegisterPrompt(protomcp.PromptDef{
+    Name:        "summarize",
+    Description: "Summarize a document",
+    Arguments: []protomcp.PromptArg{
+        {Name: "topic", Description: "What to summarize", Required: true},
+        {Name: "style", Description: "brief, detailed, or bullet"},
+    },
+    HandlerFn: func(args map[string]string) (string, []protomcp.PromptMessage) {
+        style := args["style"]
+        if style == "" {
+            style = "brief"
+        }
+        return "", []protomcp.PromptMessage{
+            {Role: "user", ContentJSON: fmt.Sprintf(`{"type":"text","text":"Summarize %s in a %s style."}`, args["topic"], style)},
+        }
+    },
+})
+```
+
+## Completions
+
+Completions provide autocomplete suggestions as users fill in prompt arguments. Register a completion handler for a specific prompt + argument combination:
+
+```python
+from protomcp import completion, CompletionResult
+
+@completion("ref/prompt", "summarize", "topic")
+def complete_topic(value: str) -> CompletionResult:
+    topics = ["quarterly-report", "incident-2024-03", "architecture-review"]
+    matches = [t for t in topics if t.startswith(value)]
+    return CompletionResult(values=matches, total=len(matches))
+
+@completion("ref/prompt", "summarize", "style")
+def complete_style(value: str) -> list[str]:
+    return [s for s in ["brief", "detailed", "bullet"] if s.startswith(value)]
+```
+
+Completions also work for resource template arguments:
+
+```python
+@completion("ref/resource", "db://users/{user_id}", "user_id")
+def complete_user_id(value: str) -> list[str]:
+    return [uid for uid in get_all_user_ids() if uid.startswith(value)]
+```

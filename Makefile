@@ -18,9 +18,11 @@ proto:
 
 build:
 	go build -o bin/pmcp ./cmd/protomcp
+	cd tests/bench/fixtures/go && go build -o ../../../../bin/go_bench_tool .
+	cd tests/bench/fixtures/rust_echo_tool && cargo build --release && cp target/release/rust_echo_tool ../../../../bin/rust_echo_tool
 
 test:
-	go test ./...
+	go test ./cmd/... ./internal/...
 
 test-python:
 	cd sdk/python && python -m pytest tests/ -v

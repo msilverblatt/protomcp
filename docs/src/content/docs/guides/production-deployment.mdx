@@ -36,18 +36,16 @@ For production, choose the transport that matches your deployment topology:
 | Transport | Flag | When to use |
 |-----------|------|-------------|
 | stdio | `--transport stdio` | MCP client spawns protomcp as a subprocess (most common) |
-| HTTP SSE | `--transport sse` | Remote or web-based MCP clients, single connection |
-| Streamable HTTP | `--transport http` | Modern HTTP clients, multiple concurrent connections |
-| WebSocket | `--transport ws` | Real-time bidirectional, low-latency clients |
+| Streamable HTTP | `--transport http` | Remote or web-based MCP clients |
 
-For Claude Desktop (local), stdio is the correct choice. For a remote server, use `sse` or `http`.
+For Claude Desktop (local), stdio is the correct choice. For a remote server, use `http`.
 
 ```sh
 # Remote HTTP server (Python)
-pmcp run tools.py --transport sse --host 0.0.0.0 --port 8080
+pmcp run tools.py --transport http --host 0.0.0.0 --port 8080
 
 # Remote HTTP server (TypeScript)
-pmcp run tools.ts --transport sse --host 0.0.0.0 --port 8080
+pmcp run tools.ts --transport http --host 0.0.0.0 --port 8080
 ```
 
 ---
@@ -90,8 +88,8 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/pmcp run /opt/mytools/tools.py --transport sse --host 127.0.0.1 --port 8080
-# For TypeScript: ExecStart=/usr/local/bin/pmcp run /opt/mytools/tools.ts --transport sse --host 127.0.0.1 --port 8080
+ExecStart=/usr/local/bin/pmcp run /opt/mytools/tools.py --transport http --host 127.0.0.1 --port 8080
+# For TypeScript: ExecStart=/usr/local/bin/pmcp run /opt/mytools/tools.ts --transport http --host 127.0.0.1 --port 8080
 WorkingDirectory=/opt/mytools
 User=protomcp
 Restart=on-failure
@@ -130,7 +128,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY tools.py .
 
 EXPOSE 8080
-CMD ["pmcp", "run", "tools.py", "--transport", "sse", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["pmcp", "run", "tools.py", "--transport", "http", "--host", "0.0.0.0", "--port", "8080"]
 ```
 
 `requirements.txt`:
@@ -166,12 +164,12 @@ Run separate protomcp instances for each tool file:
 
 ```sh
 # Python
-pmcp run auth_tools.py --transport sse --port 8081 &
-pmcp run data_tools.py --transport sse --port 8082 &
+pmcp run auth_tools.py --transport http --port 8081 &
+pmcp run data_tools.py --transport http --port 8082 &
 
 # TypeScript
-pmcp run auth_tools.ts --transport sse --port 8081 &
-pmcp run data_tools.ts --transport sse --port 8082 &
+pmcp run auth_tools.ts --transport http --port 8081 &
+pmcp run data_tools.ts --transport http --port 8082 &
 ```
 
 Configure each as a separate MCP server in your client.

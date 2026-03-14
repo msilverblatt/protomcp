@@ -37,13 +37,10 @@ graph LR
 
 ### Transport Layer
 
-Handles the MCP host connection. protomcp supports five transports, selected with `--transport`:
+Handles the MCP host connection. protomcp supports two transports, selected with `--transport`, provided by the official MCP Go SDK:
 
 - **stdio**: Reads MCP from stdin, writes to stdout. The host spawns protomcp as a child process.
-- **SSE**: HTTP server with Server-Sent Events. One persistent connection per client.
-- **Streamable HTTP**: HTTP with chunked responses. Supports multiple concurrent connections.
-- **WebSocket**: Full-duplex WebSocket connection.
-- **In-process**: For testing — no network I/O.
+- **Streamable HTTP**: HTTP transport. Supports remote and web-based MCP clients.
 
 The transport is transparent to the tool process. Your tools work the same regardless of which transport the host uses.
 

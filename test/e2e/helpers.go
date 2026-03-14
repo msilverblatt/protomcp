@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/msilverblatt/protomcp/internal/mcp"
+	"github.com/msilverblatt/protomcp/tests/testutil"
 )
 
 // StartProtomcp starts the protomcp binary with the given args.
@@ -35,10 +35,10 @@ func StartProtomcp(t *testing.T, args ...string) (io.Writer, *bufio.Scanner, fun
 }
 
 // SendRequest sends a JSON-RPC request and reads the response.
-func SendRequest(t *testing.T, w io.Writer, r *bufio.Scanner, method string, params interface{}) mcp.JSONRPCResponse {
+func SendRequest(t *testing.T, w io.Writer, r *bufio.Scanner, method string, params interface{}) testutil.JSONRPCResponse {
 	t.Helper()
 	id := json.RawMessage(`1`)
-	req := mcp.JSONRPCRequest{
+	req := testutil.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      id,
 		Method:  method,
@@ -54,9 +54,38 @@ func SendRequest(t *testing.T, w io.Writer, r *bufio.Scanner, method string, par
 		t.Fatalf("no response from protomcp for method %q: %v", method, r.Err())
 	}
 
-	var resp mcp.JSONRPCResponse
+	var resp testutil.JSONRPCResponse
 	if err := json.Unmarshal(r.Bytes(), &resp); err != nil {
 		t.Fatalf("failed to unmarshal response: %v", err)
 	}
+	return resp
+}
+
+// SendNotification sends a JSON-RPC notification (no id, no response expected).
+func SendNotification(t *testing.T, w io.Writer, method string, params interface{}) {
+	t.Helper()
+	req := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"method":  method,
+	}
+	if params != nil {
+		req["params"] = params
+	}
+	data, _ := json.Marshal(req)
+	w.Write(append(data, '\n'))
+}
+
+// InitializeSession sends a proper MCP initialize handshake.
+func InitializeSession(t *testing.T, w io.Writer, r *bufio.Scanner) testutil.JSONRPCResponse {
+	t.Helper()
+	resp := SendRequest(t, w, r, "initialize", map[string]interface{}{
+		"protocolVersion": "2025-03-26",
+		"capabilities":    map[string]interface{}{},
+		"clientInfo":      map[string]interface{}{"name": "e2e-test", "version": "1.0.0"},
+	})
+	if resp.Error != nil {
+		t.Fatalf("initialize error: %v", resp.Error)
+	}
+	SendNotification(t, w, "notifications/initialized", map[string]interface{}{})
 	return resp
 }

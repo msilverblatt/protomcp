@@ -1,0 +1,114 @@
+---
+draft: false
+title: MCP Spec Compliance
+description: How protomcp maps to every feature in the MCP specification.
+---
+
+protomcp implements the MCP specification via the [official Go SDK](https://github.com/modelcontextprotocol/go-sdk). This page maps every MCP spec feature to its protomcp implementation.
+
+## Protocol
+
+| Spec Feature | Status | Implementation |
+|-------------|--------|----------------|
+| Protocol version negotiation | Automatic | Official SDK handles `initialize` handshake |
+| JSON-RPC 2.0 | Automatic | Official SDK |
+| Protocol version 2025-03-26 | Supported | Default version |
+
+## Server Features
+
+### Tools
+
+| Method | Status | Notes |
+|--------|--------|-------|
+| `tools/list` | Supported | Registered via `@tool` / `tool()` in each SDK |
+| `tools/call` | Supported | Proxy through bridge to SDK process |
+| Tool annotations | Supported | `destructive`, `readOnly`, `idempotent`, `openWorld` hints |
+| Structured output | Supported | Output schemas via `output_type` parameter |
+| `notifications/tools/list_changed` | Supported | Sent on hot reload and dynamic enable/disable |
+
+### Resources
+
+| Method | Status | Notes |
+|--------|--------|-------|
+| `resources/list` | Supported | Registered via `@resource` / `resource()` |
+| `resources/read` | Supported | Handler receives URI, returns content |
+| `resources/templates/list` | Supported | Registered via `@resource_template` / `resourceTemplate()` |
+| `resources/subscribe` | Supported | Via official SDK `SubscribeHandler` |
+| `notifications/resources/list_changed` | Supported | Sent on hot reload |
+
+### Prompts
+
+| Method | Status | Notes |
+|--------|--------|-------|
+| `prompts/list` | Supported | Registered via `@prompt` / `prompt()` |
+| `prompts/get` | Supported | Handler receives arguments, returns messages |
+| `notifications/prompts/list_changed` | Supported | Sent on hot reload |
+
+### Completions
+
+| Method | Status | Notes |
+|--------|--------|-------|
+| `completion/complete` | Supported | Registered via `@completion` / `completion()` |
+
+### Sampling
+
+| Method | Status | Notes |
+|--------|--------|-------|
+| `sampling/createMessage` | Supported | SDK processes can request LLM calls from client |
+
+### Roots
+
+| Method | Status | Notes |
+|--------|--------|-------|
+| `roots/list` | Supported | SDK processes can request client roots |
+| `notifications/roots/list_changed` | Supported | Bridge handles change notifications |
+
+### Logging
+
+| Method | Status | Notes |
+|--------|--------|-------|
+| `logging/setLevel` | Supported | Official SDK tracks per-session log level |
+| Log messages | Supported | `log.info()`, `log.warning()`, etc. in each SDK |
+
+### Utilities
+
+| Method | Status | Notes |
+|--------|--------|-------|
+| `ping` | Supported | Official SDK handles automatically |
+| `notifications/progress` | Supported | `ctx.report_progress()` in each SDK |
+| `notifications/cancelled` | Supported | Official SDK handles cancellation |
+| Pagination | Supported | Cursor-based, automatic for list operations |
+
+## Transports
+
+| Transport | Status | Notes |
+|-----------|--------|-------|
+| stdio | Supported | Default. `mcp.StdioTransport` from official SDK |
+| Streamable HTTP | Supported | `mcp.StreamableHTTPHandler` with session management |
+
+## Content Types
+
+| Type | Status |
+|------|--------|
+| TextContent | Supported |
+| ImageContent | Supported |
+| AudioContent | Supported |
+| EmbeddedResource | Supported |
+| ResourceLink | Supported |
+
+## SDK Feature Matrix
+
+Which features are available in each language SDK:
+
+| Feature | Python | TypeScript | Go | Rust |
+|---------|--------|------------|-----|------|
+| Tools | `@tool` | `tool()` | `Tool()` | `tool()` |
+| Resources | `@resource` | `resource()` | `RegisterResource()` | `register_resource()` |
+| Resource Templates | `@resource_template` | `resourceTemplate()` | `RegisterResourceTemplate()` | `register_resource_template()` |
+| Prompts | `@prompt` | `prompt()` | `RegisterPrompt()` | `register_prompt()` |
+| Completions | `@completion` | `completion()` | `RegisterCompletion()` | `register_completion()` |
+| Progress | `ctx.report_progress()` | `ctx.reportProgress()` | `ctx.ReportProgress()` | `ctx.report_progress()` |
+| Logging | `log.info()` | `log.info()` | `Log.Info()` | `log::info!()` |
+| Cancellation | `ctx.is_cancelled()` | `ctx.isCancelled()` | `ctx.Done()` | `ctx.is_cancelled()` |
+| Tool management | `tool_manager` | `toolManager` | `ToolManager` | N/A |
+| Sampling | `ctx.sample()` | `ctx.sample()` | `ctx.Sample()` | `ctx.sample()` |

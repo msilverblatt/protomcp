@@ -1,0 +1,263 @@
+---
+draft: false
+title: Writing Tools (Go)
+description: Use Tool(), functional options, ToolResult, ToolContext, ServerLogger, and ToolManager in Go.
+---
+
+## Installation
+
+```sh
+go get github.com/msilverblatt/protomcp/sdk/go
+```
+
+---
+
+## The `Tool()` function
+
+Register tools using `Tool()` with functional options. The first argument is the tool name.
+
+```go
+package main
+
+import (
+	"fmt"
+	"github.com/msilverblatt/protomcp/sdk/go/protomcp"
+)
+
+func main() {
+	protomcp.Tool("add",
+		protomcp.Description("Add two numbers"),
+		protomcp.Args(
+			protomcp.IntArg("a"),
+			protomcp.IntArg("b"),
+		),
+		protomcp.Handler(func(ctx protomcp.ToolContext, args map[string]interface{}) protomcp.ToolResult {
+			a := int(args["a"].(float64))
+			b := int(args["b"].(float64))
+			return protomcp.Result(fmt.Sprintf("%d", a+b))
+		}),
+	)
+
+	protomcp.Run()
+}
+```
+
+### Tool metadata
+
+Pass hint options to provide metadata to the MCP host:
+
+```go
+protomcp.Tool("delete_file",
+	protomcp.Description("Delete a file from disk"),
+	protomcp.DestructiveHint(true),
+	protomcp.IdempotentHint(false),
+	protomcp.ReadOnlyHint(false),
+	protomcp.OpenWorldHint(false),
+	protomcp.Args(protomcp.StrArg("path")),
+	protomcp.Handler(func(ctx protomcp.ToolContext, args map[string]interface{}) protomcp.ToolResult {
+		path := args["path"].(string)
+		os.Remove(path)
+		return protomcp.Result(fmt.Sprintf("Deleted %s", path))
+	}),
+)
+```
+
+| Option | Description |
+|--------|-------------|
+| `Description(s)` | Human-readable description (required) |
+| `Title(s)` | Display name shown in the MCP host UI |
+| `DestructiveHint(bool)` | Hint: the tool has destructive side effects |
+| `IdempotentHint(bool)` | Hint: calling multiple times has the same effect as once |
+| `ReadOnlyHint(bool)` | Hint: the tool does not modify state |
+| `OpenWorldHint(bool)` | Hint: the tool may access external resources |
+| `TaskSupportHint(bool)` | Hint: the tool supports long-running async task semantics |
+
+### Argument types
+
+| Function | JSON Schema type |
+|----------|-----------------|
+| `IntArg(name)` | `"integer"` |
+| `StrArg(name)` | `"string"` |
+| `NumArg(name)` | `"number"` |
+| `BoolArg(name)` | `"boolean"` |
+
+Arguments are passed to the handler as `map[string]interface{}`. JSON numbers are `float64` in Go — cast with `int()` when expecting integers.
+
+---
+
+## `ToolResult`
+
+All handlers return a `ToolResult`.
+
+### Success
+
+```go
+return protomcp.Result("done")
+```
+
+### Structured error
+
+```go
+return protomcp.ErrorResult(
+	"The file /tmp/data.csv does not exist",
+	"NOT_FOUND",
+	"Check the path and try again",
+	false,
+)
+```
+
+| Field | Description |
+|-------|-------------|
+| `ResultText` | The result string |
+| `IsError` | Whether this is an error |
+| `ErrorCode` | Machine-readable error code |
+| `Message` | Human-readable error message |
+| `Suggestion` | Actionable suggestion for the caller |
+| `Retryable` | Whether the caller should retry |
+| `EnableTools` | Tool names to enable after this call |
+| `DisableTools` | Tool names to disable after this call |
+
+### Enabling / disabling tools from a result
+
+```go
+protomcp.Tool("login",
+	protomcp.Description("Log in and unlock tools"),
+	protomcp.Args(protomcp.StrArg("username"), protomcp.StrArg("password")),
+	protomcp.Handler(func(ctx protomcp.ToolContext, args map[string]interface{}) protomcp.ToolResult {
+		username := args["username"].(string)
+		password := args["password"].(string)
+		if !authenticate(username, password) {
+			return protomcp.ErrorResult("Authentication failed", "AUTH_FAILED", "", false)
+		}
+		r := protomcp.Result("Logged in")
+		r.EnableTools = []string{"delete_file", "write_file"}
+		return r
+	}),
+)
+```
+
+---
+
+## Progress Reporting
+
+Use `ToolContext` to report progress during long-running tool calls.
+
+```go
+protomcp.Tool("process_data",
+	protomcp.Description("Process a large dataset"),
+	protomcp.Args(protomcp.StrArg("file_path")),
+	protomcp.Handler(func(ctx protomcp.ToolContext, args map[string]interface{}) protomcp.ToolResult {
+		filePath := args["file_path"].(string)
+		rows := loadRows(filePath)
+		total := len(rows)
+		for i, row := range rows {
+			if ctx.IsCancelled() {
+				return protomcp.ErrorResult("Cancelled", "CANCELLED", "", false)
+			}
+			processRow(row)
+			ctx.ReportProgress(i+1, total)
+		}
+		return protomcp.Result(fmt.Sprintf("Processed %d rows", total))
+	}),
+)
+```
+
+### `ToolContext` API
+
+| Method | Description |
+|--------|-------------|
+| `ReportProgress(progress, total int)` | Send a progress notification to the MCP host |
+| `IsCancelled() bool` | Returns `true` if the MCP host has cancelled this call |
+
+---
+
+## Server Logging
+
+Use `ServerLogger` to send structured log messages back to the MCP host.
+
+```go
+protomcp.Tool("fetch_data",
+	protomcp.Description("Fetch remote data"),
+	protomcp.Args(protomcp.StrArg("url")),
+	protomcp.Handler(func(ctx protomcp.ToolContext, args map[string]interface{}) protomcp.ToolResult {
+		url := args["url"].(string)
+		protomcp.Log.Info(fmt.Sprintf("Fetching %s", url))
+		data, err := download(url)
+		if err != nil {
+			protomcp.Log.Error(fmt.Sprintf("Fetch failed: %v", err))
+			return protomcp.ErrorResult(err.Error(), "FETCH_FAILED", "", true)
+		}
+		protomcp.Log.Debug(fmt.Sprintf("Fetched %d bytes", len(data)))
+		return protomcp.Result(data)
+	}),
+)
+```
+
+### Log levels
+
+| Method | Level |
+|--------|-------|
+| `Log.Debug(msg)` | `debug` |
+| `Log.Info(msg)` | `info` |
+| `Log.Notice(msg)` | `notice` |
+| `Log.Warning(msg)` | `warning` |
+| `Log.Error(msg)` | `error` |
+| `Log.Critical(msg)` | `critical` |
+| `Log.Alert(msg)` | `alert` |
+| `Log.Emergency(msg)` | `emergency` |
+
+---
+
+## Cancellation
+
+Check `ctx.IsCancelled()` periodically in long-running tools to stop early when the MCP host cancels the request.
+
+```go
+protomcp.Tool("slow_compute",
+	protomcp.Description("Run a slow computation"),
+	protomcp.Args(protomcp.IntArg("n")),
+	protomcp.Handler(func(ctx protomcp.ToolContext, args map[string]interface{}) protomcp.ToolResult {
+		n := int(args["n"].(float64))
+		result := 0
+		for i := 0; i < n; i++ {
+			if ctx.IsCancelled() {
+				return protomcp.ErrorResult("Cancelled by host", "CANCELLED", "", false)
+			}
+			result += expensiveStep(i)
+		}
+		return protomcp.Result(fmt.Sprintf("%d", result))
+	}),
+)
+```
+
+Cancellation is cooperative — protomcp sets the cancelled flag and your tool is responsible for checking it.
+
+---
+
+## Testing tools
+
+Use `ClearRegistry()` between tests:
+
+```go
+func TestAdd(t *testing.T) {
+	protomcp.ClearRegistry()
+
+	protomcp.Tool("add",
+		protomcp.Description("Add two numbers"),
+		protomcp.Args(protomcp.IntArg("a"), protomcp.IntArg("b")),
+		protomcp.Handler(func(ctx protomcp.ToolContext, args map[string]interface{}) protomcp.ToolResult {
+			a := int(args["a"].(float64))
+			b := int(args["b"].(float64))
+			return protomcp.Result(fmt.Sprintf("%d", a+b))
+		}),
+	)
+
+	tools := protomcp.GetRegisteredTools()
+	if len(tools) != 1 {
+		t.Fatalf("expected 1 tool, got %d", len(tools))
+	}
+	if tools[0].Name != "add" {
+		t.Fatalf("expected tool name 'add', got %q", tools[0].Name)
+	}
+}
+```

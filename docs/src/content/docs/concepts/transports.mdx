@@ -1,21 +1,17 @@
 ---
 draft: false
 title: Transports
-description: All five protomcp transports — when to use each and compatibility.
+description: protomcp transports — stdio and Streamable HTTP via the official MCP Go SDK.
 ---
 
 ## Overview
 
-protomcp supports five transports for the MCP host connection. All five are fully implemented. The transport determines how your MCP client connects to protomcp. Your tool code is unaffected — it always communicates with protomcp via the same unix socket protocol.
+protomcp supports two transports, both implemented by the [official MCP Go SDK](https://github.com/modelcontextprotocol/go-sdk). The transport determines how your MCP client connects to protomcp. Your server code is unaffected — it always communicates with protomcp via the same unix socket protocol.
 
 Set the transport with `--transport`:
 
 ```sh
-# Python
-pmcp dev tools.py --transport sse --port 8080
-
-# TypeScript
-pmcp dev tools.ts --transport sse --port 8080
+pmcp dev server.py --transport http --port 8080
 ```
 
 ---
@@ -35,20 +31,7 @@ Reads MCP requests from stdin, writes responses to stdout. The MCP client spawns
   "mcpServers": {
     "mytools": {
       "command": "pmcp",
-      "args": ["dev", "/path/to/tools.py"]
-    }
-  }
-}
-```
-
-TypeScript works the same way — just use the `.ts` file:
-
-```json
-{
-  "mcpServers": {
-    "mytools": {
-      "command": "pmcp",
-      "args": ["dev", "/path/to/tools.ts"]
+      "args": ["dev", "/path/to/server.py"]
     }
   }
 }
@@ -58,34 +41,29 @@ No `--host` or `--port` needed. stdio is the simplest and most compatible option
 
 ---
 
-## HTTP SSE
+## Streamable HTTP
 
-**Flag:** `--transport sse`
+**Flag:** `--transport http`
 
-Runs an HTTP server. MCP clients connect to `/sse` for a persistent Server-Sent Events stream (requests come in via SSE, responses go back via a separate HTTP endpoint).
+Runs an HTTP server using the official SDK's `StreamableHTTPHandler`. Supports session management, multiple concurrent clients, and SSE-based streaming responses. This is the modern MCP HTTP transport that replaces the older SSE transport.
 
 **Use when:**
 - Your MCP client connects over HTTP instead of spawning a subprocess
-- You want a single persistent connection
+- You need to handle multiple concurrent MCP clients
 - You're running protomcp on a remote server
-
-**Config:**
+- Load balancers or proxies are in the path
 
 ```sh
-# Python
-pmcp run tools.py --transport sse --host 0.0.0.0 --port 8080
-
-# TypeScript
-pmcp run tools.ts --transport sse --host 0.0.0.0 --port 8080
+pmcp run server.py --transport http --host 0.0.0.0 --port 8080
 ```
 
-MCP client config (remote):
+MCP client config:
 
 ```json
 {
   "mcpServers": {
     "mytools": {
-      "url": "http://myserver:8080/sse"
+      "url": "http://myserver:8080/mcp"
     }
   }
 }
@@ -93,83 +71,18 @@ MCP client config (remote):
 
 ---
 
-## Streamable HTTP
-
-**Flag:** `--transport http`
-
-Modern HTTP transport. Handles MCP requests as HTTP requests with chunked/streaming responses. Supports multiple concurrent connections without a persistent SSE stream.
-
-**Use when:**
-- You need to handle many concurrent MCP clients
-- Your client uses the newer streamable HTTP transport spec
-- Load balancers or proxies are in the path (no long-lived connections needed)
-
-```sh
-# Python
-pmcp run tools.py --transport http --host 0.0.0.0 --port 8080
-
-# TypeScript
-pmcp run tools.ts --transport http --host 0.0.0.0 --port 8080
-```
-
----
-
-## WebSocket
-
-**Flag:** `--transport ws`
-
-Full-duplex WebSocket connection. The MCP client connects via WebSocket for bidirectional real-time communication.
-
-**Use when:**
-- You need low latency bidirectional messaging
-- Your MCP client supports WebSocket transport
-- You're building a browser-based MCP integration
-
-```sh
-# Python
-pmcp run tools.py --transport ws --host 0.0.0.0 --port 8080
-
-# TypeScript
-pmcp run tools.ts --transport ws --host 0.0.0.0 --port 8080
-```
-
----
-
-## In-process
-
-**Flag:** `--transport inproc`
-
-No network I/O. The transport is connected directly in memory. Intended for testing and embedding protomcp in a Go application.
-
-**Use when:**
-- Writing integration tests for protomcp behavior
-- Embedding protomcp in a Go application without a network boundary
-
-```sh
-# Python
-pmcp dev tools.py --transport inproc
-
-# TypeScript
-pmcp dev tools.ts --transport inproc
-```
-
----
-
 ## Compatibility matrix
 
-| Transport | MCP clients | Hot reload | Multiple clients |
-|-----------|-------------|------------|-----------------|
-| stdio | Claude Desktop, Cursor, most local | Yes | No (one client) |
-| sse | HTTP-capable clients | Yes | One at a time |
-| http | Modern HTTP clients | Yes | Yes |
-| ws | WebSocket clients | Yes | Yes |
-| inproc | Go embed / testing | Yes | No |
+| Transport | MCP clients | Hot reload | Multiple clients | Session management |
+|-----------|-------------|------------|-----------------|-------------------|
+| stdio | Claude Desktop, Cursor, most local | Yes | No (one client) | Single session |
+| http | Modern HTTP clients | Yes | Yes | Per-session via `Mcp-Session-Id` |
 
 ---
 
 ## Host and port flags
 
-`--host` and `--port` only apply to HTTP-based transports (sse, http, ws):
+`--host` and `--port` only apply to the HTTP transport:
 
 | Flag | Default | Description |
 |------|---------|-------------|
@@ -179,9 +92,5 @@ pmcp dev tools.ts --transport inproc
 For local-only access, use the default `localhost`. For external access:
 
 ```sh
-# Python
-pmcp run tools.py --transport sse --host 0.0.0.0 --port 8080
-
-# TypeScript
-pmcp run tools.ts --transport sse --host 0.0.0.0 --port 8080
+pmcp run server.py --transport http --host 0.0.0.0 --port 8080
 ```

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/klauspost/compress/zstd"
 	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
 	"google.golang.org/protobuf/proto"
 )
@@ -52,4 +53,41 @@ func Read(r io.Reader) (*pb.Envelope, error) {
 	}
 
 	return env, nil
+}
+
+// ReadRaw reads a length-prefixed Envelope. If the envelope contains a
+// RawHeader, it also reads the subsequent raw bytes from the reader.
+// Returns (envelope, rawBytes, error). rawBytes is nil for non-RawHeader messages.
+func ReadRaw(r io.Reader) (*pb.Envelope, []byte, error) {
+	env, err := Read(r)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	rh := env.GetRawHeader()
+	if rh == nil {
+		return env, nil, nil
+	}
+
+	// Read raw bytes that follow the RawHeader
+	raw := make([]byte, rh.Size)
+	if _, err := io.ReadFull(r, raw); err != nil {
+		return nil, nil, fmt.Errorf("read raw payload (%d bytes): %w", rh.Size, err)
+	}
+
+	// Decompress if the payload was compressed
+	if rh.Compression == "zstd" {
+		decoder, err := zstd.NewReader(nil)
+		if err != nil {
+			return nil, nil, fmt.Errorf("create zstd decoder: %w", err)
+		}
+		defer decoder.Close()
+		decompressed, err := decoder.DecodeAll(raw, make([]byte, 0, rh.UncompressedSize))
+		if err != nil {
+			return nil, nil, fmt.Errorf("zstd decompress (%d bytes): %w", rh.Size, err)
+		}
+		raw = decompressed
+	}
+
+	return env, raw, nil
 }

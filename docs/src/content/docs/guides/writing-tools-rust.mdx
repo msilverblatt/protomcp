@@ -1,0 +1,223 @@
+---
+draft: false
+title: Writing Tools (Rust)
+description: Use the builder pattern with tool(), ToolResult, ToolContext, and ServerLogger in Rust.
+---
+
+## Installation
+
+Add `protomcp` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+protomcp = "0.1"
+tokio = { version = "1", features = ["full"] }
+serde_json = "1"
+```
+
+---
+
+## The `tool()` builder
+
+Register tools using the builder pattern. Call `tool("name")` to start, chain methods, and finish with `.register()`.
+
+```rust
+use protomcp::{tool, ToolResult, ArgDef};
+
+#[tokio::main]
+async fn main() {
+    tool("add")
+        .description("Add two numbers")
+        .arg(ArgDef::int("a"))
+        .arg(ArgDef::int("b"))
+        .handler(|_ctx, args| {
+            let a = args["a"].as_i64().unwrap_or(0);
+            let b = args["b"].as_i64().unwrap_or(0);
+            ToolResult::new(format!("{}", a + b))
+        })
+        .register();
+
+    protomcp::run().await;
+}
+```
+
+### Tool metadata
+
+Chain hint methods before `.register()`:
+
+```rust
+tool("delete_file")
+    .description("Delete a file from disk")
+    .destructive_hint(true)
+    .idempotent_hint(false)
+    .read_only_hint(false)
+    .open_world_hint(false)
+    .arg(ArgDef::string("path"))
+    .handler(|_ctx, args| {
+        let path = args["path"].as_str().unwrap_or("");
+        std::fs::remove_file(path).ok();
+        ToolResult::new(format!("Deleted {}", path))
+    })
+    .register();
+```
+
+| Method | Description |
+|--------|-------------|
+| `.description(s)` | Human-readable description (required) |
+| `.destructive_hint(bool)` | Hint: the tool has destructive side effects |
+| `.idempotent_hint(bool)` | Hint: calling multiple times has the same effect as once |
+| `.read_only_hint(bool)` | Hint: the tool does not modify state |
+| `.open_world_hint(bool)` | Hint: the tool may access external resources |
+| `.task_support_hint(bool)` | Hint: the tool supports long-running async task semantics |
+
+### Argument types
+
+| Function | JSON Schema type |
+|----------|-----------------|
+| `ArgDef::int(name)` | `"integer"` |
+| `ArgDef::string(name)` | `"string"` |
+| `ArgDef::number(name)` | `"number"` |
+| `ArgDef::boolean(name)` | `"boolean"` |
+
+Arguments are passed as `serde_json::Value`. Use `.as_i64()`, `.as_f64()`, `.as_str()`, `.as_bool()` to extract values.
+
+---
+
+## `ToolResult`
+
+All handlers return a `ToolResult`.
+
+### Success
+
+```rust
+ToolResult::new("done")
+```
+
+### Structured error
+
+```rust
+ToolResult::error(
+    "The file /tmp/data.csv does not exist",
+    "NOT_FOUND",
+    "Check the path and try again",
+    false,
+)
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `result_text` | `String` | The result string |
+| `is_error` | `bool` | Whether this is an error |
+| `error_code` | `String` | Machine-readable error code |
+| `message` | `String` | Human-readable error message |
+| `suggestion` | `String` | Actionable suggestion for the caller |
+| `retryable` | `bool` | Whether the caller should retry |
+| `enable_tools` | `Vec<String>` | Tool names to enable after this call |
+| `disable_tools` | `Vec<String>` | Tool names to disable after this call |
+
+### Enabling / disabling tools from a result
+
+```rust
+tool("login")
+    .description("Log in and unlock tools")
+    .arg(ArgDef::string("username"))
+    .arg(ArgDef::string("password"))
+    .handler(|_ctx, args| {
+        let username = args["username"].as_str().unwrap_or("");
+        let password = args["password"].as_str().unwrap_or("");
+        if !authenticate(username, password) {
+            return ToolResult::error("Authentication failed", "AUTH_FAILED", "", false);
+        }
+        let mut r = ToolResult::new("Logged in");
+        r.enable_tools = vec!["delete_file".to_string(), "write_file".to_string()];
+        r
+    })
+    .register();
+```
+
+---
+
+## Progress Reporting
+
+Use `ToolContext` to report progress during long-running tool calls.
+
+```rust
+tool("process_data")
+    .description("Process a large dataset")
+    .arg(ArgDef::string("file_path"))
+    .handler(|ctx, args| {
+        let file_path = args["file_path"].as_str().unwrap_or("");
+        let rows = load_rows(file_path);
+        let total = rows.len();
+        for (i, row) in rows.iter().enumerate() {
+            if ctx.is_cancelled() {
+                return ToolResult::error("Cancelled", "CANCELLED", "", false);
+            }
+            process_row(row);
+            ctx.report_progress((i + 1) as i64, total as i64);
+        }
+        ToolResult::new(format!("Processed {} rows", total))
+    })
+    .register();
+```
+
+### `ToolContext` API
+
+| Method | Description |
+|--------|-------------|
+| `report_progress(progress, total)` | Send a progress notification to the MCP host |
+| `is_cancelled() -> bool` | Returns `true` if the MCP host has cancelled this call |
+
+---
+
+## Cancellation
+
+Check `ctx.is_cancelled()` periodically in long-running tools to stop early when the MCP host cancels the request.
+
+```rust
+tool("slow_compute")
+    .description("Run a slow computation")
+    .arg(ArgDef::int("n"))
+    .handler(|ctx, args| {
+        let n = args["n"].as_i64().unwrap_or(0);
+        let mut result = 0i64;
+        for i in 0..n {
+            if ctx.is_cancelled() {
+                return ToolResult::error("Cancelled by host", "CANCELLED", "", false);
+            }
+            result += expensive_step(i);
+        }
+        ToolResult::new(format!("{}", result))
+    })
+    .register();
+```
+
+Cancellation is cooperative — protomcp sets the cancelled flag and your tool is responsible for checking it.
+
+---
+
+## Testing tools
+
+Use `clear_registry()` between tests:
+
+```rust
+use protomcp::{tool, ToolResult, ArgDef, clear_registry};
+use protomcp::tool::with_registry;
+
+#[test]
+fn test_add() {
+    clear_registry();
+    tool("add")
+        .description("Add two numbers")
+        .arg(ArgDef::int("a"))
+        .arg(ArgDef::int("b"))
+        .handler(|_, _| ToolResult::new("3"))
+        .register();
+
+    with_registry(|tools| {
+        assert_eq!(tools.len(), 1);
+        assert_eq!(tools[0].name, "add");
+    });
+    clear_registry();
+}
+```

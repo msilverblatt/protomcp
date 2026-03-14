@@ -1,0 +1,102 @@
+---
+draft: false
+title: Sampling
+description: Request LLM calls from your tool code — the MCP client becomes your AI backend.
+---
+
+Sampling lets your server-side code request LLM completions from the MCP client. Instead of calling an AI API directly, your tool sends a sampling request through MCP, and the client (Claude Desktop, Cursor, etc.) handles the actual LLM call.
+
+This is powerful because:
+- Your tool code doesn't need API keys or AI SDK dependencies
+- The client controls model selection, rate limiting, and cost
+- The user sees and approves the LLM interaction
+
+## How Sampling Works
+
+```
+Your Code              pmcp (bridge)              MCP Client
+    │                      │                          │
+    ├─ SamplingRequest ───►│                          │
+    │                      ├─ sampling/createMessage ►│
+    │                      │                          ├─ LLM call
+    │                      │                          │◄─ response
+    │                      │◄─ CreateMessageResult ───┤
+    │◄─ SamplingResponse ──┤                          │
+```
+
+The flow is bidirectional: your code initiates the request, pmcp forwards it to the MCP client, the client calls the LLM, and the response flows back.
+
+## Python
+
+Use `ctx.sample()` inside a tool handler to request an LLM completion:
+
+```python
+from protomcp import tool, ToolResult, ToolContext
+
+@tool("Translate text to another language")
+def translate(ctx: ToolContext, text: str, target_language: str) -> ToolResult:
+    response = ctx.sample(
+        messages=[
+            {"role": "user", "content": f"Translate the following to {target_language}:\n\n{text}"}
+        ],
+        system_prompt=f"You are a translator. Translate accurately to {target_language}.",
+        max_tokens=1000,
+    )
+
+    if response.get("error"):
+        return ToolResult(result=f"Translation failed: {response['error']}", is_error=True)
+
+    return ToolResult(result=response["content"])
+```
+
+### Sampling Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `messages` | `list[dict]` | Conversation messages (`role` + `content`) |
+| `system_prompt` | `str` | System prompt for the LLM |
+| `max_tokens` | `int` | Maximum tokens to generate |
+| `model_preferences` | `dict` | Hints about model selection (client may ignore) |
+
+### Event-Driven Sampling
+
+Sampling isn't limited to tool calls. Your server can trigger LLM calls in response to events:
+
+```python
+import threading
+from protomcp import tool, ToolResult, ToolContext
+
+# Store the sampling function for use outside tool calls
+_sampler = None
+
+@tool("Start monitoring for anomalies")
+def start_monitor(ctx: ToolContext, threshold: float) -> ToolResult:
+    global _sampler
+    _sampler = ctx.sample  # Save for later use
+
+    def monitor_loop():
+        while True:
+            data = check_for_anomalies()
+            if data.score > threshold and _sampler:
+                response = _sampler(
+                    messages=[{"role": "user", "content": f"Anomaly detected: {data}. Suggest remediation."}],
+                    max_tokens=500,
+                )
+                log_remediation(response)
+
+    threading.Thread(target=monitor_loop, daemon=True).start()
+    return ToolResult(result="Monitoring started")
+```
+
+## When to Use Sampling vs. Direct API Calls
+
+| Use Sampling When | Use Direct API Calls When |
+|-------------------|--------------------------|
+| You want the client to control costs | You need specific model guarantees |
+| You want the user to see/approve LLM usage | You need low-latency, high-volume calls |
+| Your tool is running in a client's environment | You're running a standalone server |
+| You don't want to manage API keys | You need provider-specific features |
+
+## Client Support
+
+Sampling requires the MCP client to support the `sampling` capability. Not all clients support it. If sampling isn't available, `ctx.sample()` will return an error.

@@ -7,11 +7,10 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/msilverblatt/protomcp/internal/mcp"
+	"github.com/msilverblatt/protomcp/tests/testutil"
 )
 
 func init() {
-	// Ensure the Python SDK is importable by setting PYTHONPATH.
 	_, thisFile, _, _ := runtime.Caller(0)
 	repoRoot := filepath.Join(filepath.Dir(thisFile), "..", "..")
 	pythonPath := filepath.Join(repoRoot, "sdk", "python", "src") +
@@ -28,12 +27,9 @@ func TestE2E_Initialize(t *testing.T) {
 	w, r, cleanup := StartProtomcp(t, "dev", "fixtures/simple_tool.py")
 	defer cleanup()
 
-	resp := SendRequest(t, w, r, "initialize", nil)
-	if resp.Error != nil {
-		t.Fatalf("initialize error: %v", resp.Error)
-	}
+	resp := InitializeSession(t, w, r)
 
-	var result mcp.InitializeResult
+	var result testutil.InitializeResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("unmarshal InitializeResult: %v", err)
 	}
@@ -46,13 +42,13 @@ func TestE2E_ToolsList(t *testing.T) {
 	w, r, cleanup := StartProtomcp(t, "dev", "fixtures/simple_tool.py")
 	defer cleanup()
 
-	SendRequest(t, w, r, "initialize", nil)
+	InitializeSession(t, w, r)
 	resp := SendRequest(t, w, r, "tools/list", nil)
 	if resp.Error != nil {
 		t.Fatalf("tools/list error: %v", resp.Error)
 	}
 
-	var result mcp.ToolsListResult
+	var result testutil.ToolsListResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("unmarshal ToolsListResult: %v", err)
 	}
@@ -65,7 +61,7 @@ func TestE2E_ToolsCall(t *testing.T) {
 	w, r, cleanup := StartProtomcp(t, "dev", "fixtures/simple_tool.py")
 	defer cleanup()
 
-	SendRequest(t, w, r, "initialize", nil)
+	InitializeSession(t, w, r)
 	resp := SendRequest(t, w, r, "tools/call", map[string]interface{}{
 		"name":      "echo",
 		"arguments": map[string]string{"message": "hello"},
@@ -75,7 +71,7 @@ func TestE2E_ToolsCall(t *testing.T) {
 		t.Fatalf("tools/call error: %v", resp.Error)
 	}
 
-	var result mcp.ToolsCallResult
+	var result testutil.ToolsCallResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		t.Fatalf("unmarshal ToolsCallResult: %v", err)
 	}
@@ -88,10 +84,8 @@ func TestE2E_DynamicToolList(t *testing.T) {
 	w, r, cleanup := StartProtomcp(t, "dev", "fixtures/dynamic_tool.py")
 	defer cleanup()
 
-	SendRequest(t, w, r, "initialize", nil)
+	InitializeSession(t, w, r)
 
-	// Both tools start visible; call auth with valid token to enable admin_action
-	// and disable auth.
 	resp := SendRequest(t, w, r, "tools/call", map[string]interface{}{
 		"name":      "auth",
 		"arguments": map[string]string{"token": "valid"},
@@ -104,7 +98,7 @@ func TestE2E_DynamicToolList(t *testing.T) {
 	if listResp.Error != nil {
 		t.Fatalf("tools/list error: %v", listResp.Error)
 	}
-	var result mcp.ToolsListResult
+	var result testutil.ToolsListResult
 	if err := json.Unmarshal(listResp.Result, &result); err != nil {
 		t.Fatalf("unmarshal ToolsListResult: %v", err)
 	}

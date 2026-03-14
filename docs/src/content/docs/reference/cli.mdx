@@ -13,11 +13,11 @@ Start protomcp in development mode with hot reload.
 ```sh
 # Python
 pmcp dev tools.py
-pmcp dev tools.py --transport sse --port 8080
+pmcp dev tools.py --transport http --port 8080
 
 # TypeScript
 pmcp dev tools.ts
-pmcp dev tools.ts --transport sse --port 8080
+pmcp dev tools.ts --transport http --port 8080
 ```
 
 Hot reload is enabled: when `<file>` changes on disk, protomcp reloads the tool process and notifies the MCP host.
@@ -29,16 +29,65 @@ Start protomcp in production mode without hot reload.
 ```sh
 # Python
 pmcp run tools.py
-pmcp run tools.py --transport sse --host 0.0.0.0 --port 8080
+pmcp run tools.py --transport http --host 0.0.0.0 --port 8080
 
 # TypeScript
 pmcp run tools.ts
-pmcp run tools.ts --transport sse --host 0.0.0.0 --port 8080
+pmcp run tools.ts --transport http --host 0.0.0.0 --port 8080
 ```
+
+### `pmcp validate <file> [flags]`
+
+Validate tool definitions without starting the server. Spawns the tool process, collects tool definitions, validates them, and exits.
+
+```sh
+# Basic validation
+pmcp validate tools.py
+
+# Strict mode (enforces description length, generic name detection)
+pmcp validate tools.py --strict
+
+# JSON output
+pmcp validate tools.py --format json
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--strict` | `false` | Enable strict validation (min 10 char descriptions, generic name detection) |
+| `--format` | `text` | Output format: `text` or `json` |
+
+Validation checks:
+- Tool name format: must match `^[a-zA-Z_][a-zA-Z0-9_]*$`
+- No duplicate tool names
+- All tools have descriptions
+- Input schema is valid JSON Schema
+- **Strict mode**: description at least 10 characters, no generic names like "tool1"
 
 ---
 
 ## Flags
+
+### `--auth <scheme:ENV_VAR>`
+
+**Repeatable.** Configure authentication for the HTTP transport (`--transport http`). Skipped for stdio.
+
+| Scheme | Header | Format |
+|--------|--------|--------|
+| `token` | `Authorization` | `Bearer <value>` |
+| `apikey` | `X-API-Key` | `<value>` |
+
+```sh
+# Require Bearer token
+pmcp run tools.py --transport http --auth token:MY_TOKEN
+
+# Require API key
+pmcp run tools.py --transport http --auth apikey:SERVICE_KEY
+
+# Multiple (all must pass)
+pmcp run tools.py --transport http --auth token:MY_TOKEN --auth apikey:SERVICE_KEY
+```
+
+The environment variable must be set at startup. See [Authentication](/guides/auth/) for details.
 
 ### `--transport <value>`
 
@@ -49,45 +98,42 @@ The transport to use for the MCP host connection.
 | Value | Description |
 |-------|-------------|
 | `stdio` | Read/write on stdin/stdout. Used when the MCP client spawns protomcp as a subprocess. |
-| `sse` | HTTP server with Server-Sent Events. MCP client connects over HTTP. |
-| `http` | Streamable HTTP transport. |
-| `ws` | WebSocket transport. |
-| `inproc` | In-process transport for testing and embedding. |
+| `http` | Streamable HTTP transport. MCP client connects over HTTP. |
 
 ```sh
 # Python
-pmcp dev tools.py --transport sse
+pmcp dev tools.py --transport http
 
 # TypeScript
-pmcp dev tools.ts --transport sse
+pmcp dev tools.ts --transport http
 ```
 
 ### `--host <value>`
 
 **Default:** `localhost`
 
-Host/address to bind the HTTP server to. Used with `--transport sse`, `http`, or `ws`.
+Host/address to bind the HTTP server to. Used with `--transport http`.
 
 ```sh
 # Python
-pmcp run tools.py --transport sse --host 0.0.0.0
+pmcp run tools.py --transport http --host 0.0.0.0
 
 # TypeScript
-pmcp run tools.ts --transport sse --host 0.0.0.0
+pmcp run tools.ts --transport http --host 0.0.0.0
 ```
 
 ### `--port <value>`
 
 **Default:** `8080`
 
-Port to bind the HTTP server to. Used with `--transport sse`, `http`, or `ws`.
+Port to bind the HTTP server to. Used with `--transport http`.
 
 ```sh
 # Python
-pmcp run tools.py --transport sse --port 9000
+pmcp run tools.py --transport http --port 9000
 
 # TypeScript
-pmcp run tools.ts --transport sse --port 9000
+pmcp run tools.ts --transport http --port 9000
 ```
 
 ### `--hot-reload <value>`

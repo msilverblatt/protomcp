@@ -1,7 +1,7 @@
 ---
 draft: false
 title: Installation
-description: Install protomcp and the Python or TypeScript SDK.
+description: Install protomcp and the Python, TypeScript, Go, or Rust SDK.
 ---
 
 ## protomcp binary
@@ -76,6 +76,37 @@ Or with yarn / pnpm:
 ```sh
 yarn add protomcp
 pnpm add protomcp
+```
+
+---
+
+## Go SDK
+
+Requires Go 1.22+.
+
+```sh
+go get github.com/msilverblatt/protomcp/sdk/go
+```
+
+---
+
+## Rust SDK
+
+Requires Rust 1.70+ and `protoc` (protobuf compiler).
+
+```sh
+cargo add protomcp tokio --features tokio/full
+cargo add serde_json
+```
+
+Install protoc if not already available:
+
+```sh
+# macOS
+brew install protobuf
+
+# Linux (apt)
+sudo apt install -y protobuf-compiler
 ```
 
 ---

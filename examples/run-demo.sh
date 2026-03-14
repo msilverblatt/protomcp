@@ -34,7 +34,7 @@ run_example() {
     echo -e "  Args: ${args_json}"
 
     # Build JSON-RPC messages
-    local init_req='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"demo","version":"1.0"}}}'
+    local init_req='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"demo","version":"1.0"}}}'
     local init_notif='{"jsonrpc":"2.0","method":"notifications/initialized"}'
     local list_req='{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'
     local call_req="{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name\":\"${tool_name}\",\"arguments\":${args_json}}}"

@@ -1,0 +1,213 @@
+---
+draft: false
+title: Writing a Language Library
+description: Build a protomcp SDK for any language using the protobuf contract and unix socket protocol.
+---
+
+protomcp is language-agnostic. If you want to write tools in a language that doesn't have an SDK yet, you can build one by implementing the protobuf protocol over unix sockets.
+
+## Architecture
+
+```
+MCP Host ←→ pmcp (Go binary, JSON-RPC/stdio) ←→ Tool Process (your language, protobuf/unix socket)
+```
+
+The Go binary (`pmcp`) handles all MCP protocol details. Your SDK only needs to:
+
+1. Connect to a unix socket
+2. Send and receive length-prefixed protobuf messages
+3. Handle a small set of message types
+
+---
+
+## The protobuf contract
+
+All messages are wrapped in an `Envelope` message. The proto definition is at `proto/protomcp.proto`.
+
+```protobuf
+message Envelope {
+  oneof msg {
+    ReloadRequest reload = 1;
+    ListToolsRequest list_tools = 2;
+    CallToolRequest call_tool = 3;
+    // ... (see proto/protomcp.proto for full list)
+  }
+  string request_id = 14;
+  string namespace = 15;
+}
+```
+
+---
+
+## Wire format
+
+Messages use 4-byte big-endian length-prefixed framing:
+
+```
+[4 bytes: uint32 big-endian length][N bytes: serialized Envelope]
+```
+
+### Sending a message
+
+1. Serialize the `Envelope` to bytes using protobuf
+2. Write a 4-byte big-endian uint32 of the serialized length
+3. Write the serialized bytes
+
+### Receiving a message
+
+1. Read 4 bytes, interpret as big-endian uint32 for the message length
+2. Read that many bytes
+3. Deserialize as an `Envelope` protobuf message
+
+---
+
+## Connection
+
+The Go binary passes the unix socket path via the `PROTOMCP_SOCKET` environment variable. Your SDK should:
+
+1. Read `PROTOMCP_SOCKET` from the environment
+2. Connect to that unix socket path
+3. Begin the handshake protocol
+
+---
+
+## Handshake protocol
+
+The handshake establishes the tool list and any middleware:
+
+```
+Go binary                          Tool process
+   │                                    │
+   ├── ListToolsRequest ───────────────>│
+   │                                    │
+   │<──────────────── ToolListResponse ─┤
+   │                                    │
+   │  (optional middleware registration)│
+   │<── RegisterMiddlewareRequest ──────┤
+   │                                    │
+   │── RegisterMiddlewareResponse ─────>│
+   │                                    │
+   │<──────────────── ReloadResponse ───┤  (handshake-complete signal)
+   │                                    │
+```
+
+### Steps
+
+1. **Receive `ListToolsRequest`**: The Go binary asks for the tool list
+2. **Send `ToolListResponse`**: Respond with all registered tools (name, description, input_schema, hints)
+3. **(Optional) Send `RegisterMiddlewareRequest`**: Register any custom middleware. Wait for `RegisterMiddlewareResponse` acknowledgment for each
+4. **Send `ReloadResponse`**: This signals handshake complete. The Go binary will wait up to 500ms for this signal (for backward compatibility with v1.0 SDKs that don't send it)
+
+---
+
+## Tool calls
+
+After the handshake, the Go binary sends `CallToolRequest` messages when tools are invoked:
+
+```
+Go binary                          Tool process
+   │                                    │
+   ├── CallToolRequest ────────────────>│
+   │   (name, arguments_json,          │
+   │    progress_token, request_id)     │
+   │                                    │
+   │  (optional progress notifications)│
+   │<──────── ProgressNotification ─────┤
+   │                                    │
+   │<──────────── CallToolResponse ─────┤
+   │   (result_text, is_error,          │
+   │    error details, enable/disable)  │
+```
+
+### Handling a tool call
+
+1. Parse `CallToolRequest.name` to find the matching tool
+2. Parse `CallToolRequest.arguments_json` as JSON
+3. Execute the tool handler
+4. Optionally send `ProgressNotification` messages during execution
+5. Send `CallToolResponse` with the result
+
+### Progress notifications
+
+If the request includes a `progress_token`, you can send progress updates:
+
+```protobuf
+message ProgressNotification {
+  string progress_token = 1;
+  int64 progress = 2;
+  int64 total = 3;
+  string message = 4;
+}
+```
+
+### Cancellation
+
+The Go binary may send a `CancelRequest` with a matching `request_id`. Set a flag that the handler can check via `is_cancelled()`.
+
+---
+
+## Reload
+
+When the user changes the tool file and saves, the Go binary sends a `ReloadRequest`. Your SDK should:
+
+1. Re-register all tools (re-run decorators, builders, etc.)
+2. Go through the handshake again (send `ToolListResponse`, optional middleware, then `ReloadResponse`)
+
+---
+
+## Server logging
+
+Send `LogMessage` to the Go binary at any time:
+
+```protobuf
+message LogMessage {
+  string level = 1;   // debug, info, notice, warning, error, critical, alert, emergency
+  string logger = 2;  // logger name (e.g., "mylib")
+  string data_json = 3; // JSON-encoded log data
+}
+```
+
+---
+
+## Tool list management
+
+Send these messages to dynamically modify which tools are active:
+
+| Message | Effect |
+|---------|--------|
+| `EnableToolsRequest` | Add tools to the active set |
+| `DisableToolsRequest` | Remove tools from the active set |
+| `SetAllowedRequest` | Switch to allowlist mode with these tools |
+| `SetBlockedRequest` | Switch to blocklist mode, blocking these tools |
+| `BatchUpdateRequest` | Multiple operations atomically |
+
+---
+
+## Testing your SDK
+
+Build a tool with your SDK and test it against the Go binary:
+
+```sh
+# Build the binary
+go build -o pmcp ./cmd/protomcp/
+
+# Run your tool
+pmcp dev path/to/your/tool_file
+
+# In another terminal, the MCP host can connect via stdio
+```
+
+Use `pmcp validate path/to/your/tool_file` to validate tool definitions without starting the server.
+
+---
+
+## Reference implementations
+
+Study the existing SDKs for patterns:
+
+| Language | Path | Pattern |
+|----------|------|---------|
+| Python | `sdk/python/` | `@tool()` decorator, type hint schema generation |
+| TypeScript | `sdk/typescript/` | `tool()` function, Zod schema conversion |
+| Go | `sdk/go/` | `Tool()` with functional options |
+| Rust | `sdk/rust/` | `tool()` builder pattern with `.register()` |

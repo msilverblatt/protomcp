@@ -2,6 +2,24 @@ import * as net from 'net';
 import * as path from 'path';
 import * as url from 'url';
 import protobuf from 'protobufjs';
+import { ZstdCodec } from 'zstd-codec';
+
+// Lazy-initialized zstd codec (WASM init is async)
+let zstdInstance: { compress: (data: Uint8Array) => Uint8Array; decompress: (data: Uint8Array) => Uint8Array } | null = null;
+
+function getZstd(): Promise<{ compress: (data: Uint8Array) => Uint8Array; decompress: (data: Uint8Array) => Uint8Array }> {
+  if (zstdInstance) return Promise.resolve(zstdInstance);
+  return new Promise((resolve, reject) => {
+    ZstdCodec.run((zstd: any) => {
+      const simple = new zstd.Simple();
+      zstdInstance = {
+        compress: (data: Uint8Array) => simple.compress(data),
+        decompress: (data: Uint8Array) => simple.decompress(data),
+      };
+      resolve(zstdInstance);
+    });
+  });
+}
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const PROTO_PATH = path.resolve(__dirname, '../../../proto/protomcp.proto');
@@ -99,6 +117,85 @@ export class Transport {
     const length = Buffer.alloc(4);
     length.writeUInt32BE(data.length, 0);
     const frame = Buffer.concat([length, data]);
+    await new Promise<void>((resolve, reject) => {
+      this.socket!.write(frame, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  }
+
+  async sendChunked(requestId: string, fieldName: string, data: Buffer, chunkSize: number = 65536): Promise<void> {
+    const root = await this.getRoot();
+    const Envelope = root.lookupType('protomcp.Envelope');
+    const StreamHeader = root.lookupType('protomcp.StreamHeader');
+    const StreamChunk = root.lookupType('protomcp.StreamChunk');
+
+    // Send header
+    const header = Envelope.create({
+      requestId,
+      streamHeader: StreamHeader.create({
+        fieldName,
+        totalSize: data.length,
+        chunkSize,
+      }),
+    });
+    await this.send(header);
+
+    // Send chunks
+    let offset = 0;
+    while (offset < data.length) {
+      const end = Math.min(offset + chunkSize, data.length);
+      const isFinal = end >= data.length;
+      const chunk = Envelope.create({
+        requestId,
+        streamChunk: StreamChunk.create({
+          data: data.subarray(offset, end),
+          final: isFinal,
+        }),
+      });
+      await this.send(chunk);
+      offset = end;
+    }
+  }
+
+  async sendRaw(requestId: string, fieldName: string, data: Buffer): Promise<void> {
+    const root = await this.getRoot();
+    const Envelope = root.lookupType('protomcp.Envelope');
+    const RawHeader = root.lookupType('protomcp.RawHeader');
+
+    let compression = '';
+    let uncompressedSize = 0;
+    const compressThreshold = parseInt(process.env['PROTOMCP_COMPRESS_THRESHOLD'] ?? '65536', 10);
+    if (data.length > compressThreshold) {
+      try {
+        const zstd = await getZstd();
+        uncompressedSize = data.length;
+        const compressed = zstd.compress(new Uint8Array(data));
+        data = Buffer.from(compressed);
+        compression = 'zstd';
+      } catch {
+        // Compression failed, send uncompressed
+      }
+    }
+
+    const header = Envelope.create({
+      rawHeader: RawHeader.create({
+        requestId,
+        fieldName,
+        size: data.length,
+        compression,
+        uncompressedSize,
+      }),
+    });
+
+    // Encode the protobuf header
+    const headerBytes = Buffer.from(Envelope.encode(header).finish());
+    const lengthBuf = Buffer.alloc(4);
+    lengthBuf.writeUInt32BE(headerBytes.length, 0);
+
+    // Write header frame + raw payload in one call
+    const frame = Buffer.concat([lengthBuf, headerBytes, data]);
     await new Promise<void>((resolve, reject) => {
       this.socket!.write(frame, (err) => {
         if (err) reject(err);

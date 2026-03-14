@@ -1,38 +1,55 @@
 package cancel
 
-import "sync"
+import (
+	"context"
+	"sync"
+)
+
+type trackedCall struct {
+	cancel context.CancelFunc
+}
 
 type Tracker struct {
-	mu        sync.RWMutex
-	cancelled map[string]bool
+	mu    sync.Mutex
+	calls map[string]*trackedCall
 }
 
 func NewTracker() *Tracker {
-	return &Tracker{cancelled: make(map[string]bool)}
+	return &Tracker{calls: make(map[string]*trackedCall)}
 }
 
-func (t *Tracker) TrackCall(requestID string) {
+// TrackCallWithContext creates a cancellable child context for the given request ID.
+func (t *Tracker) TrackCallWithContext(parent context.Context, requestID string) (context.Context, string) {
+	ctx, cancel := context.WithCancel(parent)
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.cancelled[requestID] = false
+	t.calls[requestID] = &trackedCall{cancel: cancel}
+	return ctx, requestID
 }
 
+// Cancel cancels the context for the given request ID.
 func (t *Tracker) Cancel(requestID string) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	if _, exists := t.cancelled[requestID]; exists {
-		t.cancelled[requestID] = true
+	if call, exists := t.calls[requestID]; exists {
+		call.cancel()
 	}
 }
 
+// IsCancelled checks if a request is being tracked (for backward compat).
 func (t *Tracker) IsCancelled(requestID string) bool {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	return t.cancelled[requestID]
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	_, exists := t.calls[requestID]
+	return exists
 }
 
+// Complete removes tracking for the given request ID and releases resources.
 func (t *Tracker) Complete(requestID string) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	delete(t.cancelled, requestID)
+	if call, exists := t.calls[requestID]; exists {
+		call.cancel()
+		delete(t.calls, requestID)
+	}
 }
