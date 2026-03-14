@@ -7,6 +7,11 @@ import (
 	"strings"
 )
 
+type CrossRule struct {
+	Condition func(map[string]interface{}) bool
+	Message   string
+}
+
 type ActionDef struct {
 	Name        string
 	Description string
@@ -14,6 +19,7 @@ type ActionDef struct {
 	HandlerFn   func(ToolContext, map[string]interface{}) ToolResult
 	Requires    []string
 	EnumFields  map[string][]string
+	CrossRules  []CrossRule
 }
 
 type GroupDef struct {
@@ -78,6 +84,12 @@ func ActionRequires(reqs ...string) ActionOption {
 
 func ActionEnumField(field string, values []string) ActionOption {
 	return func(ad *ActionDef) { ad.EnumFields[field] = values }
+}
+
+func ActionCrossRule(condition func(map[string]interface{}) bool, msg string) ActionOption {
+	return func(ad *ActionDef) {
+		ad.CrossRules = append(ad.CrossRules, CrossRule{Condition: condition, Message: msg})
+	}
 }
 
 func GroupsToToolDefs() []ToolDef {
@@ -201,15 +213,27 @@ func DispatchGroupAction(g GroupDef, ctx ToolContext, args map[string]interface{
 
 	for _, a := range g.Actions {
 		if a.Name == actionName {
-			if a.HandlerFn == nil {
-				return Result("")
-			}
 			// Remove action from args before dispatch
 			argsCopy := make(map[string]interface{})
 			for k, v := range args {
 				if k != "action" {
 					argsCopy[k] = v
 				}
+			}
+
+			// Resolve server contexts
+			ctxValues := ResolveContexts(argsCopy)
+			for k, v := range ctxValues {
+				argsCopy[k] = v
+			}
+
+			// Validate before calling handler
+			if errResult := validateAction(a, argsCopy); errResult != nil {
+				return *errResult
+			}
+
+			if a.HandlerFn == nil {
+				return Result("")
 			}
 			return a.HandlerFn(ctx, argsCopy)
 		}
@@ -291,6 +315,60 @@ func min3(a, b, c int) int {
 func GetRegisteredGroups() []GroupDef { return append([]GroupDef{}, groupRegistry...) }
 
 func ClearGroupRegistry() { groupRegistry = nil }
+
+// validateAction checks requires, enum fields, and cross rules. Returns nil if valid.
+func validateAction(a ActionDef, args map[string]interface{}) *ToolResult {
+	// Check requires
+	for _, field := range a.Requires {
+		val, exists := args[field]
+		if !exists || val == nil || val == "" {
+			r := ErrorResult(
+				fmt.Sprintf("Missing required field: %s", field),
+				"MISSING_REQUIRED", "", false,
+			)
+			return &r
+		}
+	}
+
+	// Check enum fields
+	for field, valid := range a.EnumFields {
+		val, exists := args[field]
+		if !exists || val == nil {
+			continue
+		}
+		valStr := fmt.Sprintf("%v", val)
+		found := false
+		for _, v := range valid {
+			if valStr == v {
+				found = true
+				break
+			}
+		}
+		if !found {
+			suggestion := fuzzyMatch(valStr, valid)
+			suggMsg := ""
+			if suggestion != "" {
+				suggMsg = fmt.Sprintf("Did you mean '%s'?", suggestion)
+			}
+			validStr := strings.Join(valid, ", ")
+			r := ErrorResult(
+				fmt.Sprintf("Invalid value '%s' for field '%s'. Valid options: %s", valStr, field, validStr),
+				"INVALID_ENUM", suggMsg, false,
+			)
+			return &r
+		}
+	}
+
+	// Check cross rules
+	for _, rule := range a.CrossRules {
+		if rule.Condition(args) {
+			r := ErrorResult(rule.Message, "CROSS_PARAM_VIOLATION", "", false)
+			return &r
+		}
+	}
+
+	return nil
+}
 
 func (gd GroupDef) InputSchemaJSON() string {
 	// Build union schema for the group

@@ -7,9 +7,12 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
 	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
 )
+
+var firstToolCallOnce sync.Once
 
 var Log *ServerLogger
 
@@ -37,6 +40,9 @@ func Run() {
 	Log = NewServerLogger(func(env *pb.Envelope) error { return tp.Send(env) }, "protomcp-go")
 	mwHandlers = make(map[string]func(phase, toolName, argsJSON, resultJSON string, isError bool) map[string]interface{})
 	activeCancels = make(map[string]context.CancelFunc)
+
+	StartSidecars("server_start")
+	defer StopAllSidecars()
 
 	for {
 		env, err := tp.Recv()
@@ -186,6 +192,15 @@ func handleCallTool(tp *Transport, req *pb.CallToolRequest, reqID string) {
 		args = map[string]interface{}{}
 	}
 
+	// Start first_tool_call sidecars on first invocation
+	firstToolCallOnce.Do(func() { StartSidecars("first_tool_call") })
+
+	// Resolve server contexts
+	ctxValues := ResolveContexts(args)
+	for k, v := range ctxValues {
+		args[k] = v
+	}
+
 	callCtx, cancel := context.WithCancel(context.Background())
 	cancelsMu.Lock()
 	activeCancels[reqID] = cancel
@@ -197,7 +212,40 @@ func handleCallTool(tp *Transport, req *pb.CallToolRequest, reqID string) {
 		sendFn:        func(env *pb.Envelope) error { return tp.Send(env) },
 	}
 
-	result := handler(ctx, args)
+	// Emit telemetry start
+	EmitTelemetry(ToolCallEvent{
+		ToolName: req.Name,
+		Phase:    "start",
+		Args:     args,
+	})
+
+	startTime := time.Now()
+
+	// Build local middleware chain
+	wrapped := BuildMiddlewareChain(req.Name, handler)
+	result := wrapped(ctx, args)
+
+	durationMs := int(time.Since(startTime).Milliseconds())
+
+	// Emit telemetry success/error
+	if result.IsError {
+		EmitTelemetry(ToolCallEvent{
+			ToolName:   req.Name,
+			Phase:      "error",
+			Args:       args,
+			Result:     result.ResultText,
+			DurationMs: durationMs,
+			Message:    result.Message,
+		})
+	} else {
+		EmitTelemetry(ToolCallEvent{
+			ToolName:   req.Name,
+			Phase:      "success",
+			Args:       args,
+			Result:     result.ResultText,
+			DurationMs: durationMs,
+		})
+	}
 
 	cancel()
 	cancelsMu.Lock()

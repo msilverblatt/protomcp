@@ -264,3 +264,155 @@ func TestUnionHandlerDispatch(t *testing.T) {
 		t.Errorf("expected 'Hello, World!', got '%s'", result.ResultText)
 	}
 }
+
+func TestValidationRequires(t *testing.T) {
+	ClearGroupRegistry()
+	ClearContextRegistry()
+	defer ClearGroupRegistry()
+	defer ClearContextRegistry()
+
+	ToolGroup("val_req",
+		Action("create",
+			ActionRequires("name", "email"),
+			ActionArgs(StrArg("name"), StrArg("email")),
+			ActionHandler(func(ctx ToolContext, args map[string]interface{}) ToolResult {
+				return Result("created")
+			}),
+		),
+	)
+
+	groups := GetRegisteredGroups()
+	ctx := dummyToolContext()
+
+	// Missing required field
+	result := DispatchGroupAction(groups[0], ctx, map[string]interface{}{
+		"action": "create",
+		"name":   "Alice",
+	})
+	if !result.IsError {
+		t.Error("expected error for missing email")
+	}
+	if !strings.Contains(result.ResultText, "email") {
+		t.Errorf("expected 'email' in error, got '%s'", result.ResultText)
+	}
+	if result.ErrorCode != "MISSING_REQUIRED" {
+		t.Errorf("expected error code MISSING_REQUIRED, got '%s'", result.ErrorCode)
+	}
+
+	// Empty string counts as missing
+	result = DispatchGroupAction(groups[0], ctx, map[string]interface{}{
+		"action": "create",
+		"name":   "Alice",
+		"email":  "",
+	})
+	if !result.IsError {
+		t.Error("expected error for empty email")
+	}
+
+	// All fields present
+	result = DispatchGroupAction(groups[0], ctx, map[string]interface{}{
+		"action": "create",
+		"name":   "Alice",
+		"email":  "alice@example.com",
+	})
+	if result.IsError {
+		t.Errorf("unexpected error: %s", result.ResultText)
+	}
+	if result.ResultText != "created" {
+		t.Errorf("expected 'created', got '%s'", result.ResultText)
+	}
+}
+
+func TestValidationEnumField(t *testing.T) {
+	ClearGroupRegistry()
+	ClearContextRegistry()
+	defer ClearGroupRegistry()
+	defer ClearContextRegistry()
+
+	ToolGroup("val_enum",
+		Action("set",
+			ActionEnumField("mode", []string{"fast", "slow", "balanced"}),
+			ActionArgs(StrArg("mode")),
+			ActionHandler(func(ctx ToolContext, args map[string]interface{}) ToolResult {
+				return Result("set:" + args["mode"].(string))
+			}),
+		),
+	)
+
+	groups := GetRegisteredGroups()
+	ctx := dummyToolContext()
+
+	// Invalid enum value
+	result := DispatchGroupAction(groups[0], ctx, map[string]interface{}{
+		"action": "set",
+		"mode":   "fats",
+	})
+	if !result.IsError {
+		t.Error("expected error for invalid enum")
+	}
+	if result.ErrorCode != "INVALID_ENUM" {
+		t.Errorf("expected INVALID_ENUM, got '%s'", result.ErrorCode)
+	}
+	if !strings.Contains(result.Suggestion, "fast") {
+		t.Errorf("expected fuzzy suggestion 'fast', got '%s'", result.Suggestion)
+	}
+
+	// Valid enum value
+	result = DispatchGroupAction(groups[0], ctx, map[string]interface{}{
+		"action": "set",
+		"mode":   "fast",
+	})
+	if result.IsError {
+		t.Errorf("unexpected error: %s", result.ResultText)
+	}
+	if result.ResultText != "set:fast" {
+		t.Errorf("expected 'set:fast', got '%s'", result.ResultText)
+	}
+}
+
+func TestValidationCrossRule(t *testing.T) {
+	ClearGroupRegistry()
+	ClearContextRegistry()
+	defer ClearGroupRegistry()
+	defer ClearContextRegistry()
+
+	ToolGroup("val_cross",
+		Action("transfer",
+			ActionCrossRule(func(args map[string]interface{}) bool {
+				from, _ := args["from"].(string)
+				to, _ := args["to"].(string)
+				return from == to
+			}, "Cannot transfer to the same account"),
+			ActionArgs(StrArg("from"), StrArg("to")),
+			ActionHandler(func(ctx ToolContext, args map[string]interface{}) ToolResult {
+				return Result("transferred")
+			}),
+		),
+	)
+
+	groups := GetRegisteredGroups()
+	ctx := dummyToolContext()
+
+	// Cross rule violation
+	result := DispatchGroupAction(groups[0], ctx, map[string]interface{}{
+		"action": "transfer",
+		"from":   "acct1",
+		"to":     "acct1",
+	})
+	if !result.IsError {
+		t.Error("expected cross rule error")
+	}
+	if result.ErrorCode != "CROSS_PARAM_VIOLATION" {
+		t.Errorf("expected CROSS_PARAM_VIOLATION, got '%s'", result.ErrorCode)
+	}
+
+	// No violation
+	result = DispatchGroupAction(groups[0], ctx, map[string]interface{}{
+		"action": "transfer",
+		"from":   "acct1",
+		"to":     "acct2",
+	})
+	if result.IsError {
+		t.Errorf("unexpected error: %s", result.ResultText)
+	}
+}
