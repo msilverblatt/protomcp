@@ -292,10 +292,13 @@ async function handleStepCall(workflowName: string, stepName: string, kwargs: Re
         if (errMsg.includes(substring)) {
           state!.currentStep = targetStep;
           const allowedTools = transitionToSteps(wf, state!, [targetStep]);
+          const allToolNames = getRegisteredTools().map(t => t.name);
+          const allowedSet = new Set(allowedTools);
+          const onErrorDisableTools = allToolNames.filter(t => !allowedSet.has(t));
           return new ToolResult({
             result: `Error caught (${errMsg}), transitioning to '${targetStep}'`,
             enableTools: allowedTools,
-            disableTools: [],
+            disableTools: onErrorDisableTools,
           });
         }
       }
