@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go)](https://go.dev)
 
-**Build MCP servers in any language. Tools, resources, prompts — one file, one command.**
+**Build powerful MCP workflows with dynamic tool lists and server-defined workflows. Lightweight protobuf-based MCP runtime built the official SDK.**
 
 protomcp is a language-agnostic MCP runtime. Write your server logic in Python, TypeScript, Go, or Rust. Run `pmcp dev server.py` and you get a spec-compliant MCP server with hot reload, no protocol boilerplate, and no framework lock-in.
 
@@ -193,6 +193,19 @@ protomcp implements the full MCP specification (2025-03-26) via the official Go 
 - **Custom Middleware** — intercept tool calls with before/after hooks
 - **Validation** — `pmcp validate` checks definitions before deployment
 
+## Advanced Features
+
+- **Native Tool Groups** -- Group related actions with per-action schemas (oneOf discriminated unions). Each action gets its own required fields, enums, and validation rules while appearing as a single tool to the LLM.
+- **Server-Defined Workflows** -- Multi-step state machines where the visible tool surface IS the state. The server defines the process, the agent follows it. Supports `no_cancel`, error recovery, dynamic branching, and tool visibility control.
+- **Local Middleware** -- In-process middleware chain for error handling, timing, auto-install, or any cross-cutting concern. Middleware receives the tool name, args, and a `next` handler.
+- **Server Context** -- Inject shared parameters (project directory, DB connection, auth tokens) into tool handlers automatically. Hidden contexts stay out of the tool schema entirely.
+- **Telemetry** -- Structured `ToolCallEvent`s (start, success, error, progress) emitted to pluggable sinks. Wire up logging, metrics, or tracing with a single decorator.
+- **Declarative Validation** -- Required fields, enum fuzzy matching (with "did you mean?" suggestions), and cross-parameter rules defined alongside your actions.
+- **Sidecar Management** -- Managed companion processes with health checks, started and stopped alongside your server.
+- **Handler Discovery** -- Auto-discover tool handlers from a directory so you can organize large servers into separate files.
+
+See the [full documentation](https://msilverblatt.github.io/protomcp/) for details on each feature.
+
 ## Tool Groups
 
 Real-world MCP tools tend to accumulate dozens of parameters behind a single endpoint. Tool groups let you split actions into clean, per-action schemas while exposing a single tool with a discriminated union (`oneOf`) to the LLM.
@@ -346,19 +359,6 @@ Workflows also support:
 - **Error handling** — failed steps stay in state for retry, or route to recovery steps via `on_error`
 - **Lifecycle hooks** — `on_cancel` for cleanup, `on_complete` for audit logging
 - **Tool visibility** — `allow_during` / `block_during` with glob patterns, step-level overrides
-
-## Advanced Features
-
-- **Tool Groups** -- Group related actions with per-action schemas (oneOf discriminated unions). Each action gets its own required fields, enums, and validation rules while appearing as a single tool to the LLM.
-- **Server-Defined Workflows** -- Multi-step state machines where the visible tool surface IS the state. The server defines the process, the agent follows it. Supports `no_cancel`, error recovery, dynamic branching, and tool visibility control.
-- **Local Middleware** -- In-process middleware chain for error handling, timing, auto-install, or any cross-cutting concern. Middleware receives the tool name, args, and a `next` handler.
-- **Server Context** -- Inject shared parameters (project directory, DB connection, auth tokens) into tool handlers automatically. Hidden contexts stay out of the tool schema entirely.
-- **Telemetry** -- Structured `ToolCallEvent`s (start, success, error, progress) emitted to pluggable sinks. Wire up logging, metrics, or tracing with a single decorator.
-- **Declarative Validation** -- Required fields, enum fuzzy matching (with "did you mean?" suggestions), and cross-parameter rules defined alongside your actions.
-- **Sidecar Management** -- Managed companion processes with health checks, started and stopped alongside your server.
-- **Handler Discovery** -- Auto-discover tool handlers from a directory so you can organize large servers into separate files.
-
-See the [full documentation](https://msilverblatt.github.io/protomcp/) for details on each feature.
 
 ## When to Use protomcp
 
