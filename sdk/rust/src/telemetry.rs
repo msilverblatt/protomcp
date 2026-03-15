@@ -32,14 +32,14 @@ static SINK_REGISTRY: Mutex<Vec<SinkFn>> = Mutex::new(Vec::new());
 
 /// Register a telemetry sink that receives ToolCallEvents.
 pub fn telemetry_sink(handler: impl Fn(&ToolCallEvent) + Send + Sync + 'static) {
-    SINK_REGISTRY.lock().unwrap().push(Box::new(handler));
+    SINK_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).push(Box::new(handler));
 }
 
 /// Emit a telemetry event to all registered sinks.
 /// Fail-safe: catches panics in individual sinks so one bad sink
 /// doesn't crash the process.
 pub fn emit_telemetry(event: ToolCallEvent) {
-    let guard = SINK_REGISTRY.lock().unwrap();
+    let guard = SINK_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
     for sink in guard.iter() {
         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             sink(&event);
@@ -48,7 +48,7 @@ pub fn emit_telemetry(event: ToolCallEvent) {
 }
 
 pub fn clear_telemetry_sinks() {
-    SINK_REGISTRY.lock().unwrap().clear();
+    SINK_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).clear();
 }
 
 #[cfg(test)]
@@ -57,9 +57,17 @@ mod tests {
     use std::sync::Arc;
     use std::sync::atomic::{AtomicI32, Ordering};
 
+    static TEST_LOCK: Mutex<()> = Mutex::new(());
+
+    fn lock_and_clear() -> std::sync::MutexGuard<'static, ()> {
+        let guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        clear_telemetry_sinks();
+        guard
+    }
+
     #[test]
     fn test_register_and_emit() {
-        clear_telemetry_sinks();
+        let _lock = lock_and_clear();
 
         let count = Arc::new(AtomicI32::new(0));
         let count2 = count.clone();
@@ -77,7 +85,7 @@ mod tests {
 
     #[test]
     fn test_multiple_sinks() {
-        clear_telemetry_sinks();
+        let _lock = lock_and_clear();
 
         let count_a = Arc::new(AtomicI32::new(0));
         let count_b = Arc::new(AtomicI32::new(0));
@@ -96,7 +104,7 @@ mod tests {
 
     #[test]
     fn test_panic_in_sink_does_not_crash() {
-        clear_telemetry_sinks();
+        let _lock = lock_and_clear();
 
         let reached = Arc::new(AtomicI32::new(0));
         let reached2 = reached.clone();
@@ -113,7 +121,7 @@ mod tests {
 
     #[test]
     fn test_event_fields() {
-        clear_telemetry_sinks();
+        let _lock = lock_and_clear();
 
         let captured_name = Arc::new(Mutex::new(String::new()));
         let cn = captured_name.clone();
@@ -137,16 +145,16 @@ mod tests {
 
     #[test]
     fn test_clear() {
-        clear_telemetry_sinks();
+        let _lock = lock_and_clear();
         telemetry_sink(|_| {});
         telemetry_sink(|_| {});
         {
-            let guard = SINK_REGISTRY.lock().unwrap();
+            let guard = SINK_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
             assert_eq!(guard.len(), 2);
         }
         clear_telemetry_sinks();
         {
-            let guard = SINK_REGISTRY.lock().unwrap();
+            let guard = SINK_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
             assert_eq!(guard.len(), 0);
         }
     }
