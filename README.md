@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go)](https://go.dev)
 
-**Build powerful MCP workflows with dynamic tool lists and server-defined workflows. Lightweight protobuf-based MCP runtime built the official SDK.**
+**Build powerful MCP workflows with dynamic tool lists and server-defined workflows. Lightweight protobuf-based MCP runtime built on the official Go SDK.**
 
 protomcp is a language-agnostic MCP runtime. Write your server logic in Python, TypeScript, Go, or Rust. Run `pmcp dev server.py` and you get a spec-compliant MCP server with hot reload, no protocol boilerplate, and no framework lock-in.
 
