@@ -2,7 +2,6 @@
 
 [![CI](https://github.com/msilverblatt/protomcp/actions/workflows/ci.yml/badge.svg)](https://github.com/msilverblatt/protomcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Go](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go)](https://go.dev)
 
 **Build powerful MCP workflows with dynamic tool lists and server-defined workflows. Lightweight protobuf-based MCP runtime built on the official Go SDK.**
 
