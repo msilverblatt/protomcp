@@ -1,6 +1,5 @@
-import json
 from dataclasses import dataclass, field
-from typing import Callable, Optional
+from typing import Callable
 
 _prompt_registry: list["PromptDef"] = []
 

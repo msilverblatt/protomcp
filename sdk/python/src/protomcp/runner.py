@@ -124,6 +124,8 @@ def _handle_call_tool(transport, env):
         transport.send(resp)
         return
 
+    start_time = time.monotonic()
+    action_name = ""
     try:
         args = json.loads(req.arguments_json) if req.arguments_json else {}
         # Resolve server contexts and inject into args if handler accepts them
