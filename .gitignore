@@ -10,3 +10,5 @@ __pycache__/
 .superpowers/
 docs/superpowers/
 sdk/rust/target/
+/protomcp
+docs/.astro/
