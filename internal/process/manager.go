@@ -923,12 +923,14 @@ func (m *Manager) readLoop() {
 		}
 
 		// Clean up orphaned stream assemblies.
+		m.mu.Lock()
 		now := time.Now()
 		for id, asm := range m.streams {
 			if now.Sub(asm.created) > m.cfg.CallTimeout {
 				delete(m.streams, id)
 			}
 		}
+		m.mu.Unlock()
 
 		env, rawPayload, err := envelope.ReadRaw(m.conn)
 		if err != nil {
@@ -1059,7 +1061,9 @@ func (m *Manager) readLoop() {
 				if sh.TotalSize > 0 {
 					assembly.buf.Grow(int(sh.TotalSize))
 				}
+				m.mu.Lock()
 				m.streams[reqID] = assembly
+				m.mu.Unlock()
 			}
 			continue
 		}
@@ -1084,13 +1088,17 @@ func (m *Manager) readLoop() {
 				}
 			} else {
 				// Reassembly mode.
+				m.mu.Lock()
 				assembly, ok := m.streams[reqID]
+				m.mu.Unlock()
 				if !ok {
 					continue
 				}
 				assembly.buf.Write(sc.Data)
 				if sc.Final {
+					m.mu.Lock()
 					delete(m.streams, reqID)
+					m.mu.Unlock()
 					result := &pb.Envelope{
 						RequestId: reqID,
 						Msg: &pb.Envelope_CallResult{
