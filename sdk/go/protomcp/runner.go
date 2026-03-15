@@ -314,6 +314,7 @@ func handleReload(tp *Transport, reqID string) {
 	})
 	handleListTools(tp, "")
 	sendMiddlewareRegistrations(tp)
+	sendDisableHiddenTools(tp)
 }
 
 func uriMatchesTemplate(template, uri string) bool {

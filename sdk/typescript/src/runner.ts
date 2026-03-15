@@ -140,8 +140,8 @@ export async function run(): Promise<void> {
 
       const resp = Envelope.create({
         middlewareInterceptResponse: MiddlewareInterceptResponse.create({
-          argumentsJson: respFields['argumentsJson'] ?? respFields['arguments_json'] ?? '',
-          resultJson: respFields['resultJson'] ?? respFields['result_json'] ?? '',
+          argumentsJson: respFields['argumentsJson'] ?? respFields['arguments_json'] ?? req['argumentsJson'] ?? '',
+          resultJson: respFields['resultJson'] ?? respFields['result_json'] ?? req['resultJson'] ?? '',
           reject: respFields['reject'] ?? false,
           rejectReason: respFields['rejectReason'] ?? respFields['reject_reason'] ?? '',
         }),
@@ -324,6 +324,13 @@ export async function run(): Promise<void> {
       await transport.send(reloadResp);
       await sendListTools('');
       await sendMiddlewareRegistrations();
+      const reloadHiddenNames = getHiddenToolNames();
+      if (reloadHiddenNames.length > 0) {
+        const disableResp = Envelope.create({
+          disableTools: { toolNames: reloadHiddenNames },
+        });
+        await transport.send(disableResp);
+      }
     }
   }
 }

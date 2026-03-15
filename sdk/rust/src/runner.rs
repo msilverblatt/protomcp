@@ -234,6 +234,7 @@ async fn handle_reload(transport: &Transport, request_id: &str) {
     let _ = transport.send(&resp).await;
     handle_list_tools(transport, "").await;
     send_middleware_registrations(transport).await;
+    send_disable_hidden_tools(transport).await;
 }
 
 async fn send_disable_hidden_tools(transport: &Transport) {
