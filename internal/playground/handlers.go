@@ -50,6 +50,7 @@ func (s *Server) handleListPrompts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleCallTool(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	var req struct {
 		Name string         `json:"name"`
 		Args map[string]any `json:"args"`
@@ -74,6 +75,7 @@ func (s *Server) handleCallTool(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleReadResource(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	var req struct {
 		URI string `json:"uri"`
 	}
@@ -92,6 +94,7 @@ func (s *Server) handleReadResource(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetPrompt(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	var req struct {
 		Name      string            `json:"name"`
 		Arguments map[string]string `json:"arguments"`

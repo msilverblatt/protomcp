@@ -175,7 +175,10 @@ func TestBatch_AtomicUpdate(t *testing.T) {
 	m := toollist.New()
 	m.SetRegistered([]string{"a", "b", "c", "d"})
 
-	changed := m.Batch(nil, nil, []string{"a", "b"}, nil)
+	changed, err := m.Batch(nil, nil, []string{"a", "b"}, nil)
+	if err != nil {
+		t.Fatalf("Batch returned error: %v", err)
+	}
 	if !changed {
 		t.Error("expected changed=true")
 	}
@@ -189,12 +192,20 @@ func TestBatch_RejectsMixedAllowAndBlock(t *testing.T) {
 	m := toollist.New()
 	m.SetRegistered([]string{"a", "b", "c"})
 
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("expected panic for mixed allow+block")
-		}
-	}()
-	m.Batch(nil, nil, []string{"a"}, []string{"b"})
+	_, err := m.Batch(nil, nil, []string{"a"}, []string{"b"})
+	if err == nil {
+		t.Error("expected error for mixed allow+block")
+	}
+}
+
+func TestBatchBothAllowAndBlockReturnsError(t *testing.T) {
+	m := toollist.New()
+	// Register some tools first
+	m.SetRegistered([]string{"tool_a", "tool_b"})
+	_, err := m.Batch(nil, nil, []string{"tool_a"}, []string{"tool_b"})
+	if err == nil {
+		t.Fatal("expected error when both allow and block are specified, got nil")
+	}
 }
 
 func TestChanged_DetectsAddedTools(t *testing.T) {
