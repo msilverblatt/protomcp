@@ -39,3 +39,7 @@ export function prompt(options: PromptOptions): PromptDef {
 export function getRegisteredPrompts(): PromptDef[] {
   return [...promptRegistry];
 }
+
+export function clearPromptRegistry(): void {
+  promptRegistry.length = 0;
+}
