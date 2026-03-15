@@ -386,19 +386,12 @@ fn compute_transition(
     }
 
     // enable_tools = allowed_tools
-    // disable_tools = all workflow tools NOT in allowed (to hide them)
-    let all_wf_tools: Vec<String> = wf.steps.iter().map(|s| format!("{}.{}", wf.name, s.name)).collect();
-    let cancel_tool = format!("{}.cancel", wf.name);
-
-    let mut disable_tools: Vec<String> = Vec::new();
-    for t in &all_wf_tools {
-        if !allowed_tools.contains(t) {
-            disable_tools.push(t.clone());
-        }
-    }
-    if !allowed_tools.contains(&cancel_tool) {
-        disable_tools.push(cancel_tool);
-    }
+    // disable_tools = all registered tools NOT in allowed set
+    let allowed_set: std::collections::HashSet<&String> = allowed_tools.iter().collect();
+    let disable_tools: Vec<String> = all_tool_names.iter()
+        .filter(|t| !allowed_set.contains(t))
+        .cloned()
+        .collect();
 
     (allowed_tools, disable_tools)
 }
@@ -454,10 +447,18 @@ fn handle_step_call(workflow_name: &str, step_name: &str, ctx: ToolContext, args
         }
     }
 
+    // Drop state lock before calling handler to avoid deadlock if handler
+    // accesses workflow state. Registry lock (guard) is still held since
+    // handler lives in the registry, but that's unavoidable without Arc.
+    drop(state_guard);
+
     // Run handler, catch panics as errors
     let handler_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         (step_def.handler)(ctx, args)
     }));
+
+    // Re-acquire state lock after handler call
+    let mut state_guard = ACTIVE_WORKFLOW.lock().unwrap_or_else(|e| e.into_inner());
 
     match handler_result {
         Err(panic_info) => {

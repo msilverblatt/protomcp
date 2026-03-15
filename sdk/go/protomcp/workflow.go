@@ -485,7 +485,16 @@ func HandleStepCall(workflowName, stepName string, ctx ToolContext, args map[str
 		}
 		r := Result(resultText)
 		r.EnableTools = state.PreWorkflowTools
-		r.DisableTools = []string{}
+		// Disable everything not in pre-workflow set
+		preSet := map[string]bool{}
+		for _, t := range state.PreWorkflowTools {
+			preSet[t] = true
+		}
+		for _, t := range GetRegisteredTools() {
+			if !preSet[t.Name] {
+				r.DisableTools = append(r.DisableTools, t.Name)
+			}
+		}
 		return r
 	}
 

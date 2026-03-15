@@ -344,12 +344,15 @@ async function handleStepCall(workflowName: string, stepName: string, kwargs: Re
     if (wf.onComplete) {
       wf.onComplete(state!.history);
     }
-    // Restore pre-workflow tools
+    // Restore pre-workflow tools — disable everything not in pre-workflow set
+    const allToolNames = getRegisteredTools().map(t => t.name);
+    const preSet = new Set(state!.preWorkflowTools);
+    const terminalDisableTools = allToolNames.filter(t => !preSet.has(t));
     activeWorkflowStack.pop();
     return new ToolResult({
       result: result.result || 'Workflow complete',
       enableTools: state!.preWorkflowTools,
-      disableTools: [],
+      disableTools: terminalDisableTools,
     });
   } else {
     // Transition to next steps
