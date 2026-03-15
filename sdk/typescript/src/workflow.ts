@@ -260,17 +260,11 @@ async function handleStepCall(workflowName: string, stepName: string, kwargs: Re
   let state = getActiveState();
 
   if (stepDef.initial) {
-    let preTools: string[] = [];
-    try {
-      preTools = await toolManager.getActiveTools();
-    } catch {
-      // If toolManager not connected, preWorkflowTools stays empty
-    }
     state = {
       workflowName,
       currentStep: stepName,
       history: [],
-      preWorkflowTools: preTools,
+      preWorkflowTools: [],
     };
     activeWorkflowStack.push(state);
   } else {
