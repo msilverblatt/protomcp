@@ -313,4 +313,53 @@ mod tests {
         });
         clear_registry();
     }
+
+    #[test]
+    fn test_hidden_defaults_to_false() {
+        let _lock = lock_and_clear();
+        tool("my_tool")
+            .description("A tool")
+            .handler(|_, _| ToolResult::new("ok"))
+            .register();
+
+        with_registry(|tools| {
+            assert_eq!(tools.len(), 1);
+            assert!(!tools[0].hidden, "hidden should default to false");
+        });
+        clear_registry();
+    }
+
+    #[test]
+    fn test_hidden_field_set_by_direct_construction() {
+        let _lock = lock_and_clear();
+        // Since there's no builder method for hidden, verify the field
+        // is accessible and can be set directly on ToolDef
+        let td = ToolDef {
+            name: "secret".to_string(),
+            description: "A hidden tool".to_string(),
+            input_schema: serde_json::json!({"type": "object", "properties": {}}),
+            handler: Arc::new(|_, _| ToolResult::new("secret")),
+            destructive: false,
+            idempotent: false,
+            read_only: false,
+            open_world: false,
+            task_support: false,
+            hidden: true,
+        };
+        assert!(td.hidden, "hidden should be true when set explicitly");
+
+        let td2 = ToolDef {
+            name: "visible".to_string(),
+            description: "A visible tool".to_string(),
+            input_schema: serde_json::json!({"type": "object", "properties": {}}),
+            handler: Arc::new(|_, _| ToolResult::new("visible")),
+            destructive: false,
+            idempotent: false,
+            read_only: false,
+            open_world: false,
+            task_support: false,
+            hidden: false,
+        };
+        assert!(!td2.hidden, "hidden should be false when set explicitly");
+    }
 }

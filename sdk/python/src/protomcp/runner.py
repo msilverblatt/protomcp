@@ -209,8 +209,9 @@ def _handle_reload(transport, env, mw_handlers):
         request_id=env.request_id,
     )
     transport.send(resp)
-    # Also re-send tool list
-    _handle_list_tools(transport, env)
+    # Also re-send tool list with empty request_id so it routes to handshakeCh
+    fake_env = pb.Envelope()  # empty envelope (request_id defaults to "")
+    _handle_list_tools(transport, fake_env)
     _send_middleware_registrations(transport, mw_handlers)
 
 def _send_middleware_registrations(transport, mw_handlers):
