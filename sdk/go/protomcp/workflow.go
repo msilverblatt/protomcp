@@ -366,10 +366,18 @@ func HandleStepCall(workflowName, stepName string, ctx ToolContext, args map[str
 	state := getActiveState()
 
 	if stepDef.Initial {
-		// Start a new workflow
+		// Start a new workflow — snapshot pre-workflow tools
 		var preTools []string
 		if ToolManagerAdapter.GetActiveTools != nil {
 			preTools = ToolManagerAdapter.GetActiveTools()
+		} else {
+			// Compute from registered tools, excluding this workflow's own tools
+			prefix := workflowName + "."
+			for _, t := range GetRegisteredTools() {
+				if !strings.HasPrefix(t.Name, prefix) {
+					preTools = append(preTools, t.Name)
+				}
+			}
 		}
 		newState := WorkflowState{
 			WorkflowName:     workflowName,
@@ -485,7 +493,16 @@ func HandleStepCall(workflowName, stepName string, ctx ToolContext, args map[str
 		}
 		r := Result(resultText)
 		r.EnableTools = state.PreWorkflowTools
-		r.DisableTools = []string{}
+		// Disable everything not in pre-workflow set
+		preSet := map[string]bool{}
+		for _, t := range state.PreWorkflowTools {
+			preSet[t] = true
+		}
+		for _, t := range GetRegisteredTools() {
+			if !preSet[t.Name] {
+				r.DisableTools = append(r.DisableTools, t.Name)
+			}
+		}
 		return r
 	}
 
@@ -531,14 +548,22 @@ func HandleCancel(workflowName string) ToolResult {
 		wf.OnCancelFn(state.CurrentStep, state.History)
 	}
 
-	// Restore pre-workflow tools
+	// Restore pre-workflow tools — disable everything not in pre-workflow set
 	if ToolManagerAdapter.SetAllowed != nil {
 		ToolManagerAdapter.SetAllowed(state.PreWorkflowTools)
 	}
 	activeWorkflowStack = activeWorkflowStack[:len(activeWorkflowStack)-1]
 	r := Result(fmt.Sprintf("Workflow '%s' cancelled", workflowName))
 	r.EnableTools = state.PreWorkflowTools
-	r.DisableTools = []string{}
+	preSet := map[string]bool{}
+	for _, t := range state.PreWorkflowTools {
+		preSet[t] = true
+	}
+	for _, t := range GetRegisteredTools() {
+		if !preSet[t.Name] {
+			r.DisableTools = append(r.DisableTools, t.Name)
+		}
+	}
 	return r
 }
 
