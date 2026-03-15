@@ -1,6 +1,6 @@
-// examples/go/resources_and_prompts.go
+// examples/go/resources_and_prompts/main.go
 // Demonstrates resources, prompts, and completions — the full MCP feature set.
-// Run: pmcp dev examples/go/resources_and_prompts.go
+// Run: pmcp dev examples/go/resources_and_prompts/main.go
 package main
 
 import (
