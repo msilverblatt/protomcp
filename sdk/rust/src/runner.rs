@@ -138,45 +138,35 @@ async fn handle_call_tool(transport: &Transport, req: &proto::CallToolRequest, r
         ..ToolCallEvent::new(&tool_name, "start")
     });
 
-    let result = with_registry(|tools| {
-        if let Some(tool_def) = tools.iter().find(|t| t.name == req.name) {
-            let cancelled = Arc::new(AtomicBool::new(false));
-            let ctx = ToolContext::new(
-                req.progress_token.clone(),
-                cancelled,
-                Box::new(|_| {}),
-            );
-
-            // Build local middleware chain around the tool handler
-            // We need to create a closure that captures the tool handler
-            let tool_name_inner = tool_def.name.clone();
-            let args_clone = args.clone();
-
-            // Since we can't move the handler out of the registry,
-            // call the handler directly but wrap via middleware chain
-            // We pass a handler that looks up and calls the tool
-            let handler: Box<dyn Fn(ToolContext, serde_json::Value) -> crate::result::ToolResult + Send + Sync> =
-                Box::new(move |ctx, args| {
-                    with_registry(|tools2| {
-                        if let Some(td) = tools2.iter().find(|t| t.name == tool_name_inner) {
-                            (td.handler)(ctx, args)
-                        } else {
-                            crate::result::ToolResult::error("Tool not found", "NOT_FOUND", "", false)
-                        }
-                    })
-                });
-
-            let chain = build_middleware_chain(&req.name, handler);
-            chain(ctx, args_clone)
-        } else {
-            crate::result::ToolResult::error(
-                format!("Tool not found: {}", req.name),
-                "NOT_FOUND",
-                "",
-                false,
-            )
-        }
+    let handler_opt = with_registry(|tools| {
+        tools.iter()
+            .find(|t| t.name == req.name)
+            .map(|t| t.handler.clone())
     });
+
+    let result = if let Some(handler) = handler_opt {
+        let cancelled = Arc::new(AtomicBool::new(false));
+        let ctx = ToolContext::new(
+            req.progress_token.clone(),
+            cancelled,
+            Box::new(|_| {}),
+        );
+
+        let chain_handler: Box<dyn Fn(ToolContext, serde_json::Value) -> crate::result::ToolResult + Send + Sync> =
+            Box::new(move |ctx, args| {
+                handler(ctx, args)
+            });
+
+        let chain = build_middleware_chain(&req.name, chain_handler);
+        chain(ctx, args)
+    } else {
+        crate::result::ToolResult::error(
+            format!("Tool not found: {}", req.name),
+            "NOT_FOUND",
+            "",
+            false,
+        )
+    };
 
     // Emit completion telemetry
     let duration = start_time.elapsed().as_millis() as i64;

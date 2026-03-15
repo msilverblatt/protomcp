@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use serde_json::Value;
 use crate::context::ToolContext;
 use crate::result::ToolResult;
@@ -217,7 +217,7 @@ fn group_to_union_def(group: &GroupDef) -> ToolDef {
         name: group.name.clone(),
         description: desc,
         input_schema: schema,
-        handler: Box::new(move |ctx, args| {
+        handler: Arc::new(move |ctx, args| {
             dispatch_group_action_by_name(&group_name, ctx, args)
         }),
         destructive: false,
@@ -257,7 +257,7 @@ fn group_to_separate_defs(group: &GroupDef) -> Vec<ToolDef> {
             name: format!("{}.{}", group.name, act.name),
             description: desc,
             input_schema: schema,
-            handler: Box::new(move |ctx, args| {
+            handler: Arc::new(move |ctx, args| {
                 dispatch_specific_action(&group_name, &action_name, ctx, args)
             }),
             destructive: false,
