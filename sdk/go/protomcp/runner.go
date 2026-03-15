@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -315,6 +316,37 @@ func handleReload(tp *Transport, reqID string) {
 	sendMiddlewareRegistrations(tp)
 }
 
+func uriMatchesTemplate(template, uri string) bool {
+	parts := strings.Split(template, "{")
+	if len(parts) == 0 {
+		return template == uri
+	}
+	if !strings.HasPrefix(uri, parts[0]) {
+		return false
+	}
+	remaining := uri[len(parts[0]):]
+	for _, part := range parts[1:] {
+		closeBrace := strings.Index(part, "}")
+		if closeBrace < 0 {
+			return false
+		}
+		suffix := part[closeBrace+1:]
+		if suffix == "" {
+			if remaining == "" {
+				return false
+			}
+			remaining = ""
+		} else {
+			idx := strings.Index(remaining, suffix)
+			if idx <= 0 {
+				return false
+			}
+			remaining = remaining[idx+len(suffix):]
+		}
+	}
+	return remaining == ""
+}
+
 func handleListResources(tp *Transport, reqID string) {
 	resources := GetRegisteredResources()
 	var defs []*pb.ResourceDefinition
@@ -368,7 +400,7 @@ func handleReadResource(tp *Transport, req *pb.ReadResourceRequest, reqID string
 
 	// Try resource templates.
 	for _, t := range GetRegisteredResourceTemplates() {
-		if t.HandlerFn != nil {
+		if t.HandlerFn != nil && uriMatchesTemplate(t.URITemplate, uri) {
 			contents := t.HandlerFn(uri)
 			if len(contents) > 0 {
 				sendResourceContents(tp, reqID, contents)

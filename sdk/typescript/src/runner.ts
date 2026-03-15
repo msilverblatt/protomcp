@@ -322,7 +322,7 @@ export async function run(): Promise<void> {
         requestId,
       });
       await transport.send(reloadResp);
-      await sendListTools(requestId);
+      await sendListTools('');
       await sendMiddlewareRegistrations();
     }
   }

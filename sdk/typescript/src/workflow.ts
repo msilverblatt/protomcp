@@ -283,7 +283,7 @@ async function handleStepCall(workflowName: string, stepName: string, kwargs: Re
   // Run the handler
   let result: StepResult | string;
   try {
-    result = stepDef.handler(kwargs, ctx);
+    result = await stepDef.handler(kwargs, ctx);
   } catch (exc: any) {
     // Check onError mapping
     if (stepDef.onError) {
@@ -351,10 +351,13 @@ async function handleStepCall(workflowName: string, stepName: string, kwargs: Re
   } else {
     // Transition to next steps
     const allowedTools = transitionToSteps(wf, state!, effectiveNext || []);
+    const allToolNames = getRegisteredTools().map(t => t.name);
+    const allowedSet = new Set(allowedTools);
+    const disableTools = allToolNames.filter(t => !allowedSet.has(t));
     return new ToolResult({
       result: result.result || `Proceed to: ${JSON.stringify(effectiveNext)}`,
       enableTools: allowedTools,
-      disableTools: [],
+      disableTools,
     });
   }
 }

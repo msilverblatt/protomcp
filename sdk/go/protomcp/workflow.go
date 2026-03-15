@@ -310,11 +310,7 @@ var ToolManagerAdapter struct {
 	SetAllowed     func([]string)
 }
 
-func transitionToSteps(wf *WorkflowDef, state *WorkflowState, nextStepNames []string) {
-	if ToolManagerAdapter.SetAllowed == nil {
-		return
-	}
-
+func transitionToSteps(wf *WorkflowDef, state *WorkflowState, nextStepNames []string) []string {
 	stepMap := map[string]*StepDef{}
 	for i := range wf.Steps {
 		stepMap[wf.Steps[i].Name] = &wf.Steps[i]
@@ -347,7 +343,11 @@ func transitionToSteps(wf *WorkflowDef, state *WorkflowState, nextStepNames []st
 		}
 	}
 
-	ToolManagerAdapter.SetAllowed(allowedTools)
+	if ToolManagerAdapter.SetAllowed != nil {
+		ToolManagerAdapter.SetAllowed(allowedTools)
+	}
+
+	return allowedTools
 }
 
 // --- Step dispatch ---
@@ -403,8 +403,22 @@ func HandleStepCall(workflowName, stepName string, ctx ToolContext, args map[str
 			for errKey, targetStep := range stepDef.OnError {
 				if strings.Contains(errStr, errKey) {
 					state.CurrentStep = targetStep
-					transitionToSteps(wf, state, []string{targetStep})
-					return Result(fmt.Sprintf("Error caught (%s), transitioning to '%s'", errStr, targetStep))
+					allowedTools := transitionToSteps(wf, state, []string{targetStep})
+					allTools := GetRegisteredTools()
+					allowedSet := map[string]bool{}
+					for _, t := range allowedTools {
+						allowedSet[t] = true
+					}
+					var disableTools []string
+					for _, t := range allTools {
+						if !allowedSet[t.Name] {
+							disableTools = append(disableTools, t.Name)
+						}
+					}
+					r := Result(fmt.Sprintf("Error caught (%s), transitioning to '%s'", errStr, targetStep))
+					r.EnableTools = allowedTools
+					r.DisableTools = disableTools
+					return r
 				}
 			}
 		}
@@ -469,16 +483,33 @@ func HandleStepCall(workflowName, stepName string, ctx ToolContext, args map[str
 		if resultText == "" {
 			resultText = "Workflow complete"
 		}
-		return Result(resultText)
+		r := Result(resultText)
+		r.EnableTools = state.PreWorkflowTools
+		r.DisableTools = []string{}
+		return r
 	}
 
 	// Transition to next steps
-	transitionToSteps(wf, state, effectiveNext)
+	allowedTools := transitionToSteps(wf, state, effectiveNext)
+	allTools := GetRegisteredTools()
+	allowedSet := map[string]bool{}
+	for _, t := range allowedTools {
+		allowedSet[t] = true
+	}
+	var disableTools []string
+	for _, t := range allTools {
+		if !allowedSet[t.Name] {
+			disableTools = append(disableTools, t.Name)
+		}
+	}
 	resultText := result.Result
 	if resultText == "" {
 		resultText = fmt.Sprintf("Proceed to: %v", effectiveNext)
 	}
-	return Result(resultText)
+	r := Result(resultText)
+	r.EnableTools = allowedTools
+	r.DisableTools = disableTools
+	return r
 }
 
 // HandleCancel handles a cancel tool call for the given workflow.
@@ -505,7 +536,10 @@ func HandleCancel(workflowName string) ToolResult {
 		ToolManagerAdapter.SetAllowed(state.PreWorkflowTools)
 	}
 	activeWorkflowStack = activeWorkflowStack[:len(activeWorkflowStack)-1]
-	return Result(fmt.Sprintf("Workflow '%s' cancelled", workflowName))
+	r := Result(fmt.Sprintf("Workflow '%s' cancelled", workflowName))
+	r.EnableTools = state.PreWorkflowTools
+	r.DisableTools = []string{}
+	return r
 }
 
 // --- Tool generation ---
