@@ -163,7 +163,7 @@ impl ToolBuilder {
             hidden: false,
         };
 
-        REGISTRY.lock().unwrap().push(td);
+        REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).push(td);
     }
 }
 
@@ -171,26 +171,38 @@ pub(crate) fn with_registry<F, R>(f: F) -> R
 where
     F: FnOnce(&[ToolDef]) -> R,
 {
-    let guard = REGISTRY.lock().unwrap();
+    let guard = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
     f(&guard)
 }
 
 /// Adds a ToolDef directly to the tool registry (used by group registration).
 pub(crate) fn push_to_registry(td: ToolDef) {
-    REGISTRY.lock().unwrap().push(td);
+    REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).push(td);
 }
 
 pub fn clear_registry() {
-    REGISTRY.lock().unwrap().clear();
+    REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).clear();
 }
+
+/// Test-only lock to serialize tests that mutate the global REGISTRY.
+/// Multiple modules (tool, group, workflow) push into the same REGISTRY,
+/// so all their tests must hold this lock to avoid races.
+#[cfg(test)]
+pub(crate) static TEST_REGISTRY_LOCK: Mutex<()> = Mutex::new(());
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    fn lock_and_clear() -> std::sync::MutexGuard<'static, ()> {
+        let guard = TEST_REGISTRY_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        clear_registry();
+        guard
+    }
+
     #[test]
     fn test_tool_registration() {
-        clear_registry();
+        let _lock = lock_and_clear();
         tool("add")
             .description("Add two numbers")
             .arg(ArgDef::int("a"))
@@ -208,7 +220,7 @@ mod tests {
 
     #[test]
     fn test_array_arg() {
-        clear_registry();
+        let _lock = lock_and_clear();
         tool("list_items")
             .description("List items")
             .arg(ArgDef::array("tags", "string"))
@@ -227,7 +239,7 @@ mod tests {
 
     #[test]
     fn test_object_arg() {
-        clear_registry();
+        let _lock = lock_and_clear();
         tool("set_config")
             .description("Set config")
             .arg(ArgDef::object("config"))
@@ -245,7 +257,7 @@ mod tests {
 
     #[test]
     fn test_union_arg() {
-        clear_registry();
+        let _lock = lock_and_clear();
         tool("process")
             .description("Process data")
             .arg(ArgDef::union("data", &["string", "object"]))
@@ -266,7 +278,7 @@ mod tests {
 
     #[test]
     fn test_literal_arg() {
-        clear_registry();
+        let _lock = lock_and_clear();
         tool("set_mode")
             .description("Set mode")
             .arg(ArgDef::literal("mode", &["fast", "slow", "balanced"]))
@@ -289,7 +301,7 @@ mod tests {
 
     #[test]
     fn test_tool_metadata() {
-        clear_registry();
+        let _lock = lock_and_clear();
         tool("delete_user")
             .description("Delete a user")
             .destructive_hint(true)

@@ -1,6 +1,7 @@
 package toollist
 
 import (
+	"fmt"
 	"sort"
 	"sync"
 )
@@ -154,11 +155,11 @@ func (m *Manager) SetBlocked(names []string) {
 	m.disabled = make(map[string]bool)
 }
 
-// Batch performs an atomic multi-operation update. Panics if both allow and block are non-nil/non-empty.
+// Batch performs an atomic multi-operation update. Returns an error if both allow and block are non-nil/non-empty.
 // Returns true if the active set changed.
-func (m *Manager) Batch(enable, disable, allow, block []string) bool {
+func (m *Manager) Batch(enable, disable, allow, block []string) (bool, error) {
 	if len(allow) > 0 && len(block) > 0 {
-		panic("batch: cannot specify both allow and block")
+		return false, fmt.Errorf("batch: cannot specify both allow and block")
 	}
 
 	m.mu.Lock()
@@ -220,7 +221,7 @@ func (m *Manager) Batch(enable, disable, allow, block []string) bool {
 	}
 
 	after := m.getActiveLocked()
-	return !slicesEqual(before, after)
+	return !slicesEqual(before, after), nil
 }
 
 func slicesEqual(a, b []string) bool {

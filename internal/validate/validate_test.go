@@ -92,6 +92,18 @@ func TestValidateStrictGenericName(t *testing.T) {
 	}
 }
 
+func TestDottedToolNamesPass(t *testing.T) {
+	tools := []*pb.ToolDefinition{
+		{Name: "db.query", Description: "Query the database"},
+		{Name: "deploy.approve", Description: "Approve a deployment step"},
+		{Name: "files.read", Description: "Read a file from disk"},
+	}
+	result := validate.Tools(tools, false)
+	if !result.Pass {
+		t.Fatalf("expected dotted names to pass validation, got errors: %v", result.Errors)
+	}
+}
+
 func TestResultFormatText(t *testing.T) {
 	tools := []*pb.ToolDefinition{
 		{Name: "add", Description: "Add two numbers", InputSchemaJson: `{"type":"object"}`},
@@ -108,7 +120,10 @@ func TestResultFormatJSON(t *testing.T) {
 		{Name: "add", Description: "Add two numbers", InputSchemaJson: `{"type":"object"}`},
 	}
 	result := validate.Tools(tools, false)
-	output := result.FormatJSON()
+	output, err := result.FormatJSON()
+	if err != nil {
+		t.Fatalf("FormatJSON() returned error: %v", err)
+	}
 	if output == "" {
 		t.Error("expected non-empty JSON output")
 	}

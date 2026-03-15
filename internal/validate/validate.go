@@ -9,7 +9,7 @@ import (
 	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
 )
 
-var validName = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+var validName = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_.]*$`)
 
 var genericNames = map[string]bool{
 	"test": true, "tool1": true, "foo": true, "bar": true, "baz": true,
@@ -108,7 +108,10 @@ func (r Result) FormatText() string {
 	return sb.String()
 }
 
-func (r Result) FormatJSON() string {
-	b, _ := json.Marshal(r)
-	return string(b)
+func (r Result) FormatJSON() (string, error) {
+	b, err := json.Marshal(r)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal validation result: %w", err)
+	}
+	return string(b), nil
 }

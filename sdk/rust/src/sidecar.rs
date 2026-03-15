@@ -28,7 +28,7 @@ fn with_running_pids<F, R>(f: F) -> R
 where
     F: FnOnce(&mut HashMap<String, u32>) -> R,
 {
-    let mut guard = RUNNING_PIDS.lock().unwrap();
+    let mut guard = RUNNING_PIDS.lock().unwrap_or_else(|e| e.into_inner());
     if guard.is_none() {
         *guard = Some(HashMap::new());
     }
@@ -89,7 +89,7 @@ impl SidecarBuilder {
     }
 
     pub fn register(self) {
-        SIDECAR_REGISTRY.lock().unwrap().push(SidecarDef {
+        SIDECAR_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).push(SidecarDef {
             name: self.name,
             command: self.command,
             health_check: self.health_check,
@@ -226,7 +226,7 @@ fn stop_one_sidecar(sc: &SidecarDef) {
 /// Start all sidecars that match the given trigger.
 #[allow(clippy::type_complexity)]
 pub fn start_sidecars(trigger: &str) {
-    let guard = SIDECAR_REGISTRY.lock().unwrap();
+    let guard = SIDECAR_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
     let matching: Vec<usize> = guard
         .iter()
         .enumerate()
@@ -269,7 +269,7 @@ pub fn start_sidecars(trigger: &str) {
 /// Stop all running sidecars.
 #[allow(clippy::type_complexity)]
 pub fn stop_all_sidecars() {
-    let guard = SIDECAR_REGISTRY.lock().unwrap();
+    let guard = SIDECAR_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
     let sidecar_data: Vec<(String, Vec<String>, String, String, u64, u64, u64)> = guard
         .iter()
         .map(|sc| {
@@ -301,7 +301,7 @@ pub fn stop_all_sidecars() {
 }
 
 pub fn clear_sidecar_registry() {
-    SIDECAR_REGISTRY.lock().unwrap().clear();
+    SIDECAR_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).clear();
     with_running_pids(|pids| pids.clear());
 }
 
@@ -309,9 +309,17 @@ pub fn clear_sidecar_registry() {
 mod tests {
     use super::*;
 
+    static TEST_LOCK: Mutex<()> = Mutex::new(());
+
+    fn lock_and_clear() -> std::sync::MutexGuard<'static, ()> {
+        let guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        clear_sidecar_registry();
+        guard
+    }
+
     #[test]
     fn test_sidecar_registration() {
-        clear_sidecar_registry();
+        let _lock = lock_and_clear();
 
         sidecar("redis", &["redis-server", "--port", "6380"])
             .health_check("http://localhost:6380")
@@ -322,7 +330,7 @@ mod tests {
             .start_on("first_tool_call")
             .register();
 
-        let guard = SIDECAR_REGISTRY.lock().unwrap();
+        let guard = SIDECAR_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
         assert_eq!(guard.len(), 2);
         assert_eq!(guard[0].name, "redis");
         assert_eq!(guard[0].command, vec!["redis-server", "--port", "6380"]);
@@ -337,11 +345,11 @@ mod tests {
 
     #[test]
     fn test_builder_defaults() {
-        clear_sidecar_registry();
+        let _lock = lock_and_clear();
 
         sidecar("test", &["echo", "hi"]).register();
 
-        let guard = SIDECAR_REGISTRY.lock().unwrap();
+        let guard = SIDECAR_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
         assert_eq!(guard[0].start_on, "first_tool_call");
         assert_eq!(guard[0].health_check, "");
         assert_eq!(guard[0].health_timeout_ms, 30000);
@@ -359,7 +367,7 @@ mod tests {
 
     #[test]
     fn test_start_sidecars_filter() {
-        clear_sidecar_registry();
+        let _lock = lock_and_clear();
 
         // Register with a trigger that won't actually start a real process
         // (command doesn't exist, which is fine — we just test filtering)
@@ -382,22 +390,22 @@ mod tests {
 
     #[test]
     fn test_clear_sidecar_registry() {
-        clear_sidecar_registry();
+        let _lock = lock_and_clear();
         sidecar("x", &["true"]).register();
         {
-            let guard = SIDECAR_REGISTRY.lock().unwrap();
+            let guard = SIDECAR_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
             assert_eq!(guard.len(), 1);
         }
         clear_sidecar_registry();
         {
-            let guard = SIDECAR_REGISTRY.lock().unwrap();
+            let guard = SIDECAR_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
             assert_eq!(guard.len(), 0);
         }
     }
 
     #[test]
     fn test_stop_all_no_crash() {
-        clear_sidecar_registry();
+        let _lock = lock_and_clear();
         sidecar("phantom", &["sleep", "999"]).register();
         // No processes actually running, stop should be a no-op
         stop_all_sidecars();

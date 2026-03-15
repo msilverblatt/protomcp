@@ -14,6 +14,11 @@ import { emitTelemetry } from './telemetry.js';
 import { startSidecars } from './sidecar.js';
 import { discoverHandlers } from './discovery.js';
 
+function uriMatchesTemplate(template: string, uri: string): boolean {
+  const pattern = template.replace(/\{[^}]+\}/g, '[^/]+');
+  return new RegExp(`^${pattern}$`).test(uri);
+}
+
 export async function run(): Promise<void> {
   const socketPath = process.env['PROTOMCP_SOCKET'];
   if (!socketPath) {
@@ -231,7 +236,8 @@ export async function run(): Promise<void> {
       const allResources = getRegisteredResources();
       const allTemplates = getRegisteredResourceTemplates();
       const resDef = allResources.find(r => r.uri === uri);
-      const handler = resDef?.handler ?? allTemplates[0]?.handler;
+      const matchedTemplate = allTemplates.find(t => uriMatchesTemplate(t.uriTemplate, uri));
+      const handler = resDef?.handler ?? matchedTemplate?.handler;
       if (!handler) {
         const resp = Envelope.create({ readResourceResponse: { contents: [{ uri, text: `Resource not found: ${uri}`, mimeType: 'text/plain' }] }, requestId });
         await transport.send(resp);

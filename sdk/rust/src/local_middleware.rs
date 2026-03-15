@@ -26,7 +26,7 @@ pub fn local_middleware(
         + Sync
         + 'static,
 ) {
-    LOCAL_MW_REGISTRY.lock().unwrap().push(LocalMiddlewareDef {
+    LOCAL_MW_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).push(LocalMiddlewareDef {
         priority,
         handler: Arc::new(handler),
     });
@@ -41,7 +41,7 @@ pub fn build_middleware_chain(
 ) -> Box<dyn Fn(ToolContext, Value) -> ToolResult + Send + Sync> {
     // Snapshot the middleware handlers (as Arcs) so we don't hold the lock during execution.
     let mut sorted: Vec<Arc<LocalMwFn>> = {
-        let guard = LOCAL_MW_REGISTRY.lock().unwrap();
+        let guard = LOCAL_MW_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
         if guard.is_empty() {
             return handler;
         }
@@ -79,7 +79,7 @@ pub fn build_middleware_chain(
 }
 
 pub fn clear_local_middleware() {
-    LOCAL_MW_REGISTRY.lock().unwrap().clear();
+    LOCAL_MW_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).clear();
 }
 
 #[cfg(test)]
@@ -87,6 +87,14 @@ mod tests {
     use super::*;
     use std::sync::Arc;
     use std::sync::atomic::{AtomicBool, AtomicI32};
+
+    static TEST_LOCK: Mutex<()> = Mutex::new(());
+
+    fn lock_and_clear() -> std::sync::MutexGuard<'static, ()> {
+        let guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        clear_local_middleware();
+        guard
+    }
 
     fn dummy_ctx() -> ToolContext {
         ToolContext::new(
@@ -98,7 +106,7 @@ mod tests {
 
     #[test]
     fn test_no_middleware() {
-        clear_local_middleware();
+        let _lock = lock_and_clear();
         let handler: Box<dyn Fn(ToolContext, Value) -> ToolResult + Send + Sync> =
             Box::new(|_, _| ToolResult::new("direct"));
         let chain = build_middleware_chain("test_tool", handler);
@@ -109,7 +117,7 @@ mod tests {
 
     #[test]
     fn test_single_middleware() {
-        clear_local_middleware();
+        let _lock = lock_and_clear();
 
         local_middleware(10, |ctx, _tool_name, args, next| {
             let mut result = next(ctx, args);
@@ -128,7 +136,7 @@ mod tests {
 
     #[test]
     fn test_priority_ordering() {
-        clear_local_middleware();
+        let _lock = lock_and_clear();
 
         let call_order = Arc::new(Mutex::new(Vec::<i32>::new()));
 
@@ -164,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_middleware_can_short_circuit() {
-        clear_local_middleware();
+        let _lock = lock_and_clear();
 
         local_middleware(1, |_ctx, _tn, _args, _next| {
             ToolResult::error("blocked", "BLOCKED", "", false)

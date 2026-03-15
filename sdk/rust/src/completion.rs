@@ -15,13 +15,13 @@ type CompletionMap = HashMap<CompletionKey, CompletionHandler>;
 static COMPLETION_REGISTRY: Mutex<Option<CompletionMap>> = Mutex::new(None);
 
 pub fn register_completion(ref_type: &str, ref_name: &str, arg_name: &str, handler: CompletionHandler) {
-    let mut guard = COMPLETION_REGISTRY.lock().unwrap();
+    let mut guard = COMPLETION_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
     let map = guard.get_or_insert_with(HashMap::new);
     map.insert((ref_type.to_string(), ref_name.to_string(), arg_name.to_string()), handler);
 }
 
 pub(crate) fn get_completion_handler(ref_type: &str, ref_name: &str, arg_name: &str) -> Option<CompletionResult> {
-    let guard = COMPLETION_REGISTRY.lock().unwrap();
+    let guard = COMPLETION_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
     if let Some(map) = guard.as_ref() {
         let key = (ref_type.to_string(), ref_name.to_string(), arg_name.to_string());
         if let Some(handler) = map.get(&key) {

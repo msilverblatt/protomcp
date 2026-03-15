@@ -18,7 +18,7 @@ pub fn middleware<F>(name: &str, priority: i32, handler: F)
 where
     F: Fn(&str, &str, &str, &str, bool) -> HashMap<String, String> + Send + Sync + 'static,
 {
-    MIDDLEWARE_REGISTRY.lock().unwrap().push(MiddlewareDef {
+    MIDDLEWARE_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).push(MiddlewareDef {
         name: name.to_string(),
         priority,
         handler: Box::new(handler),
@@ -29,20 +29,23 @@ pub(crate) fn with_middleware_registry<F, R>(f: F) -> R
 where
     F: FnOnce(&[MiddlewareDef]) -> R,
 {
-    let guard = MIDDLEWARE_REGISTRY.lock().unwrap();
+    let guard = MIDDLEWARE_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
     f(&guard)
 }
 
 pub fn clear_middleware_registry() {
-    MIDDLEWARE_REGISTRY.lock().unwrap().clear();
+    MIDDLEWARE_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).clear();
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    static TEST_LOCK: Mutex<()> = Mutex::new(());
+
     #[test]
     fn test_middleware_registration() {
+        let _lock = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         clear_middleware_registry();
         middleware("audit", 10, |_phase, _tool, _args, _result, _err| {
             HashMap::new()

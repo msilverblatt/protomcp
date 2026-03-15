@@ -146,6 +146,30 @@ func TestParseFormatInvalid(t *testing.T) {
 	}
 }
 
+func TestHelpFlag(t *testing.T) {
+	for _, arg := range []string{"--help", "-h", "help"} {
+		cfg, err := config.Parse([]string{arg})
+		if err != nil {
+			t.Fatalf("Parse(%q) returned error: %v", arg, err)
+		}
+		if cfg.Command != "help" {
+			t.Fatalf("Parse(%q) command = %q, want 'help'", arg, cfg.Command)
+		}
+	}
+}
+
+func TestVersionFlag(t *testing.T) {
+	for _, arg := range []string{"--version", "-v", "version"} {
+		cfg, err := config.Parse([]string{arg})
+		if err != nil {
+			t.Fatalf("Parse(%q) returned error: %v", arg, err)
+		}
+		if cfg.Command != "version" {
+			t.Fatalf("Parse(%q) command = %q, want 'version'", arg, cfg.Command)
+		}
+	}
+}
+
 func TestRuntimeCommand(t *testing.T) {
 	tests := []struct {
 		file     string

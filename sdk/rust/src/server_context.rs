@@ -18,7 +18,7 @@ pub fn server_context(
     param_name: &str,
     resolver: impl Fn(&mut Value) -> Value + Send + Sync + 'static,
 ) {
-    CONTEXT_REGISTRY.lock().unwrap().push(ContextDef {
+    CONTEXT_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).push(ContextDef {
         param_name: param_name.to_string(),
         resolver: Box::new(resolver),
     });
@@ -27,7 +27,7 @@ pub fn server_context(
 /// Run all registered context resolvers against args.
 /// Returns a map of param_name -> resolved value.
 pub fn resolve_contexts(args: &mut Value) -> HashMap<String, Value> {
-    let guard = CONTEXT_REGISTRY.lock().unwrap();
+    let guard = CONTEXT_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
     let mut resolved = HashMap::new();
     for ctx_def in guard.iter() {
         let val = (ctx_def.resolver)(args);
@@ -37,7 +37,7 @@ pub fn resolve_contexts(args: &mut Value) -> HashMap<String, Value> {
 }
 
 pub fn clear_context_registry() {
-    CONTEXT_REGISTRY.lock().unwrap().clear();
+    CONTEXT_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).clear();
 }
 
 #[cfg(test)]
@@ -45,9 +45,17 @@ mod tests {
     use super::*;
     use serde_json::json;
 
+    static TEST_LOCK: Mutex<()> = Mutex::new(());
+
+    fn lock_and_clear() -> std::sync::MutexGuard<'static, ()> {
+        let guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        clear_context_registry();
+        guard
+    }
+
     #[test]
     fn test_register_and_resolve() {
-        clear_context_registry();
+        let _lock = lock_and_clear();
 
         server_context("user_id", |args| {
             let token = args.get("auth_token").and_then(|v| v.as_str()).unwrap_or("");
@@ -73,7 +81,7 @@ mod tests {
 
     #[test]
     fn test_multiple_contexts() {
-        clear_context_registry();
+        let _lock = lock_and_clear();
 
         server_context("ctx_a", |_args| Value::String("val_a".to_string()));
         server_context("ctx_b", |_args| Value::Number(serde_json::Number::from(42)));
@@ -90,15 +98,15 @@ mod tests {
 
     #[test]
     fn test_clear_registry() {
-        clear_context_registry();
+        let _lock = lock_and_clear();
         server_context("x", |_| Value::Null);
         {
-            let guard = CONTEXT_REGISTRY.lock().unwrap();
+            let guard = CONTEXT_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
             assert_eq!(guard.len(), 1);
         }
         clear_context_registry();
         {
-            let guard = CONTEXT_REGISTRY.lock().unwrap();
+            let guard = CONTEXT_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
             assert_eq!(guard.len(), 0);
         }
     }
