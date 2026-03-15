@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use serde_json::Value;
 use crate::context::ToolContext;
 use crate::result::ToolResult;
@@ -640,7 +640,7 @@ fn workflow_to_tool_defs(wf: &WorkflowDef) -> Vec<ToolDef> {
             name: tool_name,
             description: desc,
             input_schema: schema,
-            handler: Box::new(move |ctx, args| {
+            handler: Arc::new(move |ctx, args| {
                 handle_step_call(&wf_name, &sname, ctx, args)
             }),
             destructive: false,
@@ -660,7 +660,7 @@ fn workflow_to_tool_defs(wf: &WorkflowDef) -> Vec<ToolDef> {
             name: cancel_name,
             description: format!("Cancel the {} workflow", wf.name),
             input_schema: serde_json::json!({"type": "object", "properties": {}}),
-            handler: Box::new(move |_, _| {
+            handler: Arc::new(move |_, _| {
                 handle_cancel(&wf_name)
             }),
             destructive: false,

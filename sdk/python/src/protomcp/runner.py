@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import sys
 import time
 
@@ -22,6 +23,11 @@ from protomcp.local_middleware import build_middleware_chain
 from protomcp.telemetry import emit_telemetry, ToolCallEvent
 from protomcp.sidecar import start_sidecars
 from protomcp.discovery import discover_handlers, get_config
+
+def _uri_matches_template(template: str, uri: str) -> bool:
+    """Check if a URI matches a URI template pattern like 'notes://{id}'."""
+    pattern = re.sub(r'\{[^}]+\}', '[^/]+', template)
+    return bool(re.fullmatch(pattern, uri))
 
 log: ServerLogger = ServerLogger(send_fn=lambda msg: None)
 
@@ -303,9 +309,9 @@ def _handle_read_resource(transport, env):
             break
     if handler is None:
         for t in templates:
-            # Simple template matching — check if URI could match the template
-            handler = t.handler
-            break  # Templates need proper URI template matching; simplified for now
+            if _uri_matches_template(t.uri_template, uri):
+                handler = t.handler
+                break
 
     if handler is None:
         resp = pb.Envelope(

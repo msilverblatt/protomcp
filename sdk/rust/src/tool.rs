@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use serde_json::Value;
 use crate::context::ToolContext;
 use crate::result::ToolResult;
@@ -40,7 +40,7 @@ pub struct ToolDef {
     pub name: String,
     pub description: String,
     pub input_schema: Value,
-    pub handler: Box<dyn Fn(ToolContext, Value) -> ToolResult + Send + Sync>,
+    pub handler: Arc<dyn Fn(ToolContext, Value) -> ToolResult + Send + Sync>,
     pub destructive: bool,
     pub idempotent: bool,
     pub read_only: bool,
@@ -53,7 +53,7 @@ pub struct ToolBuilder {
     name: String,
     description: String,
     args: Vec<ArgDef>,
-    handler: Option<Box<dyn Fn(ToolContext, Value) -> ToolResult + Send + Sync>>,
+    handler: Option<Arc<dyn Fn(ToolContext, Value) -> ToolResult + Send + Sync>>,
     destructive: bool,
     idempotent: bool,
     read_only: bool,
@@ -126,7 +126,7 @@ impl ToolBuilder {
     where
         F: Fn(ToolContext, Value) -> ToolResult + Send + Sync + 'static,
     {
-        self.handler = Some(Box::new(f));
+        self.handler = Some(Arc::new(f));
         self
     }
 
@@ -154,7 +154,7 @@ impl ToolBuilder {
             name: self.name,
             description: self.description,
             input_schema,
-            handler: self.handler.unwrap_or_else(|| Box::new(|_, _| ToolResult::new(""))),
+            handler: self.handler.unwrap_or_else(|| Arc::new(|_, _| ToolResult::new(""))),
             destructive: self.destructive,
             idempotent: self.idempotent,
             read_only: self.read_only,

@@ -21,12 +21,30 @@ protomcp is a language-agnostic MCP runtime. Write your server logic in Python, 
 
 pmcp uses the [official MCP Go SDK](https://github.com/modelcontextprotocol/go-sdk) for full spec compliance. Your code registers tools, resources, and prompts through a simple protobuf protocol over a unix socket. pmcp handles everything else — protocol negotiation, transport, pagination, session management, and hot reload.
 
+The unix socket + protobuf layer adds ~0.5ms of overhead per tool call.
+
 ## Quick Start
 
 ### Install
 
 ```sh
 brew install msilverblatt/tap/protomcp
+```
+
+### Install SDK
+
+```sh
+# Python
+pip install protomcp
+
+# TypeScript
+npm install protomcp
+
+# Go
+go get github.com/msilverblatt/protomcp/sdk/go/protomcp
+
+# Rust
+# Add to Cargo.toml: protomcp = "0.1"
 ```
 
 ### Python
@@ -346,7 +364,7 @@ See the [full documentation](https://msilverblatt.github.io/protomcp/) for detai
 
 protomcp is not a replacement for the official MCP SDKs — it's built on top of the [official Go SDK](https://github.com/modelcontextprotocol/go-sdk). Use protomcp when:
 
-- **You want one server in multiple languages** — write tools in Python, prompts in TypeScript, resources in Go, all served by a single MCP server
+- **You want the same API across languages** — switch between Python, TypeScript, Go, and Rust with identical concepts and patterns
 - **You want zero-config hot reload** — save a file, everything reloads instantly
 - **You don't want to learn MCP internals** — no JSON-RPC, no transport wiring, no session management
 - **You want a single binary** — `pmcp` is a single Go binary, no runtime dependencies for the server itself

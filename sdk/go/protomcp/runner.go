@@ -56,6 +56,7 @@ func Run() {
 		case env.GetListTools() != nil:
 			handleListTools(tp, reqID)
 			sendMiddlewareRegistrations(tp)
+			sendDisableHiddenTools(tp)
 		case env.GetCallTool() != nil:
 			handleCallTool(tp, env.GetCallTool(), reqID)
 		case env.GetReload() != nil:
@@ -103,6 +104,23 @@ func handleListTools(tp *Transport, reqID string) {
 		RequestId: reqID,
 		Msg: &pb.Envelope_ToolList{
 			ToolList: &pb.ToolListResponse{Tools: defs},
+		},
+	})
+}
+
+func sendDisableHiddenTools(tp *Transport) {
+	var hidden []string
+	for _, t := range GetRegisteredTools() {
+		if t.Hidden {
+			hidden = append(hidden, t.Name)
+		}
+	}
+	if len(hidden) == 0 {
+		return
+	}
+	tp.Send(&pb.Envelope{
+		Msg: &pb.Envelope_DisableTools{
+			DisableTools: &pb.DisableToolsRequest{ToolNames: hidden},
 		},
 	})
 }
