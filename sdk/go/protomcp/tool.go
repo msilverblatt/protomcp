@@ -118,6 +118,7 @@ func IdempotentHint(v bool) ToolOption  { return func(td *ToolDef) { td.Idempote
 func ReadOnlyHint(v bool) ToolOption    { return func(td *ToolDef) { td.ReadOnly = v } }
 func OpenWorldHint(v bool) ToolOption   { return func(td *ToolDef) { td.OpenWorld = v } }
 func TaskSupportHint(v bool) ToolOption { return func(td *ToolDef) { td.TaskSupport = v } }
+func HiddenHint(h bool) ToolOption      { return func(d *ToolDef) { d.Hidden = h } }
 
 func (td ToolDef) InputSchemaJSON() string {
 	b, _ := json.Marshal(td.InputSchema)
