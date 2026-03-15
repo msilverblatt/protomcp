@@ -1,6 +1,6 @@
 import * as process from 'process';
 import { Transport } from './transport.js';
-import { getRegisteredTools } from './tool.js';
+import { getRegisteredTools, getHiddenToolNames } from './tool.js';
 import { ToolResult } from './result.js';
 import { ToolContext } from './context.js';
 import { toolManager } from './manager.js';
@@ -95,6 +95,8 @@ export async function run(): Promise<void> {
     await transport.send(resp);
   }
 
+  let firstToolCall = true;
+
   while (true) {
     let env: Record<string, any>;
     try {
@@ -108,6 +110,13 @@ export async function run(): Promise<void> {
     if (env['msg'] === 'listTools') {
       await sendListTools(requestId);
       await sendMiddlewareRegistrations();
+      const hiddenNames = getHiddenToolNames();
+      if (hiddenNames.length > 0) {
+        const disableResp = Envelope.create({
+          disableTools: { toolNames: hiddenNames },
+        });
+        await transport.send(disableResp);
+      }
     } else if (env['msg'] === 'middlewareIntercept') {
       const req = env['middlewareIntercept'] ?? {};
       const mwName: string = req['middlewareName'] ?? '';
@@ -162,7 +171,10 @@ export async function run(): Promise<void> {
       let respMsg;
       try {
         // Start first_tool_call sidecars
-        await startSidecars('first_tool_call');
+        if (firstToolCall) {
+          firstToolCall = false;
+          await startSidecars('first_tool_call');
+        }
 
         let args = argumentsJson ? JSON.parse(argumentsJson) : {};
         const progressToken: string = req['progressToken'] ?? '';
