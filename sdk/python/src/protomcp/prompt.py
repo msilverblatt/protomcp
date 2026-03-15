@@ -36,3 +36,6 @@ def prompt(description: str, arguments: list[PromptArg] | None = None):
 
 def get_registered_prompts() -> list[PromptDef]:
     return list(_prompt_registry)
+
+def clear_prompt_registry():
+    _prompt_registry.clear()

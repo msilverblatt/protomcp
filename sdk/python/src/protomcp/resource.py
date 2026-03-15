@@ -59,3 +59,9 @@ def get_registered_resources() -> list[ResourceDef]:
 
 def get_registered_resource_templates() -> list[ResourceTemplateDef]:
     return list(_resource_template_registry)
+
+def clear_resource_registry():
+    _resource_registry.clear()
+
+def clear_template_registry():
+    _resource_template_registry.clear()

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import type { ToolContext } from './context.js';
-import { type ToolDef, _setWorkflowsToToolDefs } from './tool.js';
+import { type ToolDef, _setWorkflowsToToolDefs, getRegisteredTools } from './tool.js';
 import { ToolResult } from './result.js';
 
 // ---------------------------------------------------------------------------
@@ -260,11 +260,14 @@ async function handleStepCall(workflowName: string, stepName: string, kwargs: Re
   let state = getActiveState();
 
   if (stepDef.initial) {
+    // Snapshot all registered tool names minus this workflow's tools
+    const allTools = getRegisteredTools().map(t => t.name);
+    const preTools = allTools.filter(t => !t.startsWith(`${workflowName}.`));
     state = {
       workflowName,
       currentStep: stepName,
       history: [],
-      preWorkflowTools: [],
+      preWorkflowTools: preTools,
     };
     activeWorkflowStack.push(state);
   } else {

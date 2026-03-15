@@ -72,3 +72,11 @@ export function getRegisteredResources(): ResourceDef[] {
 export function getRegisteredResourceTemplates(): ResourceTemplateDef[] {
   return [...templateRegistry];
 }
+
+export function clearResourceRegistry(): void {
+  resourceRegistry.length = 0;
+}
+
+export function clearTemplateRegistry(): void {
+  templateRegistry.length = 0;
+}

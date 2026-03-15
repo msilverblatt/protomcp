@@ -33,11 +33,24 @@ def discover_handlers():
         from protomcp.workflow import clear_workflow_registry
         from protomcp.server_context import clear_context_registry
         from protomcp.local_middleware import clear_local_middleware
+        from protomcp.resource import clear_resource_registry, clear_template_registry
+        from protomcp.prompt import clear_prompt_registry
+        from protomcp.completion import clear_completion_registry
+        from protomcp.telemetry import clear_telemetry_sinks
+        from protomcp.sidecar import clear_sidecar_registry
+        from protomcp.middleware import clear_middleware_registry
         clear_registry()
         clear_group_registry()
         clear_workflow_registry()
         clear_context_registry()
         clear_local_middleware()
+        clear_resource_registry()
+        clear_template_registry()
+        clear_prompt_registry()
+        clear_completion_registry()
+        clear_telemetry_sinks()
+        clear_sidecar_registry()
+        clear_middleware_registry()
         _loaded_modules.clear()
     for py_file in sorted(handlers_path.glob("*.py")):
         if py_file.name.startswith("_"):

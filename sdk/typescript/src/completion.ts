@@ -28,3 +28,7 @@ export function getCompletionHandler(
 ): CompletionHandler | undefined {
   return completionRegistry.get(makeKey(refType, refName, argumentName));
 }
+
+export function clearCompletionRegistry(): void {
+  completionRegistry.clear();
+}

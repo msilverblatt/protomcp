@@ -26,6 +26,10 @@ pub async fn run() {
     let transport = Transport::connect(&socket_path).await
         .expect("failed to connect to socket");
 
+    start_sidecars("server_start");
+
+    let mut first_tool_call = true;
+
     loop {
         let env = match transport.recv().await {
             Ok(env) => env,
@@ -38,8 +42,13 @@ pub async fn run() {
             Some(proto::envelope::Msg::ListTools(_)) => {
                 handle_list_tools(&transport, &request_id).await;
                 send_middleware_registrations(&transport).await;
+                send_disable_hidden_tools(&transport).await;
             }
             Some(proto::envelope::Msg::CallTool(req)) => {
+                if first_tool_call {
+                    first_tool_call = false;
+                    start_sidecars("first_tool_call");
+                }
                 handle_call_tool(&transport, &req, &request_id).await;
             }
             Some(proto::envelope::Msg::Reload(_)) => {
@@ -114,9 +123,6 @@ async fn handle_call_tool(transport: &Transport, req: &proto::CallToolRequest, r
     } else {
         serde_json::from_str(&req.arguments_json).unwrap_or(serde_json::json!({}))
     };
-
-    // Start sidecars on first tool call
-    start_sidecars("first_tool_call");
 
     // Resolve server contexts
     let ctx_values = resolve_contexts(&mut args);
@@ -230,6 +236,25 @@ async fn handle_reload(transport: &Transport, request_id: &str) {
     send_middleware_registrations(transport).await;
 }
 
+async fn send_disable_hidden_tools(transport: &Transport) {
+    let hidden: Vec<String> = with_registry(|tools| {
+        tools.iter()
+            .filter(|t| t.hidden)
+            .map(|t| t.name.clone())
+            .collect()
+    });
+    if hidden.is_empty() {
+        return;
+    }
+    let resp = proto::Envelope {
+        msg: Some(proto::envelope::Msg::DisableTools(proto::DisableToolsRequest {
+            tool_names: hidden,
+        })),
+        ..Default::default()
+    };
+    let _ = transport.send(&resp).await;
+}
+
 async fn send_middleware_registrations(transport: &Transport) {
     let names_and_priorities: Vec<(String, i32)> = with_middleware_registry(|mws| {
         mws.iter().map(|mw| (mw.name.clone(), mw.priority)).collect()
@@ -327,8 +352,40 @@ async fn handle_list_resource_templates(transport: &Transport, request_id: &str)
     let _ = transport.send(&resp).await;
 }
 
+fn uri_matches_template(template: &str, uri: &str) -> bool {
+    let parts: Vec<&str> = template.split('{').collect();
+    if parts.is_empty() {
+        return template == uri;
+    }
+    if !uri.starts_with(parts[0]) {
+        return false;
+    }
+    let mut remaining = &uri[parts[0].len()..];
+    for part in &parts[1..] {
+        if let Some(suffix) = part.split_once('}') {
+            let literal = suffix.1;
+            if literal.is_empty() {
+                if remaining.is_empty() {
+                    return false;
+                }
+                remaining = "";
+            } else if let Some(pos) = remaining.find(literal) {
+                if pos == 0 {
+                    return false;
+                }
+                remaining = &remaining[pos + literal.len()..];
+            } else {
+                return false;
+            }
+        }
+    }
+    remaining.is_empty()
+}
+
 async fn handle_read_resource(transport: &Transport, req: &proto::ReadResourceRequest, request_id: &str) {
     let uri = &req.uri;
+
+    // First check static resources
     let contents: Vec<proto::ResourceContent> = with_resources(|resources| {
         for r in resources {
             if r.uri == *uri {
@@ -342,6 +399,26 @@ async fn handle_read_resource(transport: &Transport, req: &proto::ReadResourceRe
         }
         Vec::new()
     });
+
+    // If no static resource matched, try templates
+    let contents = if contents.is_empty() {
+        with_resource_templates(|templates| {
+            for t in templates {
+                if uri_matches_template(&t.uri_template, uri) {
+                    return (t.handler)(uri).iter().map(|c| proto::ResourceContent {
+                        uri: c.uri.clone(),
+                        mime_type: c.mime_type.clone(),
+                        text: c.text.clone(),
+                        blob: c.blob.clone(),
+                    }).collect();
+                }
+            }
+            Vec::new()
+        })
+    } else {
+        contents
+    };
+
     let resp = proto::Envelope {
         request_id: request_id.to_string(),
         msg: Some(proto::envelope::Msg::ReadResourceResponse(proto::ReadResourceResponse { contents })),
