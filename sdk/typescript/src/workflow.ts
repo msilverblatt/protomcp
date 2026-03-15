@@ -247,7 +247,7 @@ function getActiveState(): WorkflowState | undefined {
 // Step dispatch
 // ---------------------------------------------------------------------------
 
-function handleStepCall(workflowName: string, stepName: string, kwargs: Record<string, any>, ctx: ToolContext): ToolResult {
+async function handleStepCall(workflowName: string, stepName: string, kwargs: Record<string, any>, ctx: ToolContext): Promise<ToolResult> {
   const wf = findWorkflow(workflowName);
   if (!wf) {
     return new ToolResult({ result: `Unknown workflow: ${workflowName}`, isError: true });
@@ -261,21 +261,19 @@ function handleStepCall(workflowName: string, stepName: string, kwargs: Record<s
   let state = getActiveState();
 
   if (stepDef.initial) {
-    const preTools = toolManager.getActiveTools();
+    let preTools: string[] = [];
+    try {
+      preTools = await toolManager.getActiveTools();
+    } catch {
+      // If toolManager not connected, preWorkflowTools stays empty
+    }
     state = {
       workflowName,
       currentStep: stepName,
       history: [],
-      preWorkflowTools: [],
+      preWorkflowTools: preTools,
     };
     activeWorkflowStack.push(state);
-    // getActiveTools is async; store a promise-resolved value or use sync fallback
-    // In the workflow context, we handle this by storing tools asynchronously
-    preTools.then((tools: string[]) => {
-      state!.preWorkflowTools = tools;
-    }).catch(() => {
-      // If toolManager not connected, preWorkflowTools stays empty
-    });
   } else {
     if (!state || state.workflowName !== workflowName) {
       return new ToolResult({

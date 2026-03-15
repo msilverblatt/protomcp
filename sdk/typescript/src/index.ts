@@ -4,7 +4,7 @@ export { ToolResult } from './result.js';
 export { toolManager } from './manager.js';
 export { ToolContext } from './context.js';
 export { ServerLogger } from './log.js';
-export { middleware, getRegisteredMiddleware } from './middleware.js';
+export { middleware, getRegisteredMiddleware, clearMiddlewareRegistry } from './middleware.js';
 export { resource, resourceTemplate, getRegisteredResources, getRegisteredResourceTemplates } from './resource.js';
 export type { ResourceContent, ResourceDef, ResourceTemplateDef } from './resource.js';
 export { prompt, getRegisteredPrompts } from './prompt.js';

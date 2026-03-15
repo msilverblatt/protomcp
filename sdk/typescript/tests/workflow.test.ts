@@ -228,7 +228,7 @@ describe('tool generation', () => {
 // ---------------------------------------------------------------------------
 
 describe('step dispatch', () => {
-  it('calls initial step handler and returns result', () => {
+  it('calls initial step handler and returns result', async () => {
     workflow({
       name: 'test',
       steps: {
@@ -247,13 +247,13 @@ describe('step dispatch', () => {
 
     const tools = getRegisteredTools();
     const initTool = tools.find(t => t.name === 'test.init')!;
-    const result = initTool.handler({}, dummyCtx());
+    const result = await initTool.handler({}, dummyCtx());
     expect(result).toBeInstanceOf(ToolResult);
     expect(result.result).toBe('hello from init');
     expect(result.isError).toBe(false);
   });
 
-  it('passes args to step handler', () => {
+  it('passes args to step handler', async () => {
     workflow({
       name: 'argtest',
       steps: {
@@ -272,12 +272,12 @@ describe('step dispatch', () => {
 
     const tools = getRegisteredTools();
     const step1 = tools.find(t => t.name === 'argtest.step1')!;
-    const result = step1.handler({ name: 'World' }, dummyCtx());
+    const result = await step1.handler({ name: 'World' }, dummyCtx());
     expect(result).toBeInstanceOf(ToolResult);
     expect(result.result).toBe('Hello World');
   });
 
-  it('returns error for non-initial step without active workflow', () => {
+  it('returns error for non-initial step without active workflow', async () => {
     workflow({
       name: 'wf',
       steps: {
@@ -302,13 +302,13 @@ describe('step dispatch', () => {
 
     const tools = getRegisteredTools();
     const middle = tools.find(t => t.name === 'wf.middle')!;
-    const result = middle.handler({}, dummyCtx());
+    const result = await middle.handler({}, dummyCtx());
     expect(result).toBeInstanceOf(ToolResult);
     expect(result.isError).toBe(true);
     expect(result.result).toContain('No active workflow');
   });
 
-  it('handles StepResult with dynamic next narrowing', () => {
+  it('handles StepResult with dynamic next narrowing', async () => {
     workflow({
       name: 'dynwf',
       steps: {
@@ -336,12 +336,12 @@ describe('step dispatch', () => {
 
     const tools = getRegisteredTools();
     const start = tools.find(t => t.name === 'dynwf.start')!;
-    const result = start.handler({}, dummyCtx());
+    const result = await start.handler({}, dummyCtx());
     expect(result).toBeInstanceOf(ToolResult);
     expect(result.result).toBe('choosing A');
   });
 
-  it('rejects dynamic next with steps not in declared next', () => {
+  it('rejects dynamic next with steps not in declared next', async () => {
     workflow({
       name: 'badnext',
       steps: {
@@ -364,13 +364,13 @@ describe('step dispatch', () => {
 
     const tools = getRegisteredTools();
     const start = tools.find(t => t.name === 'badnext.start')!;
-    const result = start.handler({}, dummyCtx());
+    const result = await start.handler({}, dummyCtx());
     expect(result).toBeInstanceOf(ToolResult);
     expect(result.isError).toBe(true);
     expect(result.result).toContain('invalid next steps');
   });
 
-  it('rejects dynamic next on a step with no declared next', () => {
+  it('rejects dynamic next on a step with no declared next', async () => {
     workflow({
       name: 'nodeclared',
       steps: {
@@ -388,7 +388,7 @@ describe('step dispatch', () => {
 
     const tools = getRegisteredTools();
     const start = tools.find(t => t.name === 'nodeclared.start')!;
-    const result = start.handler({}, dummyCtx());
+    const result = await start.handler({}, dummyCtx());
     expect(result).toBeInstanceOf(ToolResult);
     expect(result.isError).toBe(true);
     expect(result.result).toContain('has no declared next');
@@ -400,7 +400,7 @@ describe('step dispatch', () => {
 // ---------------------------------------------------------------------------
 
 describe('error handling', () => {
-  it('stays in state on unmatched error for retry', () => {
+  it('stays in state on unmatched error for retry', async () => {
     workflow({
       name: 'errwf',
       steps: {
@@ -418,14 +418,14 @@ describe('error handling', () => {
 
     const tools = getRegisteredTools();
     const start = tools.find(t => t.name === 'errwf.start')!;
-    const result = start.handler({}, dummyCtx());
+    const result = await start.handler({}, dummyCtx());
     expect(result).toBeInstanceOf(ToolResult);
     expect(result.isError).toBe(true);
     expect(result.result).toContain('boom');
     expect(result.result).toContain('retry');
   });
 
-  it('transitions to error target step on matched error substring', () => {
+  it('transitions to error target step on matched error substring', async () => {
     workflow({
       name: 'errmap',
       steps: {
@@ -449,7 +449,7 @@ describe('error handling', () => {
 
     const tools = getRegisteredTools();
     const start = tools.find(t => t.name === 'errmap.start')!;
-    const result = start.handler({}, dummyCtx());
+    const result = await start.handler({}, dummyCtx());
     expect(result).toBeInstanceOf(ToolResult);
     expect(result.isError).toBe(false);
     expect(result.result).toContain('transitioning');
@@ -462,7 +462,7 @@ describe('error handling', () => {
 // ---------------------------------------------------------------------------
 
 describe('cancel', () => {
-  it('cancels an active workflow', () => {
+  it('cancels an active workflow', async () => {
     const cancelSpy = vi.fn();
 
     workflow({
@@ -491,7 +491,7 @@ describe('cancel', () => {
     const cancelTool = tools.find(t => t.name === 'cancelwf.cancel')!;
 
     // Start the workflow
-    startTool.handler({}, dummyCtx());
+    await startTool.handler({}, dummyCtx());
 
     // Cancel it
     const result = cancelTool.handler({}, dummyCtx());
@@ -532,7 +532,7 @@ describe('cancel', () => {
 // ---------------------------------------------------------------------------
 
 describe('onComplete', () => {
-  it('calls onComplete when terminal step completes', () => {
+  it('calls onComplete when terminal step completes', async () => {
     const completeSpy = vi.fn();
 
     workflow({
@@ -553,7 +553,7 @@ describe('onComplete', () => {
 
     const tools = getRegisteredTools();
     const start = tools.find(t => t.name === 'completewf.start')!;
-    start.handler({}, dummyCtx());
+    await start.handler({}, dummyCtx());
     expect(completeSpy).toHaveBeenCalledTimes(1);
     // Called with history array
     expect(completeSpy.mock.calls[0][0]).toHaveLength(1);
@@ -584,7 +584,7 @@ describe('clearWorkflowRegistry', () => {
 // ---------------------------------------------------------------------------
 
 describe('multi-step workflow', () => {
-  it('walks through multiple steps', () => {
+  it('walks through multiple steps', async () => {
     const log: string[] = [];
 
     workflow({
@@ -617,13 +617,13 @@ describe('multi-step workflow', () => {
     const step2 = tools.find(t => t.name === 'multi.step2')!;
     const step3 = tools.find(t => t.name === 'multi.step3')!;
 
-    const r1 = step1.handler({}, dummyCtx());
+    const r1 = await step1.handler({}, dummyCtx());
     expect(r1.result).toBe('step1 done');
 
-    const r2 = step2.handler({}, dummyCtx());
+    const r2 = await step2.handler({}, dummyCtx());
     expect(r2.result).toBe('step2 done');
 
-    const r3 = step3.handler({}, dummyCtx());
+    const r3 = await step3.handler({}, dummyCtx());
     expect(r3.result).toBe('step3 done');
 
     expect(log).toEqual(['step1', 'step2', 'step3']);
