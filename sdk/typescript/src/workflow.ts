@@ -390,12 +390,15 @@ function handleCancel(workflowName: string): ToolResult {
     wf.onCancel(state.currentStep, state.history);
   }
 
-  // Restore pre-workflow tools
+  // Restore pre-workflow tools — disable everything not in pre-workflow set
+  const allToolNames = getRegisteredTools().map(t => t.name);
+  const preSet = new Set(state.preWorkflowTools);
+  const cancelDisableTools = allToolNames.filter(t => !preSet.has(t));
   activeWorkflowStack.pop();
   return new ToolResult({
     result: `Workflow '${workflowName}' cancelled`,
     enableTools: state.preWorkflowTools,
-    disableTools: [],
+    disableTools: cancelDisableTools,
   });
 }
 
