@@ -108,7 +108,7 @@ Which features are available in each language SDK:
 | Prompts | `@prompt` | `prompt()` | `RegisterPrompt()` | `register_prompt()` |
 | Completions | `@completion` | `completion()` | `RegisterCompletion()` | `register_completion()` |
 | Progress | `ctx.report_progress()` | `ctx.reportProgress()` | `ctx.ReportProgress()` | `ctx.report_progress()` |
-| Logging | `log.info()` | `log.info()` | `Log.Info()` | `log::info!()` |
-| Cancellation | `ctx.is_cancelled()` | `ctx.isCancelled()` | `ctx.Done()` | `ctx.is_cancelled()` |
+| Logging | `protomcp.log.info()` | `log.info()` | `Log.Info()` | `logger.info()` |
+| Cancellation | `ctx.is_cancelled()` | `ctx.isCancelled()` | `ctx.IsCancelled()` | `ctx.is_cancelled()` |
 | Tool management | `tool_manager` | `toolManager` | `ToolManager` | N/A |
-| Sampling | `ctx.sample()` | `ctx.sample()` | `ctx.Sample()` | `ctx.sample()` |
+| Sampling | `ctx.sample()` | N/A | N/A | N/A |

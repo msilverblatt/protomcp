@@ -235,20 +235,18 @@ def process_data(file_path: str, ctx: ToolContext) -> ToolResult:
 Use `ServerLogger` to send structured log messages back to the MCP host (not to stderr). The host can display or filter these messages.
 
 ```python
+import protomcp
 from protomcp import tool, ToolResult
-from protomcp.log import ServerLogger
-
-logger = ServerLogger(send_fn=None)  # send_fn is injected by protomcp at runtime
 
 @tool("Fetch remote data")
 def fetch_data(url: str) -> ToolResult:
-    logger.info("Fetching URL", data={"url": url})
+    protomcp.log.info("Fetching URL", data={"url": url})
     try:
         data = download(url)
-        logger.debug("Fetch complete", data={"bytes": len(data)})
+        protomcp.log.debug("Fetch complete", data={"bytes": len(data)})
         return ToolResult(result=data)
     except Exception as e:
-        logger.error("Fetch failed", data={"url": url, "error": str(e)})
+        protomcp.log.error("Fetch failed", data={"url": url, "error": str(e)})
         return ToolResult(is_error=True, message=str(e))
 ```
 

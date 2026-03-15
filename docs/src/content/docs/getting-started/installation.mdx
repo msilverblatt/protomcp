@@ -28,7 +28,7 @@ sudo mv protomcp /usr/local/bin/
 
 ### From source
 
-Requires Go 1.22+.
+Requires Go 1.25+.
 
 ```sh
 git clone https://github.com/msilverblatt/protomcp.git
@@ -82,7 +82,7 @@ pnpm add protomcp
 
 ## Go SDK
 
-Requires Go 1.22+.
+Requires Go 1.25+.
 
 ```sh
 go get github.com/msilverblatt/protomcp/sdk/go
@@ -121,5 +121,6 @@ protomcp detects the runtime from the file extension automatically:
 | `.ts`     | `npx tsx` (or `$PROTOMCP_NODE`) |
 | `.js`     | `node` (or `$PROTOMCP_NODE`) |
 | `.go`     | `go run` |
+| `.rs`     | `cargo run --manifest-path <Cargo.toml path>` |
 
 Use `--runtime` to override: `pmcp dev tools.py --runtime python3.12`

@@ -158,7 +158,7 @@ protomcp.Tool("process_data",
 				return protomcp.ErrorResult("Cancelled", "CANCELLED", "", false)
 			}
 			processRow(row)
-			ctx.ReportProgress(i+1, total)
+			ctx.ReportProgress(int64(i+1), int64(total), "processing rows")
 		}
 		return protomcp.Result(fmt.Sprintf("Processed %d rows", total))
 	}),
@@ -169,7 +169,7 @@ protomcp.Tool("process_data",
 
 | Method | Description |
 |--------|-------------|
-| `ReportProgress(progress, total int)` | Send a progress notification to the MCP host |
+| `ReportProgress(progress, total int64, message string) error` | Send a progress notification to the MCP host |
 | `IsCancelled() bool` | Returns `true` if the MCP host has cancelled this call |
 
 ---
@@ -273,11 +273,11 @@ Group related actions under a single tool using `ToolGroup()`.
 
 ```go
 protomcp.ToolGroup("files",
-	protomcp.Description("File operations"),
-	protomcp.Strategy("union"),
+	protomcp.GroupDescription("File operations"),
+	protomcp.GroupStrategy("union"),
 	protomcp.Action("read",
 		protomcp.ActionDescription("Read a file"),
-		protomcp.Args(protomcp.StrArg("path")),
+		protomcp.ActionArgs(protomcp.StrArg("path")),
 		protomcp.ActionHandler(func(ctx protomcp.ToolContext, args map[string]interface{}) protomcp.ToolResult {
 			path := args["path"].(string)
 			return protomcp.Result(readFile(path))
@@ -285,7 +285,7 @@ protomcp.ToolGroup("files",
 	),
 	protomcp.Action("write",
 		protomcp.ActionDescription("Write a file"),
-		protomcp.Args(protomcp.StrArg("path"), protomcp.StrArg("content")),
+		protomcp.ActionArgs(protomcp.StrArg("path"), protomcp.StrArg("content")),
 		protomcp.ActionHandler(func(ctx protomcp.ToolContext, args map[string]interface{}) protomcp.ToolResult {
 			return protomcp.Result("written")
 		}),
@@ -295,11 +295,11 @@ protomcp.ToolGroup("files",
 
 ### Strategy: union (default)
 
-With `Strategy("union")`, the group registers as a single tool with a discriminated `oneOf` schema. The caller passes an `action` field to select the action.
+With `GroupStrategy("union")`, the group registers as a single tool with a discriminated `oneOf` schema. The caller passes an `action` field to select the action.
 
 ### Strategy: separate
 
-With `Strategy("separate")`, each action becomes its own tool, namespaced as `group.action` (e.g. `files.read`, `files.write`).
+With `GroupStrategy("separate")`, each action becomes its own tool, namespaced as `group.action` (e.g. `files.read`, `files.write`).
 
 ### Dispatch and fuzzy matching
 
@@ -315,7 +315,7 @@ Declare validation rules on `Action()` to validate input before the handler runs
 
 ```go
 protomcp.Action("deploy",
-	protomcp.Requires("env", "version"),
+	protomcp.ActionRequires("env", "version"),
 	protomcp.ActionHandler(deployHandler),
 )
 ```
@@ -326,7 +326,7 @@ Restrict a field to a set of valid values. Invalid values trigger a "Did you mea
 
 ```go
 protomcp.Action("set_env",
-	protomcp.EnumFields(map[string][]string{"env": {"dev", "staging", "prod"}}),
+	protomcp.ActionEnumField("env", []string{"dev", "staging", "prod"}),
 	protomcp.ActionHandler(setEnvHandler),
 )
 ```
@@ -337,31 +337,16 @@ Validate relationships between parameters.
 
 ```go
 protomcp.Action("scale",
-	protomcp.CrossRules(protomcp.CrossRule{
-		Check: func(args map[string]interface{}) bool {
-			return args["min"].(float64) > args["max"].(float64)
-		},
-		Message: "min must be <= max",
-	}),
+	protomcp.ActionCrossRule(func(args map[string]interface{}) bool {
+		return args["min"].(float64) > args["max"].(float64)
+	}, "min must be <= max"),
 	protomcp.ActionHandler(scaleHandler),
 )
 ```
 
 ### Hints
 
-Non-blocking advisory messages appended to the result when a condition is met.
-
-```go
-protomcp.Action("query",
-	protomcp.Hints(protomcp.Hint{
-		Condition: func(args map[string]interface{}) bool {
-			return args["limit"].(float64) > 1000
-		},
-		Message: "Large limit may cause slow queries",
-	}),
-	protomcp.ActionHandler(queryHandler),
-)
-```
+Hints are not currently available in the Go SDK. For advisory messages, check conditions inside your handler and append warnings to the result text.
 
 ---
 
@@ -371,11 +356,11 @@ Register resolvers that inject shared parameters into tool handlers automaticall
 
 ```go
 protomcp.ServerContext("project_dir",
-	protomcp.Expose(false),
-	protomcp.Resolver(func(args map[string]interface{}) interface{} {
+	func(args map[string]interface{}) interface{} {
 		dir, _ := os.Getwd()
 		return dir
-	}),
+	},
+	protomcp.Expose(false),
 )
 ```
 
@@ -388,7 +373,7 @@ With `Expose(false)`, the parameter is hidden from the tool schema sent to the M
 Wrap tool handlers with in-process middleware for cross-cutting concerns.
 
 ```go
-protomcp.LocalMiddleware(10, func(ctx protomcp.ToolContext, toolName string, args map[string]interface{}, next protomcp.NextHandler) protomcp.ToolResult {
+protomcp.LocalMiddleware(10, func(ctx protomcp.ToolContext, toolName string, args map[string]interface{}, next func(protomcp.ToolContext, map[string]interface{}) protomcp.ToolResult) protomcp.ToolResult {
 	start := time.Now()
 	result := next(ctx, args)
 	log.Printf("%s took %v", toolName, time.Since(start))
@@ -433,19 +418,18 @@ Declare companion processes that protomcp manages alongside your server.
 
 ```go
 protomcp.Sidecar("redis",
-	protomcp.Command("redis-server", "--port", "6380"),
+	[]string{"redis-server", "--port", "6380"},
 	protomcp.HealthCheck("http://localhost:6380/ping"),
 	protomcp.StartOn("server_start"),
 	protomcp.HealthTimeout(30*time.Second),
 )
 ```
 
-| Option | Description |
-|--------|-------------|
-| `Command(args...)` | Process command and arguments |
+| Parameter / Option | Description |
+|--------------------|-------------|
+| `command []string` (2nd arg) | Process command and arguments |
 | `HealthCheck(url)` | URL to poll for health (HTTP 200 = healthy) |
 | `StartOn(trigger)` | `"server_start"` or `"first_tool_call"` |
 | `HealthTimeout(d)` | Duration to wait for health check to pass |
 
 PID files are stored in `~/.protomcp/sidecars/`. Processes receive `SIGTERM` on shutdown, followed by `SIGKILL` if they do not stop within the timeout.
-```

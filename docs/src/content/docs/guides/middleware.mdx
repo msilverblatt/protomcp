@@ -93,13 +93,43 @@ tool({
 
 ## Go
 
-The Go SDK does not currently expose a middleware registration API. Middleware is registered by tool processes using the Python, TypeScript, or Rust SDKs.
+The Go SDK supports middleware via the `Middleware()` function:
+
+```go
+package main
+
+import (
+	"github.com/msilverblatt/protomcp/sdk/go/protomcp"
+)
+
+func main() {
+	protomcp.Middleware("audit_log", 10, func(phase, toolName, argsJSON, resultJSON string, isError bool) map[string]interface{} {
+		if phase == "before" {
+			log.Printf("[AUDIT] Calling %s with %s", toolName, argsJSON)
+		}
+		return nil
+	})
+
+	// ... register tools and run
+}
+```
 
 ---
 
 ## Rust
 
-The Rust SDK does not currently expose a middleware registration API. Middleware support is planned for a future release.
+The Rust SDK supports middleware via the `middleware()` function:
+
+```rust
+use protomcp::{middleware, tool, ToolResult};
+
+middleware("audit_log", 10, |phase, tool_name, args_json, result_json, is_error| {
+    if phase == "before" {
+        eprintln!("[AUDIT] Calling {} with {}", tool_name, args_json);
+    }
+    Default::default()
+});
+```
 
 ---
 
