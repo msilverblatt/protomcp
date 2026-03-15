@@ -213,6 +213,7 @@ def _handle_reload(transport, env, mw_handlers):
     fake_env = pb.Envelope()  # empty envelope (request_id defaults to "")
     _handle_list_tools(transport, fake_env)
     _send_middleware_registrations(transport, mw_handlers)
+    _disable_hidden_tools(transport)
 
 def _send_middleware_registrations(transport, mw_handlers):
     mw_defs = get_registered_middleware()
@@ -265,8 +266,8 @@ def _handle_middleware_intercept(transport, env, mw_handlers):
 
     resp = pb.Envelope(
         middleware_intercept_response=pb.MiddlewareInterceptResponse(
-            arguments_json=resp_fields.get("arguments_json", ""),
-            result_json=resp_fields.get("result_json", ""),
+            arguments_json=resp_fields.get("arguments_json", req.arguments_json),
+            result_json=resp_fields.get("result_json", req.result_json),
             reject=resp_fields.get("reject", False),
             reject_reason=resp_fields.get("reject_reason", ""),
         ),
