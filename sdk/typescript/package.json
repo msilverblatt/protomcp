@@ -1,6 +1,6 @@
 {
   "name": "protomcp",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Write MCP tools in TypeScript. No MCP knowledge required.",
   "type": "module",
   "main": "dist/index.js",
