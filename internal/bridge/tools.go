@@ -9,14 +9,36 @@ import (
 	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
 )
 
-// syncTools clears existing tools and re-registers them from the backend.
-func syncTools(server *mcp.Server, backend ProcessBackend, onMutation ToolListMutationHandler) {
+// syncTools registers tools from the backend and removes any stale tools
+// that are no longer present. The registered map tracks currently known tools.
+func syncTools(server *mcp.Server, backend ProcessBackend, onMutation ToolListMutationHandler, registered map[string]bool) {
 	tools := backend.ActiveTools()
 
+	current := make(map[string]bool, len(tools))
 	for _, t := range tools {
+		current[t.Name] = true
 		tool := convertToolDef(t)
 		handler := makeToolHandler(backend, t.Name, onMutation)
 		server.AddTool(tool, handler)
+	}
+
+	// Remove tools that were previously registered but are no longer present.
+	var stale []string
+	for name := range registered {
+		if !current[name] {
+			stale = append(stale, name)
+		}
+	}
+	if len(stale) > 0 {
+		server.RemoveTools(stale...)
+	}
+
+	// Update the registered set to match current.
+	for name := range registered {
+		delete(registered, name)
+	}
+	for name := range current {
+		registered[name] = true
 	}
 }
 

@@ -14,13 +14,15 @@ type PromptBackend interface {
 	GetPrompt(ctx context.Context, name, argsJSON string) (*pb.GetPromptResponse, error)
 }
 
-func syncPrompts(server *mcp.Server, backend PromptBackend) {
+func syncPrompts(server *mcp.Server, backend PromptBackend, registered map[string]bool) {
 	ctx := context.Background()
 	prompts, err := backend.ListPrompts(ctx)
 	if err != nil {
 		return
 	}
+	current := make(map[string]bool, len(prompts))
 	for _, p := range prompts {
+		current[p.Name] = true
 		prompt := &mcp.Prompt{
 			Name:        p.Name,
 			Description: p.Description,
@@ -34,6 +36,25 @@ func syncPrompts(server *mcp.Server, backend PromptBackend) {
 		}
 		handler := makePromptHandler(backend, p.Name)
 		server.AddPrompt(prompt, handler)
+	}
+
+	// Remove prompts that were previously registered but are no longer present.
+	var stale []string
+	for name := range registered {
+		if !current[name] {
+			stale = append(stale, name)
+		}
+	}
+	if len(stale) > 0 {
+		server.RemovePrompts(stale...)
+	}
+
+	// Update the registered set to match current.
+	for name := range registered {
+		delete(registered, name)
+	}
+	for name := range current {
+		registered[name] = true
 	}
 }
 

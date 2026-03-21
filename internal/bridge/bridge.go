@@ -3,6 +3,7 @@ package bridge
 import (
 	"context"
 	"log/slog"
+	"sync"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
@@ -35,10 +36,16 @@ type ToolListMutationHandler func(enable, disable []string)
 // Bridge connects an mcp.Server to a FullBackend.
 // It registers proxy handlers that forward MCP requests to the SDK process.
 type Bridge struct {
-	Server            *mcp.Server
-	backend           FullBackend
-	logger            *slog.Logger
+	Server             *mcp.Server
+	backend            FullBackend
+	logger             *slog.Logger
 	onToolListMutation ToolListMutationHandler
+
+	mu                  sync.Mutex
+	registeredTools     map[string]bool
+	registeredResources map[string]bool
+	registeredTemplates map[string]bool
+	registeredPrompts   map[string]bool
 }
 
 // New creates a Bridge with an mcp.Server that proxies to the given backend.
@@ -79,9 +86,13 @@ func New(backend FullBackend, logger *slog.Logger) *Bridge {
 	)
 
 	b := &Bridge{
-		Server:  server,
-		backend: backend,
-		logger:  logger,
+		Server:              server,
+		backend:             backend,
+		logger:              logger,
+		registeredTools:     make(map[string]bool),
+		registeredResources: make(map[string]bool),
+		registeredTemplates: make(map[string]bool),
+		registeredPrompts:   make(map[string]bool),
 	}
 
 	// Wire reverse-request callbacks from the SDK process.
@@ -103,17 +114,23 @@ func (b *Bridge) SetToolListMutationHandler(fn ToolListMutationHandler) {
 // SyncTools reads tool definitions from the backend and registers them
 // with the mcp.Server. Called on startup and after hot reload.
 func (b *Bridge) SyncTools() {
-	syncTools(b.Server, b.backend, b.onToolListMutation)
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	syncTools(b.Server, b.backend, b.onToolListMutation, b.registeredTools)
 }
 
 // SyncResources reads resource and resource template definitions from the
 // backend and registers them with the mcp.Server.
 func (b *Bridge) SyncResources() {
-	syncResources(b.Server, b.backend)
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	syncResources(b.Server, b.backend, b.registeredResources, b.registeredTemplates)
 }
 
 // SyncPrompts reads prompt definitions from the backend and registers them
 // with the mcp.Server.
 func (b *Bridge) SyncPrompts() {
-	syncPrompts(b.Server, b.backend)
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	syncPrompts(b.Server, b.backend, b.registeredPrompts)
 }
