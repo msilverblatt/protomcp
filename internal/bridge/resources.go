@@ -2,6 +2,7 @@ package bridge
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
@@ -20,6 +21,7 @@ func syncResources(server *mcp.Server, backend ResourceBackend, registeredRes ma
 	// Sync resources.
 	resources, err := backend.ListResources(ctx)
 	if err != nil {
+		slog.Warn("failed to list resources", "error", err)
 		return
 	}
 	currentRes := make(map[string]bool, len(resources))
@@ -53,6 +55,18 @@ func syncResources(server *mcp.Server, backend ResourceBackend, registeredRes ma
 	// Sync resource templates.
 	templates, err := backend.ListResourceTemplates(ctx)
 	if err != nil {
+		slog.Warn("failed to list resource templates", "error", err)
+		// Still remove stale templates since we can't verify them
+		var staleTmpl []string
+		for uri := range registeredTmpl {
+			staleTmpl = append(staleTmpl, uri)
+		}
+		if len(staleTmpl) > 0 {
+			server.RemoveResourceTemplates(staleTmpl...)
+		}
+		for k := range registeredTmpl {
+			delete(registeredTmpl, k)
+		}
 		return
 	}
 	currentTmpl := make(map[string]bool, len(templates))
