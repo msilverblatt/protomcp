@@ -134,3 +134,12 @@ func (b *Bridge) SyncPrompts() {
 	defer b.mu.Unlock()
 	syncPrompts(b.Server, b.backend, b.registeredPrompts)
 }
+
+// SyncAll atomically syncs tools, resources, and prompts under a single lock.
+func (b *Bridge) SyncAll() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	syncTools(b.Server, b.backend, b.onToolListMutation, b.registeredTools)
+	syncResources(b.Server, b.backend, b.registeredResources, b.registeredTemplates)
+	syncPrompts(b.Server, b.backend, b.registeredPrompts)
+}
