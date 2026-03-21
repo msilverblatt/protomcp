@@ -264,6 +264,71 @@ func TestE2E_Sidecar(t *testing.T) {
 	}
 }
 
+func TestE2E_HotReload(t *testing.T) {
+	// Set up a temp dir with a server.py that uses a handlers/ directory
+	tmpDir := t.TempDir()
+	handlersDir := filepath.Join(tmpDir, "handlers")
+	os.MkdirAll(handlersDir, 0755)
+
+	// Create the main server.py that uses discovery with hot_reload=True
+	serverContent := []byte("import os\nimport sys\nfrom protomcp.discovery import configure\nfrom protomcp.runner import run\n\nhandlers_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), \"handlers\")\nconfigure(handlers_dir=handlers_dir, hot_reload=True)\n\nif __name__ == \"__main__\":\n    run()\n")
+	srcFile := filepath.Join(tmpDir, "server.py")
+	os.WriteFile(srcFile, serverContent, 0644)
+
+	// Create v1 handler with "original" tool
+	v1Handler := []byte("from protomcp import tool\n\n@tool(description=\"Original tool\")\ndef original() -> str:\n    return \"v1\"\n")
+	os.WriteFile(filepath.Join(handlersDir, "tools.py"), v1Handler, 0644)
+
+	w, r, cleanup := StartProtomcp(t, "dev", srcFile)
+	defer cleanup()
+
+	InitializeSession(t, w, r)
+
+	// Verify v1 tools
+	resp := SendRequestSkipNotifications(t, w, r, "tools/list", nil)
+	var list1 testutil.ToolsListResult
+	json.Unmarshal(resp.Result, &list1)
+
+	foundOriginal := false
+	for _, tool := range list1.Tools {
+		if tool.Name == "original" {
+			foundOriginal = true
+		}
+	}
+	if !foundOriginal {
+		t.Fatal("expected 'original' tool in v1")
+	}
+
+	// Overwrite handler file with v2 content (different tool)
+	v2Handler := []byte("from protomcp import tool\n\n@tool(description=\"New tool added in v2\")\ndef new_tool() -> str:\n    return \"v2\"\n")
+	os.WriteFile(filepath.Join(handlersDir, "tools.py"), v2Handler, 0644)
+
+	// Poll tools/list until we see the new tool (reload: debounce 100ms + process restart)
+	deadline := time.Now().Add(10 * time.Second)
+	var names map[string]bool
+	for time.Now().Before(deadline) {
+		time.Sleep(500 * time.Millisecond)
+		resp2 := SendRequestSkipNotifications(t, w, r, "tools/list", nil)
+		var list2 testutil.ToolsListResult
+		json.Unmarshal(resp2.Result, &list2)
+
+		names = map[string]bool{}
+		for _, tool := range list2.Tools {
+			names[tool.Name] = true
+		}
+		if names["new_tool"] {
+			break
+		}
+	}
+
+	if !names["new_tool"] {
+		t.Error("expected 'new_tool' after hot reload")
+	}
+	if names["original"] {
+		t.Error("'original' should have been removed after hot reload")
+	}
+}
+
 func TestE2E_Middleware(t *testing.T) {
 	w, r, cleanup := StartProtomcp(t, "dev", fixture("middleware_basic.py"))
 	defer cleanup()

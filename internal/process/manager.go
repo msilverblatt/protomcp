@@ -668,12 +668,28 @@ func (m *Manager) Reload(ctx context.Context) ([]*pb.ToolDefinition, error) {
 		}
 	}
 
-	// Wait for the unsolicited ToolListResponse (no request_id).
+	// Wait for the ToolListResponse. The Python SDK sends this with the same
+	// request_id, so it arrives on respCh. It may also arrive on handshakeCh
+	// if sent without a request_id.
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	case <-timer.C:
 		return nil, fmt.Errorf("waiting for tool list after reload timed out")
+	case toolEnv := <-respCh:
+		toolList := toolEnv.GetToolList()
+		if toolList == nil {
+			return nil, fmt.Errorf("unexpected response type for tool list after reload")
+		}
+		m.mu.Lock()
+		m.tools = toolList.Tools
+		m.mu.Unlock()
+		// Drain the handshake-complete signal if present.
+		select {
+		case <-m.handshakeCh:
+		case <-time.After(2 * time.Second):
+		}
+		return toolList.Tools, nil
 	case toolEnv := <-m.handshakeCh:
 		toolList := toolEnv.GetToolList()
 		if toolList == nil {

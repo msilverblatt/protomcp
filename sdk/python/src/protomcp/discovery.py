@@ -28,8 +28,12 @@ def discover_handlers():
         return
     hot_reload = _config.get("hot_reload", False)
     if hot_reload and _loaded_modules:
+        from protomcp.tool import clear_registry as clear_tool_registry
         from protomcp.group import clear_group_registry
+        from protomcp.workflow import clear_workflow_registry
+        clear_tool_registry()
         clear_group_registry()
+        clear_workflow_registry()
         _loaded_modules.clear()
     for py_file in sorted(handlers_path.glob("*.py")):
         if py_file.name.startswith("_"):
