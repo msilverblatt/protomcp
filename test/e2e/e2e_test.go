@@ -265,19 +265,11 @@ func TestE2E_Sidecar(t *testing.T) {
 }
 
 func TestE2E_HotReload(t *testing.T) {
-	// Set up a temp dir with a server.py that uses a handlers/ directory
+	// Copy fixture to a temp dir so we can modify it
 	tmpDir := t.TempDir()
-	handlersDir := filepath.Join(tmpDir, "handlers")
-	os.MkdirAll(handlersDir, 0755)
-
-	// Create the main server.py that uses discovery with hot_reload=True
-	serverContent := []byte("import os\nimport sys\nfrom protomcp.discovery import configure\nfrom protomcp.runner import run\n\nhandlers_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), \"handlers\")\nconfigure(handlers_dir=handlers_dir, hot_reload=True)\n\nif __name__ == \"__main__\":\n    run()\n")
 	srcFile := filepath.Join(tmpDir, "server.py")
-	os.WriteFile(srcFile, serverContent, 0644)
-
-	// Create v1 handler with "original" tool
-	v1Handler := []byte("from protomcp import tool\n\n@tool(description=\"Original tool\")\ndef original() -> str:\n    return \"v1\"\n")
-	os.WriteFile(filepath.Join(handlersDir, "tools.py"), v1Handler, 0644)
+	v1Content, _ := os.ReadFile(fixture("hot_reload_v1.py"))
+	os.WriteFile(srcFile, v1Content, 0644)
 
 	w, r, cleanup := StartProtomcp(t, "dev", srcFile)
 	defer cleanup()
@@ -299,12 +291,12 @@ func TestE2E_HotReload(t *testing.T) {
 		t.Fatal("expected 'original' tool in v1")
 	}
 
-	// Overwrite handler file with v2 content (different tool)
-	v2Handler := []byte("from protomcp import tool\n\n@tool(description=\"New tool added in v2\")\ndef new_tool() -> str:\n    return \"v2\"\n")
-	os.WriteFile(filepath.Join(handlersDir, "tools.py"), v2Handler, 0644)
+	// Overwrite file with v2 content (different tool)
+	v2Content := []byte("from protomcp import tool\nfrom protomcp.runner import run\n\n@tool(description=\"New tool added in v2\")\ndef new_tool() -> str:\n    return \"v2\"\n\nif __name__ == \"__main__\":\n    run()\n")
+	os.WriteFile(srcFile, v2Content, 0644)
 
 	// Poll tools/list until we see the new tool (reload: debounce 100ms + process restart)
-	deadline := time.Now().Add(10 * time.Second)
+	deadline := time.Now().Add(15 * time.Second)
 	var names map[string]bool
 	for time.Now().Before(deadline) {
 		time.Sleep(500 * time.Millisecond)

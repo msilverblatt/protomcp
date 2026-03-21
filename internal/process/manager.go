@@ -621,85 +621,22 @@ func (m *Manager) CallToolStream(ctx context.Context, name, argsJSON string) (<-
 // Reload sends a ReloadRequest, waits for ReloadResponse, then receives the
 // updated ToolListResponse.
 func (m *Manager) Reload(ctx context.Context) ([]*pb.ToolDefinition, error) {
-	reqID := m.nextRequestID()
+	// Stop the old process and clean up resources.
+	m.cleanup()
 
-	env := &pb.Envelope{
-		RequestId: reqID,
-		Msg: &pb.Envelope_Reload{
-			Reload: &pb.ReloadRequest{},
-		},
-	}
+	// Wait for the read loop to finish.
+	m.readWg.Wait()
 
-	respCh := make(chan *pb.Envelope, 1)
+	// Reset internal state for a fresh start.
 	m.mu.Lock()
-	m.pending[reqID] = respCh
+	m.pending = make(map[string]chan *pb.Envelope)
+	m.streams = make(map[string]*streamAssembly)
+	m.streamChs = make(map[string]chan StreamEvent)
+	m.handshakeCh = make(chan *pb.Envelope, 4)
 	m.mu.Unlock()
 
-	defer func() {
-		m.mu.Lock()
-		delete(m.pending, reqID)
-		m.mu.Unlock()
-	}()
-
-	m.writeMu.Lock()
-	err := envelope.Write(m.conn, env)
-	m.writeMu.Unlock()
-	if err != nil {
-		return nil, fmt.Errorf("write ReloadRequest: %w", err)
-	}
-
-	// Wait for ReloadResponse (matched by request_id).
-	timeout := m.cfg.CallTimeout
-	timer := time.NewTimer(timeout)
-	defer timer.Stop()
-
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case <-timer.C:
-		return nil, fmt.Errorf("reload timed out after %v", timeout)
-	case resp := <-respCh:
-		reloadResp := resp.GetReloadResponse()
-		if reloadResp == nil {
-			return nil, fmt.Errorf("unexpected response type for Reload")
-		}
-		if !reloadResp.Success {
-			return nil, fmt.Errorf("reload failed: %s", reloadResp.Error)
-		}
-	}
-
-	// Wait for the ToolListResponse. The Python SDK sends this with the same
-	// request_id, so it arrives on respCh. It may also arrive on handshakeCh
-	// if sent without a request_id.
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case <-timer.C:
-		return nil, fmt.Errorf("waiting for tool list after reload timed out")
-	case toolEnv := <-respCh:
-		toolList := toolEnv.GetToolList()
-		if toolList == nil {
-			return nil, fmt.Errorf("unexpected response type for tool list after reload")
-		}
-		m.mu.Lock()
-		m.tools = toolList.Tools
-		m.mu.Unlock()
-		// Drain the handshake-complete signal if present.
-		select {
-		case <-m.handshakeCh:
-		case <-time.After(2 * time.Second):
-		}
-		return toolList.Tools, nil
-	case toolEnv := <-m.handshakeCh:
-		toolList := toolEnv.GetToolList()
-		if toolList == nil {
-			return nil, fmt.Errorf("unexpected message type after reload")
-		}
-		m.mu.Lock()
-		m.tools = toolList.Tools
-		m.mu.Unlock()
-		return toolList.Tools, nil
-	}
+	// Restart: same logic as Start but reuses existing socket path.
+	return m.Start(ctx)
 }
 
 // OnCrash returns a channel that receives an error when the child process
