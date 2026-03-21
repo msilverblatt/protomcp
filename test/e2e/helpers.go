@@ -134,6 +134,19 @@ func SendRequestSkipNotifications(t *testing.T, w io.Writer, r *bufio.Scanner, m
 	}
 }
 
+// extractText returns the text from the first text-type content item.
+func extractText(result testutil.ToolsCallResult) string {
+	if len(result.Content) == 0 {
+		return ""
+	}
+	for _, c := range result.Content {
+		if c.Type == "text" {
+			return c.Text
+		}
+	}
+	return ""
+}
+
 // InitializeSession sends a proper MCP initialize handshake.
 func InitializeSession(t *testing.T, w io.Writer, r *bufio.Scanner) testutil.JSONRPCResponse {
 	t.Helper()

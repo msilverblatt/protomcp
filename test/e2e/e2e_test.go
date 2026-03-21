@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -237,5 +238,43 @@ func TestE2E_WorkflowBasic(t *testing.T) {
 	json.Unmarshal(executeResp.Result, &execResult)
 	if execResult.IsError {
 		t.Error("deploy.execute should succeed after approval")
+	}
+}
+
+func TestE2E_Middleware(t *testing.T) {
+	w, r, cleanup := StartProtomcp(t, "dev", fixture("middleware_basic.py"))
+	defer cleanup()
+
+	InitializeSession(t, w, r)
+
+	resp := SendRequestSkipNotifications(t, w, r, "tools/call", map[string]interface{}{
+		"name":      "echo_args",
+		"arguments": map[string]string{"message": "hello"},
+	})
+	if resp.Error != nil {
+		t.Fatalf("echo_args error: %v", resp.Error)
+	}
+
+	var result testutil.ToolsCallResult
+	json.Unmarshal(resp.Result, &result)
+	if result.IsError {
+		t.Fatalf("echo_args returned error: %s", string(resp.Result))
+	}
+
+	resultText := extractText(result)
+	if !strings.Contains(resultText, `"source": "middleware"`) {
+		t.Errorf("expected middleware-injected 'source' field in result, got: %s", resultText)
+	}
+
+	logResp := SendRequestSkipNotifications(t, w, r, "tools/call", map[string]interface{}{
+		"name":      "get_call_log",
+		"arguments": map[string]interface{}{},
+	})
+	var logResult testutil.ToolsCallResult
+	json.Unmarshal(logResp.Result, &logResult)
+
+	logText := extractText(logResult)
+	if !strings.Contains(logText, "echo_args") {
+		t.Errorf("expected 'echo_args' in call log, got: %s", logText)
 	}
 }
