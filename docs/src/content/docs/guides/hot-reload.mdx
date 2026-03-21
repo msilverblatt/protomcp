@@ -6,15 +6,14 @@ description: How protomcp reloads tool processes when source files change.
 
 ## How it works
 
-protomcp watches your tool file for changes. When a change is detected:
+`pmcp dev` watches the directory containing your entry-point file, recursively. When any matching file changes:
 
-1. A `ReloadRequest` is sent to the tool process over the unix socket
-2. The tool process handles the reload (re-registers tools, re-reads config, etc.)
-3. The tool process replies with `ReloadResponse { success: true }`
-4. protomcp sends `notifications/tools/list_changed` to the MCP host
-5. The MCP host re-fetches the tool list
-
-The file is the same process — no restart, no re-connection.
+1. The tool process is killed
+2. Internal state (tools, resources, prompts) is reset
+3. A fresh process is spawned
+4. The new process performs a full handshake, registering its tools from scratch
+5. pmcp diffs the new tool list against the old one and sends `notifications/tools/list_changed` if anything changed
+6. Stale tools, resources, and prompts that no longer exist are automatically removed
 
 ---
 
@@ -32,84 +31,28 @@ pmcp dev tools.ts
 
 It is disabled in `run` mode, which is intended for production.
 
-The file watcher monitors the tool file path specified on the command line. Changes to imported modules are not automatically detected — only the entry file.
+The watcher monitors the entire directory tree rooted at the entry file's parent directory. Changes to imported modules are detected automatically as long as they live under that directory.
 
 ---
 
-## Reload modes
+## File watching details
 
-### Default: graceful reload
-
-```sh
-# Python
-pmcp dev tools.py
-
-# TypeScript
-pmcp dev tools.ts
-```
-
-Sends `ReloadRequest` to the running process. The SDK handles this by re-executing the module-level code and re-registering all tools.
-
-### Immediate: process restart
-
-```sh
-# Python
-pmcp dev tools.py --hot-reload immediate
-
-# TypeScript
-pmcp dev tools.ts --hot-reload immediate
-```
-
-Kills and restarts the tool process. Useful when:
-- The language or runtime doesn't support graceful reload
-- You want a clean slate every time (no stale module cache)
-- You're using `.go` or `.rs` files that need recompilation
+- **Debounce**: there is a 100ms debounce — rapid saves (e.g. editor auto-format on write) trigger only one reload.
+- **New directories**: subdirectories created while dev mode is running are automatically watched.
+- **Skipped directories**: `.git`, `node_modules`, `__pycache__`, `target`, and `venv` are ignored.
 
 ---
 
 ## In-flight calls
 
-Calls that are in flight when a reload is triggered are not interrupted. protomcp waits for in-flight calls to complete before applying the reload. If a reload is requested while calls are running, it is queued.
-
----
-
-## SDK behavior on reload
-
-The Python and TypeScript SDKs re-run the tool registration code automatically. Since `@tool()` and `tool()` append to a global registry, the SDK clears the registry before re-running.
-
-If you have initialization code that should only run once (e.g. loading a model, connecting to a database), gate it with a module-level flag:
-
-```python
-from protomcp import tool, ToolResult
-
-_db = None
-
-def _get_db():
-    global _db
-    if _db is None:
-        _db = connect_to_db()
-    return _db
-
-@tool("Query the database")
-def query(sql: str) -> ToolResult:
-    results = _get_db().execute(sql)
-    return ToolResult(result=str(results))
-```
-
-The database connection is created on first use and reused across reloads.
+Calls that are in flight when a change is detected are interrupted — the process is killed immediately. If you need a call to complete before the process exits, that is not supported in dev mode.
 
 ---
 
 ## Gotchas
 
-**Module-level side effects**: Code at module level runs on every reload. Avoid expensive operations (network calls, model loading) at module level without caching.
+**State is lost on every reload**: Because the process is killed and restarted, all in-memory state (caches, sessions, open connections) is lost. Re-initialize lazily if you need to survive across reloads.
 
-**File-level watch only**: Only the entry file is watched. If you change an imported module, touch the entry file to trigger reload:
+**Whole directory is watched**: Every file under the entry file's parent directory (filtered by extension) can trigger a reload. If your project directory contains generated or frequently-updated files, move them outside the watched tree or use a subdirectory structure where the entry file lives higher up.
 
-```sh
-touch tools.py
-```
-
-**Immediate mode loses state**: With `--hot-reload immediate`, the process is killed and restarted. Any in-memory state (caches, sessions, etc.) is lost.
-
-**Syntax errors**: If the tool file has a syntax error after reload, the `ReloadResponse` will contain `success: false` and an error message. The previous tool list remains active.
+**Syntax errors at startup**: If the tool process fails to start or crashes during the handshake, pmcp will log the error and leave the previous tool list active until the next successful reload.
