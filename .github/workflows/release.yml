@@ -23,6 +23,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+      - name: Create SDK Go submodule tag
+        if: success()
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          git tag "sdk/go/${TAG}"
+          git push origin "sdk/go/${TAG}"
 
   pypi:
     runs-on: ubuntu-latest
