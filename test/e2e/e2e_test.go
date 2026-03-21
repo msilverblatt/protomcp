@@ -85,6 +85,52 @@ func TestE2E_ToolsCall(t *testing.T) {
 	}
 }
 
+func TestE2E_ToolGroupSeparate(t *testing.T) {
+	w, r, cleanup := StartProtomcp(t, "dev", fixture("tool_group_separate.py"))
+	defer cleanup()
+
+	InitializeSession(t, w, r)
+
+	resp := SendRequest(t, w, r, "tools/list", nil)
+	if resp.Error != nil {
+		t.Fatalf("tools/list error: %v", resp.Error)
+	}
+
+	var result testutil.ToolsListResult
+	if err := json.Unmarshal(resp.Result, &result); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	names := map[string]bool{}
+	for _, tool := range result.Tools {
+		names[tool.Name] = true
+	}
+	if !names["db.query"] {
+		t.Error("expected tool 'db.query'")
+	}
+	if !names["db.insert"] {
+		t.Error("expected tool 'db.insert'")
+	}
+	if names["db"] {
+		t.Error("should NOT have a single 'db' tool in separate strategy")
+	}
+
+	callResp := SendRequest(t, w, r, "tools/call", map[string]interface{}{
+		"name":      "db.query",
+		"arguments": map[string]string{"sql": "SELECT * FROM users"},
+	})
+	if callResp.Error != nil {
+		t.Fatalf("tools/call error: %v", callResp.Error)
+	}
+	var callResult testutil.ToolsCallResult
+	if err := json.Unmarshal(callResp.Result, &callResult); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if callResult.IsError {
+		t.Error("tool call should not be an error")
+	}
+}
+
 func TestE2E_DynamicToolList(t *testing.T) {
 	w, r, cleanup := StartProtomcp(t, "dev", fixture("dynamic_tool.py"))
 	defer cleanup()
