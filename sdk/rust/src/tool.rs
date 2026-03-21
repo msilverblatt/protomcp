@@ -202,7 +202,8 @@ mod tests {
 
     #[test]
     fn test_tool_registration() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool("add")
             .description("Add two numbers")
             .arg(ArgDef::int("a"))
@@ -220,7 +221,8 @@ mod tests {
 
     #[test]
     fn test_array_arg() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool("list_items")
             .description("List items")
             .arg(ArgDef::array("tags", "string"))
@@ -239,7 +241,8 @@ mod tests {
 
     #[test]
     fn test_object_arg() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool("set_config")
             .description("Set config")
             .arg(ArgDef::object("config"))
@@ -257,7 +260,8 @@ mod tests {
 
     #[test]
     fn test_union_arg() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool("process")
             .description("Process data")
             .arg(ArgDef::union("data", &["string", "object"]))
@@ -278,7 +282,8 @@ mod tests {
 
     #[test]
     fn test_literal_arg() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool("set_mode")
             .description("Set mode")
             .arg(ArgDef::literal("mode", &["fast", "slow", "balanced"]))
@@ -301,7 +306,8 @@ mod tests {
 
     #[test]
     fn test_tool_metadata() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool("delete_user")
             .description("Delete a user")
             .destructive_hint(true)

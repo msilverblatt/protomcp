@@ -53,6 +53,7 @@ func TestUnionStrategySchema(t *testing.T) {
 
 	ToolGroup("db",
 		GroupDescription("DB ops"),
+		GroupStrategy("union"),
 		Action("query",
 			ActionDescription("Run query"),
 			ActionArgs(StrArg("sql")),
@@ -231,13 +232,13 @@ func TestGroupsInGetRegisteredTools(t *testing.T) {
 	tools := GetRegisteredTools()
 	found := false
 	for _, td := range tools {
-		if td.Name == "tools_test" {
+		if td.Name == "tools_test.ping" {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Error("expected 'tools_test' in registered tools")
+		t.Error("expected 'tools_test.ping' in registered tools")
 	}
 }
 
@@ -246,6 +247,7 @@ func TestUnionHandlerDispatch(t *testing.T) {
 	defer ClearGroupRegistry()
 
 	ToolGroup("handler_test",
+		GroupStrategy("union"),
 		Action("greet",
 			ActionArgs(StrArg("name")),
 			ActionHandler(func(ctx ToolContext, args map[string]interface{}) ToolResult {

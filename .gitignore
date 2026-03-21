@@ -7,5 +7,7 @@ __pycache__/
 .superpowers/
 docs/superpowers/
 sdk/rust/target/
+go.work
+go.work.sum
 /protomcp
 docs/.astro/

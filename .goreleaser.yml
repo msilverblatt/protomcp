@@ -2,6 +2,8 @@ version: 2
 builds:
   - main: ./cmd/protomcp
     binary: pmcp
+    ldflags:
+      - -s -w -X main.version={{.Version}}
     goos:
       - linux
       - darwin

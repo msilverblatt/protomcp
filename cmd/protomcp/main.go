@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -22,6 +23,8 @@ import (
 	"github.com/msilverblatt/protomcp/internal/toollist"
 	"github.com/msilverblatt/protomcp/internal/validate"
 )
+
+var version = "dev"
 
 func main() {
 	cfg, err := config.Parse(os.Args[1:])
@@ -109,7 +112,7 @@ func main() {
 	backend := &toolBackend{pm: pm, tlm: tlm, allTools: tools}
 
 	// 5. Create bridge (replaces custom mcp.NewHandler)
-	b := bridge.New(backend, logger)
+	b := bridge.New(backend, logger, version)
 	b.SetToolListMutationHandler(func(enable, disable []string) {
 		if len(enable) > 0 {
 			tlm.Enable(enable)
@@ -121,9 +124,7 @@ func main() {
 	})
 
 	// 6. Sync tools, resources, and prompts from backend into the official mcp.Server
-	b.SyncTools()
-	b.SyncResources()
-	b.SyncPrompts()
+	b.SyncAll()
 
 	// 7. Wire process manager callbacks
 	pm.OnProgress(func(msg *pb.ProgressNotification) {
@@ -145,7 +146,8 @@ func main() {
 
 	// 8. Start file watcher (dev mode only)
 	if cfg.Command == "dev" {
-		w, err := reload.NewWatcher(cfg.File, nil, func() {
+		ext := filepath.Ext(cfg.File)
+		w, err := reload.NewWatcher(filepath.Dir(cfg.File), []string{ext}, func() {
 			slog.Info("file changed, reloading...")
 			newTools, err := pm.Reload(ctx)
 			if err != nil {
@@ -163,9 +165,7 @@ func main() {
 			if !slicesEqual(oldActive, newActive) {
 				slog.Info("tool list changed, syncing tools")
 			}
-			b.SyncTools()
-			b.SyncResources()
-			b.SyncPrompts()
+			b.SyncAll()
 		})
 		if err != nil {
 			slog.Error("failed to create file watcher", "error", err)

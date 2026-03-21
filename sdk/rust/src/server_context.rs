@@ -55,7 +55,8 @@ mod tests {
 
     #[test]
     fn test_register_and_resolve() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
 
         server_context("user_id", |args| {
             let token = args.get("auth_token").and_then(|v| v.as_str()).unwrap_or("");
@@ -81,7 +82,8 @@ mod tests {
 
     #[test]
     fn test_multiple_contexts() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
 
         server_context("ctx_a", |_args| Value::String("val_a".to_string()));
         server_context("ctx_b", |_args| Value::Number(serde_json::Number::from(42)));
@@ -98,7 +100,8 @@ mod tests {
 
     #[test]
     fn test_clear_registry() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         server_context("x", |_| Value::Null);
         {
             let guard = CONTEXT_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());

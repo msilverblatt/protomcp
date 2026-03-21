@@ -58,3 +58,11 @@ where F: FnOnce(&[ResourceTemplateDef]) -> R {
     let guard = TEMPLATE_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
     f(&guard)
 }
+
+pub fn clear_resource_registry() {
+    RESOURCE_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).clear();
+}
+
+pub fn clear_resource_template_registry() {
+    TEMPLATE_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).clear();
+}

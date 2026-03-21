@@ -73,15 +73,17 @@ def test_tool_group_with_middleware_and_telemetry():
             return ToolResult(result=str(a * b))
 
     tools = get_registered_tools()
-    assert len(tools) == 1
-    assert tools[0].name == "math"
+    assert len(tools) == 2
+    tool_names = [t.name for t in tools]
+    assert "math.add" in tool_names
 
-    handler = tools[0].handler
-    chain = build_middleware_chain("math", handler)
+    add_tool = next(t for t in tools if t.name == "math.add")
+    handler = add_tool.handler
+    chain = build_middleware_chain("math.add", handler)
 
-    emit_telemetry(ToolCallEvent(tool_name="math", action="add", phase="start", args={"a": 2, "b": 3}))
-    result = chain(None, {"action": "add", "a": 2, "b": 3})
-    emit_telemetry(ToolCallEvent(tool_name="math", action="add", phase="success", args={}, result=str(result)))
+    emit_telemetry(ToolCallEvent(tool_name="math.add", action="add", phase="start", args={"a": 2, "b": 3}))
+    result = chain(None, {"a": 2, "b": 3})
+    emit_telemetry(ToolCallEvent(tool_name="math.add", action="add", phase="success", args={}, result=str(result)))
 
     # Handler was called correctly — result contains the sum
     assert "5" in str(result)
@@ -262,8 +264,8 @@ def test_multiple_groups_coexist():
 
     tools = get_registered_tools()
     tool_names = [t.name for t in tools]
-    assert "alpha" in tool_names
-    assert "beta" in tool_names
+    assert "alpha.do_a" in tool_names
+    assert "beta.do_b" in tool_names
     assert "standalone" in tool_names
 
     # Dispatch each independently
@@ -301,17 +303,17 @@ def test_telemetry_captures_errors():
             raise ValueError("boom!")
 
     tools = get_registered_tools()
-    risky_tool = next(t for t in tools if t.name == "risky")
+    risky_tool = next(t for t in tools if t.name == "risky.explode")
 
-    chain = build_middleware_chain("risky", risky_tool.handler)
-    emit_telemetry(ToolCallEvent(tool_name="risky", action="explode", phase="start", args={}))
+    chain = build_middleware_chain("risky.explode", risky_tool.handler)
+    emit_telemetry(ToolCallEvent(tool_name="risky.explode", action="explode", phase="start", args={}))
 
     error_caught = None
     try:
-        chain(None, {"action": "explode"})
+        chain(None, {})
     except ValueError as e:
         error_caught = e
-        emit_telemetry(ToolCallEvent(tool_name="risky", action="explode", phase="error", args={}, error=e))
+        emit_telemetry(ToolCallEvent(tool_name="risky.explode", action="explode", phase="error", args={}, error=e))
 
     assert error_caught is not None
     assert str(error_caught) == "boom!"
@@ -352,8 +354,8 @@ class DiscoveredGroup:
 
         tools = get_registered_tools()
         tool_names = [t.name for t in tools]
-        assert "discovered" in tool_names
+        assert "discovered.ping" in tool_names
 
-        discovered_tool = next(t for t in tools if t.name == "discovered")
-        result = discovered_tool.handler(action="ping")
+        discovered_tool = next(t for t in tools if t.name == "discovered.ping")
+        result = discovered_tool.handler()
         assert str(result) == "pong"

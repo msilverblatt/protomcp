@@ -50,6 +50,83 @@ func TestWatcherFileChange(t *testing.T) {
 	}
 }
 
+func TestWatcherDirectoryWatch(t *testing.T) {
+	dir := t.TempDir()
+	f1 := filepath.Join(dir, "main.py")
+	os.WriteFile(f1, []byte("v1"), 0644)
+
+	called := make(chan struct{}, 1)
+	w, err := reload.NewWatcher(dir, []string{".py"}, func() {
+		select {
+		case called <- struct{}{}:
+		default:
+		}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go w.Start(ctx)
+	defer w.Stop()
+
+	time.Sleep(50 * time.Millisecond)
+	f2 := filepath.Join(dir, "helper.py")
+	os.WriteFile(f2, []byte("v1"), 0644)
+
+	select {
+	case <-called:
+		// success
+	case <-time.After(2 * time.Second):
+		t.Error("expected callback for new file in watched directory")
+	}
+}
+
+func TestWatcherNewSubdirectory(t *testing.T) {
+	dir := t.TempDir()
+
+	called := make(chan struct{}, 1)
+	w, err := reload.NewWatcher(dir, []string{".py"}, func() {
+		select {
+		case called <- struct{}{}:
+		default:
+		}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go w.Start(ctx)
+	defer w.Stop()
+
+	// Give the watcher time to set up
+	time.Sleep(50 * time.Millisecond)
+
+	// Create a new subdirectory
+	subdir := filepath.Join(dir, "subpkg")
+	if err := os.Mkdir(subdir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Give the watcher time to register the new directory
+	time.Sleep(100 * time.Millisecond)
+
+	// Create a .py file inside the new subdirectory
+	if err := os.WriteFile(filepath.Join(subdir, "module.py"), []byte("x = 1"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case <-called:
+		// success
+	case <-time.After(2 * time.Second):
+		t.Error("expected callback for new file in newly created subdirectory")
+	}
+}
+
 func TestWatcherDebounce(t *testing.T) {
 	dir := t.TempDir()
 	testFile := filepath.Join(dir, "test.py")

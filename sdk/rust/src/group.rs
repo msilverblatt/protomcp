@@ -17,7 +17,7 @@ pub struct ActionDef {
     pub name: String,
     pub description: String,
     pub args: Vec<ArgDef>,
-    pub handler: Box<dyn Fn(ToolContext, Value) -> ToolResult + Send + Sync>,
+    pub handler: Arc<dyn Fn(ToolContext, Value) -> ToolResult + Send + Sync>,
     pub requires: Vec<String>,
     pub enum_fields: Vec<(String, Vec<String>)>,
     pub cross_rules: Vec<CrossRule>,
@@ -41,7 +41,7 @@ pub struct ActionBuilder {
     name: String,
     description: String,
     args: Vec<ArgDef>,
-    handler: Option<Box<dyn Fn(ToolContext, Value) -> ToolResult + Send + Sync>>,
+    handler: Option<Arc<dyn Fn(ToolContext, Value) -> ToolResult + Send + Sync>>,
     requires: Vec<String>,
     enum_fields: Vec<(String, Vec<String>)>,
     cross_rules: Vec<CrossRule>,
@@ -51,7 +51,7 @@ pub fn tool_group(name: &str) -> GroupBuilder {
     GroupBuilder {
         name: name.to_string(),
         description: String::new(),
-        strategy: "union".to_string(),
+        strategy: "separate".to_string(),
         actions: Vec::new(),
     }
 }
@@ -82,7 +82,7 @@ impl GroupBuilder {
             name: built.name,
             description: built.description,
             args: built.args,
-            handler: built.handler.unwrap_or_else(|| Box::new(|_, _| ToolResult::new(""))),
+            handler: built.handler.unwrap_or_else(|| Arc::new(|_, _| ToolResult::new(""))),
             requires: built.requires,
             enum_fields: built.enum_fields,
             cross_rules: built.cross_rules,
@@ -131,7 +131,7 @@ impl ActionBuilder {
     where
         F: Fn(ToolContext, Value) -> ToolResult + Send + Sync + 'static,
     {
-        self.handler = Some(Box::new(f));
+        self.handler = Some(Arc::new(f));
         self
     }
 
@@ -272,47 +272,96 @@ fn group_to_separate_defs(group: &GroupDef) -> Vec<ToolDef> {
 }
 
 fn dispatch_group_action_by_name(group_name: &str, ctx: ToolContext, args: Value) -> ToolResult {
-    let guard = GROUP_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
-    let group = guard.iter().find(|g| g.name == group_name);
-    match group {
-        Some(g) => dispatch_group_action(g, ctx, args),
-        None => ToolResult::error(
-            format!("Group '{}' not found", group_name),
-            "GROUP_NOT_FOUND",
-            "",
-            false,
-        ),
-    }
+    let action_name = match args.get("action").and_then(|v| v.as_str()) {
+        Some(name) => name.to_string(),
+        None => {
+            let guard = GROUP_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+            let names: Vec<String> = guard.iter()
+                .find(|g| g.name == group_name)
+                .map(|g| g.actions.iter().map(|a| a.name.clone()).collect())
+                .unwrap_or_default();
+            return ToolResult::error(
+                format!("Missing 'action' field. Available actions: {}", names.join(", ")),
+                "MISSING_ACTION",
+                "",
+                false,
+            );
+        }
+    };
+
+    let handler = {
+        let guard = GROUP_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+        let group = guard.iter().find(|g| g.name == group_name);
+        match group {
+            None => return ToolResult::error(
+                format!("Group '{}' not found", group_name),
+                "GROUP_NOT_FOUND",
+                "",
+                false,
+            ),
+            Some(g) => {
+                match g.actions.iter().find(|a| a.name == action_name) {
+                    None => {
+                        let names: Vec<&str> = g.actions.iter().map(|a| a.name.as_str()).collect();
+                        let suggestion = fuzzy_match(&action_name, &names);
+                        let mut msg = format!("Unknown action '{}'.", action_name);
+                        if let Some(s) = &suggestion {
+                            msg.push_str(&format!(" Did you mean '{}'?", s));
+                        }
+                        msg.push_str(&format!(" Available actions: {}", names.join(", ")));
+                        return ToolResult::error(
+                            msg,
+                            "UNKNOWN_ACTION",
+                            suggestion.unwrap_or_default(),
+                            false,
+                        );
+                    }
+                    Some(a) => {
+                        if let Some(err) = validate_action(a, &args) {
+                            return err;
+                        }
+                        Arc::clone(&a.handler)
+                    }
+                }
+            }
+        }
+    };
+    // Lock is dropped here before calling the handler
+    handler(ctx, args)
 }
 
 fn dispatch_specific_action(group_name: &str, action_name: &str, ctx: ToolContext, args: Value) -> ToolResult {
-    let guard = GROUP_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
-    let group = guard.iter().find(|g| g.name == group_name);
-    match group {
-        Some(g) => {
-            let act = g.actions.iter().find(|a| a.name == action_name);
-            match act {
-                Some(a) => {
-                    if let Some(err) = validate_action(a, &args) {
-                        return err;
+    let handler = {
+        let guard = GROUP_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+        let group = guard.iter().find(|g| g.name == group_name);
+        match group {
+            None => return ToolResult::error(
+                format!("Group '{}' not found", group_name),
+                "GROUP_NOT_FOUND",
+                "",
+                false,
+            ),
+            Some(g) => {
+                let act = g.actions.iter().find(|a| a.name == action_name);
+                match act {
+                    None => return ToolResult::error(
+                        format!("Action '{}' not found in group '{}'", action_name, group_name),
+                        "UNKNOWN_ACTION",
+                        "",
+                        false,
+                    ),
+                    Some(a) => {
+                        if let Some(err) = validate_action(a, &args) {
+                            return err;
+                        }
+                        Arc::clone(&a.handler)
                     }
-                    (a.handler)(ctx, args)
                 }
-                None => ToolResult::error(
-                    format!("Action '{}' not found in group '{}'", action_name, group_name),
-                    "UNKNOWN_ACTION",
-                    "",
-                    false,
-                ),
             }
         }
-        None => ToolResult::error(
-            format!("Group '{}' not found", group_name),
-            "GROUP_NOT_FOUND",
-            "",
-            false,
-        ),
-    }
+    };
+    // Lock is dropped here before calling the handler
+    handler(ctx, args)
 }
 
 fn validate_action(action: &ActionDef, args: &Value) -> Option<ToolResult> {
@@ -373,6 +422,7 @@ fn validate_action(action: &ActionDef, args: &Value) -> Option<ToolResult> {
     None
 }
 
+#[cfg(test)]
 fn dispatch_group_action(group: &GroupDef, ctx: ToolContext, args: Value) -> ToolResult {
     let action_name = match args.get("action").and_then(|v| v.as_str()) {
         Some(name) => name.to_string(),
@@ -483,7 +533,8 @@ mod tests {
 
     #[test]
     fn test_group_registration() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool_group("math")
             .description("Math operations")
             .action("add", |a| {
@@ -513,9 +564,11 @@ mod tests {
 
     #[test]
     fn test_union_strategy_schema() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool_group("db")
             .description("DB ops")
+            .strategy("union")
             .action("query", |a| {
                 a.description("Run query").arg(ArgDef::string("sql"))
             })
@@ -550,7 +603,8 @@ mod tests {
 
     #[test]
     fn test_separate_strategy_schema() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool_group("files")
             .description("File ops")
             .strategy("separate")
@@ -576,7 +630,8 @@ mod tests {
 
     #[test]
     fn test_dispatch_correct_action() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool_group("calc")
             .action("add", |a| {
                 a.arg(ArgDef::int("a"))
@@ -605,7 +660,8 @@ mod tests {
 
     #[test]
     fn test_dispatch_unknown_action() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool_group("calc2")
             .action("add", |a| a.handler(|_, _| ToolResult::new("ok")))
             .register();
@@ -625,7 +681,8 @@ mod tests {
 
     #[test]
     fn test_dispatch_missing_action() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool_group("calc3")
             .action("add", |a| a.handler(|_, _| ToolResult::new("ok")))
             .register();
@@ -642,14 +699,15 @@ mod tests {
 
     #[test]
     fn test_groups_in_tool_defs() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool_group("tools_test")
             .description("Test group")
             .action("ping", |a| a.handler(|_, _| ToolResult::new("pong")))
             .register();
 
         crate::tool::with_registry(|tools| {
-            let found = tools.iter().any(|d| d.name == "tools_test");
+            let found = tools.iter().any(|d| d.name == "tools_test.ping");
             assert!(found);
         });
 
@@ -659,7 +717,8 @@ mod tests {
 
     #[test]
     fn test_validation_requires() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool_group("val_req")
             .action("create", |a| {
                 a.requires(&["name", "email"])
@@ -692,7 +751,8 @@ mod tests {
 
     #[test]
     fn test_validation_enum_field() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool_group("val_enum")
             .action("set_mode", |a| {
                 a.enum_field("mode", &["fast", "slow", "balanced"])
@@ -724,7 +784,8 @@ mod tests {
 
     #[test]
     fn test_validation_cross_rule() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool_group("val_cross")
             .action("transfer", |a| {
                 a.cross_rule(
@@ -766,7 +827,8 @@ mod tests {
 
     #[test]
     fn test_validation_enum_fuzzy_suggestion() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool_group("val_fuzzy")
             .action("color", |a| {
                 a.enum_field("color", &["red", "green", "blue"])

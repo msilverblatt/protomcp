@@ -37,7 +37,7 @@ var groupRegistry []GroupDef
 func ToolGroup(name string, opts ...GroupOption) {
 	gd := GroupDef{
 		Name:     name,
-		Strategy: "union",
+		Strategy: "separate",
 	}
 	for _, opt := range opts {
 		opt(&gd)

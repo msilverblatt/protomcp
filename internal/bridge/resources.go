@@ -2,6 +2,7 @@ package bridge
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
@@ -14,28 +15,63 @@ type ResourceBackend interface {
 	ReadResource(ctx context.Context, uri string) (*pb.ReadResourceResponse, error)
 }
 
-func syncResources(server *mcp.Server, backend ResourceBackend) {
+func syncResources(server *mcp.Server, backend ResourceBackend, registeredRes map[string]bool, registeredTmpl map[string]bool) {
 	ctx := context.Background()
+
+	// Sync resources.
 	resources, err := backend.ListResources(ctx)
 	if err != nil {
-		return
-	}
-	for _, r := range resources {
-		res := &mcp.Resource{
-			URI:         r.Uri,
-			Name:        r.Name,
-			Description: r.Description,
-			MIMEType:    r.MimeType,
+		slog.Warn("failed to list resources", "error", err)
+	} else {
+		currentRes := make(map[string]bool, len(resources))
+		for _, r := range resources {
+			currentRes[r.Uri] = true
+			res := &mcp.Resource{
+				URI:         r.Uri,
+				Name:        r.Name,
+				Description: r.Description,
+				MIMEType:    r.MimeType,
+			}
+			handler := makeResourceHandler(backend, r.Uri)
+			server.AddResource(res, handler)
 		}
-		handler := makeResourceHandler(backend, r.Uri)
-		server.AddResource(res, handler)
+		var staleRes []string
+		for uri := range registeredRes {
+			if !currentRes[uri] {
+				staleRes = append(staleRes, uri)
+			}
+		}
+		if len(staleRes) > 0 {
+			server.RemoveResources(staleRes...)
+		}
+		for uri := range registeredRes {
+			delete(registeredRes, uri)
+		}
+		for uri := range currentRes {
+			registeredRes[uri] = true
+		}
 	}
 
+	// Sync resource templates.
 	templates, err := backend.ListResourceTemplates(ctx)
 	if err != nil {
+		slog.Warn("failed to list resource templates", "error", err)
+		// Still remove stale templates since we can't verify them
+		var staleTmpl []string
+		for uri := range registeredTmpl {
+			staleTmpl = append(staleTmpl, uri)
+		}
+		if len(staleTmpl) > 0 {
+			server.RemoveResourceTemplates(staleTmpl...)
+		}
+		for k := range registeredTmpl {
+			delete(registeredTmpl, k)
+		}
 		return
 	}
+	currentTmpl := make(map[string]bool, len(templates))
 	for _, t := range templates {
+		currentTmpl[t.UriTemplate] = true
 		tmpl := &mcp.ResourceTemplate{
 			URITemplate: t.UriTemplate,
 			Name:        t.Name,
@@ -44,6 +80,21 @@ func syncResources(server *mcp.Server, backend ResourceBackend) {
 		}
 		handler := makeResourceHandler(backend, t.UriTemplate)
 		server.AddResourceTemplate(tmpl, handler)
+	}
+	var staleTmpl []string
+	for uri := range registeredTmpl {
+		if !currentTmpl[uri] {
+			staleTmpl = append(staleTmpl, uri)
+		}
+	}
+	if len(staleTmpl) > 0 {
+		server.RemoveResourceTemplates(staleTmpl...)
+	}
+	for uri := range registeredTmpl {
+		delete(registeredTmpl, uri)
+	}
+	for uri := range currentTmpl {
+		registeredTmpl[uri] = true
 	}
 }
 

@@ -207,7 +207,7 @@ See the [full documentation](https://msilverblatt.github.io/protomcp/) for detai
 
 ## Tool Groups
 
-Real-world MCP tools tend to accumulate dozens of parameters behind a single endpoint. Tool groups let you split actions into clean, per-action schemas while exposing a single tool with a discriminated union (`oneOf`) to the LLM.
+Real-world MCP tools tend to accumulate dozens of parameters behind a single endpoint. Tool groups let you split actions into clean, per-action schemas. By default, each action becomes its own tool (e.g. `db.query`, `db.insert`) — the **separate** strategy. For clients that support `oneOf` schemas, the **union** strategy is available as an opt-in, exposing all actions as a single tool with a discriminated union.
 
 **Before** -- one tool, 20+ params:
 
@@ -407,7 +407,7 @@ See [`examples/`](examples/) for runnable demos:
 - **Basic** — minimal tool examples in all four languages
 - **Resources & Prompts** — resources, prompts, completions, and tools together
 - **Full showcase** — structured output, progress, cancellation, dynamic tool lists, error handling
-- **Tool Groups** — per-action schemas with union and separate strategies
+- **Tool Groups** — per-action schemas with separate (default) and union strategies
 - **Advanced Server** — middleware, telemetry, server context working together
 - **Workflows** — deployment pipeline as a server-defined state machine
 

@@ -45,8 +45,8 @@ mod tests {
 
     #[test]
     fn test_middleware_registration() {
-        let _lock = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-        clear_middleware_registry();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         middleware("audit", 10, |_phase, _tool, _args, _result, _err| {
             HashMap::new()
         });

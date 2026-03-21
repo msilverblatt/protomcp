@@ -2,7 +2,9 @@ package reload
 
 import (
 	"context"
+	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -27,13 +29,37 @@ func NewWatcher(path string, extensions []string, onChange func()) (*Watcher, er
 		return nil, err
 	}
 
-	if err := fsw.Add(path); err != nil {
+	info, err := os.Stat(path)
+	if err != nil {
+		fsw.Close()
+		return nil, err
+	}
+
+	watchDir := path
+	if !info.IsDir() {
+		watchDir = filepath.Dir(path)
+	}
+
+	err = filepath.WalkDir(watchDir, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			name := d.Name()
+			if name != "." && (strings.HasPrefix(name, ".") || name == "node_modules" || name == "__pycache__" || name == "target" || name == "venv") {
+				return filepath.SkipDir
+			}
+			return fsw.Add(p)
+		}
+		return nil
+	})
+	if err != nil {
 		fsw.Close()
 		return nil, err
 	}
 
 	return &Watcher{
-		path:       path,
+		path:       watchDir,
 		extensions: extensions,
 		onChange:   onChange,
 		watcher:    fsw,
@@ -57,6 +83,28 @@ func (w *Watcher) Start(ctx context.Context) error {
 
 			if !event.Has(fsnotify.Write) && !event.Has(fsnotify.Create) {
 				continue
+			}
+
+			// Auto-watch newly created directories
+			if event.Has(fsnotify.Create) {
+				if info, err := os.Stat(event.Name); err == nil && info.IsDir() {
+					name := filepath.Base(event.Name)
+					if !strings.HasPrefix(name, ".") && name != "node_modules" && name != "__pycache__" && name != "target" && name != "venv" {
+						filepath.WalkDir(event.Name, func(p string, d os.DirEntry, err error) error {
+							if err != nil {
+								return nil
+							}
+							if d.IsDir() {
+								n := d.Name()
+								if n != "." && (strings.HasPrefix(n, ".") || n == "node_modules" || n == "__pycache__" || n == "target" || n == "venv") {
+									return filepath.SkipDir
+								}
+								w.watcher.Add(p)
+							}
+							return nil
+						})
+					}
+				}
 			}
 
 			if !w.matchesExtension(event.Name) {

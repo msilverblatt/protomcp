@@ -29,3 +29,7 @@ where F: FnOnce(&[PromptDef]) -> R {
     let guard = PROMPT_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
     f(&guard)
 }
+
+pub fn clear_prompt_registry() {
+    PROMPT_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).clear();
+}

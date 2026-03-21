@@ -319,7 +319,8 @@ mod tests {
 
     #[test]
     fn test_sidecar_registration() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
 
         sidecar("redis", &["redis-server", "--port", "6380"])
             .health_check("http://localhost:6380")
@@ -345,7 +346,8 @@ mod tests {
 
     #[test]
     fn test_builder_defaults() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
 
         sidecar("test", &["echo", "hi"]).register();
 
@@ -367,7 +369,8 @@ mod tests {
 
     #[test]
     fn test_start_sidecars_filter() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
 
         // Register with a trigger that won't actually start a real process
         // (command doesn't exist, which is fine — we just test filtering)
@@ -390,7 +393,8 @@ mod tests {
 
     #[test]
     fn test_clear_sidecar_registry() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         sidecar("x", &["true"]).register();
         {
             let guard = SIDECAR_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
@@ -405,7 +409,8 @@ mod tests {
 
     #[test]
     fn test_stop_all_no_crash() {
-        let _lock = lock_and_clear();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         sidecar("phantom", &["sleep", "999"]).register();
         // No processes actually running, stop should be a no-op
         stop_all_sidecars();

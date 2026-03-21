@@ -46,7 +46,7 @@ export function toolGroup(options: GroupOptions): GroupDef {
     name: options.name,
     description: options.description,
     actions: options.actions,
-    strategy: options.strategy ?? 'union',
+    strategy: options.strategy ?? 'separate',
   };
   groupRegistry.push(def);
   return def;
