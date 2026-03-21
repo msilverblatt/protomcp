@@ -241,6 +241,29 @@ func TestE2E_WorkflowBasic(t *testing.T) {
 	}
 }
 
+func TestE2E_Sidecar(t *testing.T) {
+	w, r, cleanup := StartProtomcp(t, "dev", fixture("sidecar_basic.py"))
+	defer cleanup()
+
+	InitializeSession(t, w, r)
+
+	resp := SendRequestSkipNotifications(t, w, r, "tools/call", map[string]interface{}{
+		"name":      "check_sidecar",
+		"arguments": map[string]interface{}{},
+	})
+	if resp.Error != nil {
+		t.Fatalf("check_sidecar error: %v", resp.Error)
+	}
+
+	var result testutil.ToolsCallResult
+	json.Unmarshal(resp.Result, &result)
+
+	text := extractText(result)
+	if !strings.Contains(text, "200") {
+		t.Errorf("expected sidecar to be reachable with status 200, got: %s", text)
+	}
+}
+
 func TestE2E_Middleware(t *testing.T) {
 	w, r, cleanup := StartProtomcp(t, "dev", fixture("middleware_basic.py"))
 	defer cleanup()
