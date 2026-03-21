@@ -3,18 +3,21 @@ package e2e
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os/exec"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/msilverblatt/protomcp/tests/testutil"
 )
 
 var (
-	pmcpBinary     string
-	pmcpBinaryOnce sync.Once
+	pmcpBinary      string
+	pmcpBinaryOnce  sync.Once
+	requestIDCounter int64
 )
 
 func getPMCPBinary(t *testing.T) string {
@@ -97,10 +100,12 @@ func SendNotification(t *testing.T, w io.Writer, method string, params interface
 }
 
 // SendRequestSkipNotifications sends a request and reads the response,
-// skipping any JSON-RPC notifications (messages without an "id" field).
+// skipping any JSON-RPC notifications (messages without an "id" field) and
+// responses whose ID does not match the request ID.
 func SendRequestSkipNotifications(t *testing.T, w io.Writer, r *bufio.Scanner, method string, params interface{}) testutil.JSONRPCResponse {
 	t.Helper()
-	id := json.RawMessage(`1`)
+	reqID := atomic.AddInt64(&requestIDCounter, 1)
+	id := json.RawMessage(fmt.Sprintf("%d", reqID))
 	req := testutil.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      id,
@@ -121,8 +126,14 @@ func SendRequestSkipNotifications(t *testing.T, w io.Writer, r *bufio.Scanner, m
 
 		var check map[string]json.RawMessage
 		if json.Unmarshal(line, &check) == nil {
-			if _, hasID := check["id"]; !hasID {
+			rawID, hasID := check["id"]
+			if !hasID {
 				continue // skip notification
+			}
+			// Skip responses with non-matching IDs
+			expectedID := fmt.Sprintf("%d", reqID)
+			if string(rawID) != expectedID {
+				continue
 			}
 		}
 
