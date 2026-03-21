@@ -177,7 +177,7 @@ protomcp implements the full MCP specification (2025-03-26) via the official Go 
 
 ## Tool Groups
 
-Real-world MCP tools tend to accumulate dozens of parameters behind a single endpoint. Tool groups let you split actions into clean, per-action schemas while exposing a single tool with a discriminated union (`oneOf`) to the LLM.
+Real-world MCP tools tend to accumulate dozens of parameters behind a single endpoint. Tool groups let you split actions into clean, per-action schemas. By default, each action becomes its own tool (e.g. `db.query`, `db.insert`) — the **separate** strategy. For clients that support `oneOf` schemas, the **union** strategy is available as an opt-in, exposing all actions as a single tool with a discriminated union.
 
 **Before** -- one tool, 20+ params:
 
@@ -331,7 +331,7 @@ Workflows also support:
 
 ## Advanced Features
 
-- **Tool Groups** -- Group related actions with per-action schemas (oneOf discriminated unions). Each action gets its own required fields, enums, and validation rules while appearing as a single tool to the LLM.
+- **Tool Groups** -- Group related actions with per-action schemas. By default each action becomes its own tool (separate strategy); the union strategy (oneOf discriminated union) is available as an opt-in for clients that support it. Each action gets its own required fields, enums, and validation rules.
 - **Server-Defined Workflows** -- Multi-step state machines where the visible tool surface IS the state. The server defines the process, the agent follows it. Supports `no_cancel`, error recovery, dynamic branching, and tool visibility control.
 - **Local Middleware** -- In-process middleware chain for error handling, timing, auto-install, or any cross-cutting concern. Middleware receives the tool name, args, and a `next` handler.
 - **Server Context** -- Inject shared parameters (project directory, DB connection, auth tokens) into tool handlers automatically. Hidden contexts stay out of the tool schema entirely.
@@ -390,7 +390,7 @@ See [`examples/`](examples/) for runnable demos:
 - **Basic** — minimal tool examples in all four languages
 - **Resources & Prompts** — resources, prompts, completions, and tools together
 - **Full showcase** — structured output, progress, cancellation, dynamic tool lists, error handling
-- **Tool Groups** — per-action schemas with union and separate strategies
+- **Tool Groups** — per-action schemas with separate (default) and union strategies
 - **Advanced Server** — middleware, telemetry, server context working together
 - **Workflows** — deployment pipeline as a server-defined state machine
 
