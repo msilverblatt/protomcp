@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/msilverblatt/protomcp/tests/testutil"
 )
@@ -162,5 +163,79 @@ func TestE2E_DynamicToolList(t *testing.T) {
 	}
 	if !found {
 		t.Error("admin_action should be visible after auth")
+	}
+}
+
+func TestE2E_WorkflowBasic(t *testing.T) {
+	w, r, cleanup := StartProtomcp(t, "dev", fixture("workflow_basic.py"))
+	defer cleanup()
+
+	InitializeSession(t, w, r)
+
+	// List tools — should see deploy.review (initial step) and status
+	resp := SendRequestSkipNotifications(t, w, r, "tools/list", nil)
+	if resp.Error != nil {
+		t.Fatalf("tools/list error: %v", resp.Error)
+	}
+	var toolsList testutil.ToolsListResult
+	json.Unmarshal(resp.Result, &toolsList)
+
+	names := map[string]bool{}
+	for _, tool := range toolsList.Tools {
+		names[tool.Name] = true
+	}
+	if !names["status"] {
+		t.Error("expected 'status' tool to be visible")
+	}
+	if !names["deploy.review"] {
+		t.Error("expected 'deploy.review' (initial step) to be visible")
+	}
+
+	// Call the initial step
+	callResp := SendRequestSkipNotifications(t, w, r, "tools/call", map[string]interface{}{
+		"name":      "deploy.review",
+		"arguments": map[string]string{"pr_number": "42"},
+	})
+	if callResp.Error != nil {
+		t.Fatalf("deploy.review call error: %v", callResp.Error)
+	}
+
+	// After calling review, the next steps (approve, reject) should become available
+	time.Sleep(200 * time.Millisecond)
+
+	listResp2 := SendRequestSkipNotifications(t, w, r, "tools/list", nil)
+	var toolsList2 testutil.ToolsListResult
+	json.Unmarshal(listResp2.Result, &toolsList2)
+
+	names2 := map[string]bool{}
+	for _, tool := range toolsList2.Tools {
+		names2[tool.Name] = true
+	}
+	if !names2["deploy.approve"] {
+		t.Error("expected 'deploy.approve' to be visible after review step")
+	}
+
+	// Call approve, then execute
+	approveResp := SendRequestSkipNotifications(t, w, r, "tools/call", map[string]interface{}{
+		"name":      "deploy.approve",
+		"arguments": map[string]interface{}{},
+	})
+	if approveResp.Error != nil {
+		t.Fatalf("deploy.approve call error: %v", approveResp.Error)
+	}
+
+	time.Sleep(200 * time.Millisecond)
+
+	executeResp := SendRequestSkipNotifications(t, w, r, "tools/call", map[string]interface{}{
+		"name":      "deploy.execute",
+		"arguments": map[string]interface{}{},
+	})
+	if executeResp.Error != nil {
+		t.Fatalf("deploy.execute call error: %v", executeResp.Error)
+	}
+	var execResult testutil.ToolsCallResult
+	json.Unmarshal(executeResp.Result, &execResult)
+	if execResult.IsError {
+		t.Error("deploy.execute should succeed after approval")
 	}
 }

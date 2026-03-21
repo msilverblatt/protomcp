@@ -96,6 +96,44 @@ func SendNotification(t *testing.T, w io.Writer, method string, params interface
 	w.Write(append(data, '\n'))
 }
 
+// SendRequestSkipNotifications sends a request and reads the response,
+// skipping any JSON-RPC notifications (messages without an "id" field).
+func SendRequestSkipNotifications(t *testing.T, w io.Writer, r *bufio.Scanner, method string, params interface{}) testutil.JSONRPCResponse {
+	t.Helper()
+	id := json.RawMessage(`1`)
+	req := testutil.JSONRPCRequest{
+		JSONRPC: "2.0",
+		ID:      id,
+		Method:  method,
+	}
+	if params != nil {
+		p, _ := json.Marshal(params)
+		req.Params = p
+	}
+	data, _ := json.Marshal(req)
+	w.Write(append(data, '\n'))
+
+	for {
+		if !r.Scan() {
+			t.Fatalf("no response from protomcp for method %q: %v", method, r.Err())
+		}
+		line := r.Bytes()
+
+		var check map[string]json.RawMessage
+		if json.Unmarshal(line, &check) == nil {
+			if _, hasID := check["id"]; !hasID {
+				continue // skip notification
+			}
+		}
+
+		var resp testutil.JSONRPCResponse
+		if err := json.Unmarshal(line, &resp); err != nil {
+			t.Fatalf("failed to unmarshal response: %v", err)
+		}
+		return resp
+	}
+}
+
 // InitializeSession sends a proper MCP initialize handshake.
 func InitializeSession(t *testing.T, w io.Writer, r *bufio.Scanner) testutil.JSONRPCResponse {
 	t.Helper()
