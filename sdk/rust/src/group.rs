@@ -422,6 +422,7 @@ fn validate_action(action: &ActionDef, args: &Value) -> Option<ToolResult> {
     None
 }
 
+#[cfg(test)]
 fn dispatch_group_action(group: &GroupDef, ctx: ToolContext, args: Value) -> ToolResult {
     let action_name = match args.get("action").and_then(|v| v.as_str()) {
         Some(name) => name.to_string(),
