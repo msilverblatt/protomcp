@@ -46,6 +46,7 @@ describe('toolGroup', () => {
     toolGroup({
       name: 'db',
       description: 'DB ops',
+      strategy: 'union',
       actions: {
         query: {
           description: 'Run query',
@@ -112,6 +113,7 @@ describe('toolGroup', () => {
     toolGroup({
       name: 'calc',
       description: 'Calculator',
+      strategy: 'union',
       actions: {
         add: {
           description: 'Add',
@@ -130,6 +132,7 @@ describe('toolGroup', () => {
     toolGroup({
       name: 'calc2',
       description: 'Calculator',
+      strategy: 'union',
       actions: {
         add: {
           description: 'Add',
@@ -151,6 +154,7 @@ describe('toolGroup', () => {
     toolGroup({
       name: 'calc3',
       description: 'Calculator',
+      strategy: 'union',
       actions: {
         add: {
           description: 'Add',
@@ -182,7 +186,7 @@ describe('toolGroup', () => {
 
     const tools = getRegisteredTools();
     const names = tools.map((t) => t.name);
-    expect(names).toContain('tools_test');
+    expect(names).toContain('tools_test.ping');
   });
 
   it('dispatches separate strategy handlers', () => {
@@ -210,6 +214,7 @@ describe('declarative validation', () => {
     toolGroup({
       name: 'val_req',
       description: 'Validation test',
+      strategy: 'union',
       actions: {
         doIt: {
           description: 'Do something',
@@ -232,6 +237,7 @@ describe('declarative validation', () => {
     toolGroup({
       name: 'val_enum',
       description: 'Enum test',
+      strategy: 'union',
       actions: {
         setColor: {
           description: 'Set color',
@@ -255,6 +261,7 @@ describe('declarative validation', () => {
     toolGroup({
       name: 'val_enum_ok',
       description: 'Enum ok test',
+      strategy: 'union',
       actions: {
         setColor: {
           description: 'Set color',
@@ -274,6 +281,7 @@ describe('declarative validation', () => {
     toolGroup({
       name: 'val_cross',
       description: 'Cross rules test',
+      strategy: 'union',
       actions: {
         range: {
           description: 'Set range',
@@ -298,6 +306,7 @@ describe('declarative validation', () => {
     toolGroup({
       name: 'val_cross_ok',
       description: 'Cross ok',
+      strategy: 'union',
       actions: {
         range: {
           description: 'Set range',
@@ -319,6 +328,7 @@ describe('declarative validation', () => {
     toolGroup({
       name: 'val_hints',
       description: 'Hints test',
+      strategy: 'union',
       actions: {
         deploy: {
           description: 'Deploy',
@@ -345,6 +355,7 @@ describe('declarative validation', () => {
     toolGroup({
       name: 'val_hints_none',
       description: 'No hints',
+      strategy: 'union',
       actions: {
         deploy: {
           description: 'Deploy',
