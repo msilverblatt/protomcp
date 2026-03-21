@@ -21,11 +21,15 @@ pub struct PromptDef {
 static PROMPT_REGISTRY: Mutex<Vec<PromptDef>> = Mutex::new(Vec::new());
 
 pub fn register_prompt(def: PromptDef) {
-    PROMPT_REGISTRY.lock().unwrap().push(def);
+    PROMPT_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).push(def);
 }
 
 pub(crate) fn with_prompts<F, R>(f: F) -> R
 where F: FnOnce(&[PromptDef]) -> R {
-    let guard = PROMPT_REGISTRY.lock().unwrap();
+    let guard = PROMPT_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
     f(&guard)
+}
+
+pub fn clear_prompt_registry() {
+    PROMPT_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).clear();
 }

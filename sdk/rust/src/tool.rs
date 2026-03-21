@@ -163,7 +163,7 @@ impl ToolBuilder {
             hidden: false,
         };
 
-        REGISTRY.lock().unwrap().push(td);
+        REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).push(td);
     }
 }
 
@@ -171,17 +171,17 @@ pub(crate) fn with_registry<F, R>(f: F) -> R
 where
     F: FnOnce(&[ToolDef]) -> R,
 {
-    let guard = REGISTRY.lock().unwrap();
+    let guard = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
     f(&guard)
 }
 
 /// Adds a ToolDef directly to the tool registry (used by group registration).
 pub(crate) fn push_to_registry(td: ToolDef) {
-    REGISTRY.lock().unwrap().push(td);
+    REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).push(td);
 }
 
 pub fn clear_registry() {
-    REGISTRY.lock().unwrap().clear();
+    REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).clear();
 }
 
 #[cfg(test)]
@@ -190,7 +190,8 @@ mod tests {
 
     #[test]
     fn test_tool_registration() {
-        clear_registry();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool("add")
             .description("Add two numbers")
             .arg(ArgDef::int("a"))
@@ -208,7 +209,8 @@ mod tests {
 
     #[test]
     fn test_array_arg() {
-        clear_registry();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool("list_items")
             .description("List items")
             .arg(ArgDef::array("tags", "string"))
@@ -227,7 +229,8 @@ mod tests {
 
     #[test]
     fn test_object_arg() {
-        clear_registry();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool("set_config")
             .description("Set config")
             .arg(ArgDef::object("config"))
@@ -245,7 +248,8 @@ mod tests {
 
     #[test]
     fn test_union_arg() {
-        clear_registry();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool("process")
             .description("Process data")
             .arg(ArgDef::union("data", &["string", "object"]))
@@ -266,7 +270,8 @@ mod tests {
 
     #[test]
     fn test_literal_arg() {
-        clear_registry();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool("set_mode")
             .description("Set mode")
             .arg(ArgDef::literal("mode", &["fast", "slow", "balanced"]))
@@ -289,7 +294,8 @@ mod tests {
 
     #[test]
     fn test_tool_metadata() {
-        clear_registry();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool("delete_user")
             .description("Delete a user")
             .destructive_hint(true)

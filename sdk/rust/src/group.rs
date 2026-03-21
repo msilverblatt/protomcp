@@ -98,11 +98,11 @@ impl GroupBuilder {
             actions: self.actions,
             strategy: self.strategy,
         };
-        GROUP_REGISTRY.lock().unwrap().push(gd);
+        GROUP_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).push(gd);
 
         // Also register the generated ToolDefs into the tool registry
         // so that with_registry() sees them.
-        let guard = GROUP_REGISTRY.lock().unwrap();
+        let guard = GROUP_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
         let group = guard.last().unwrap();
         let tool_defs = if strategy == "separate" {
             group_to_separate_defs(group)
@@ -158,7 +158,7 @@ impl ActionBuilder {
 }
 
 pub fn groups_to_tool_defs() -> Vec<ToolDef> {
-    let guard = GROUP_REGISTRY.lock().unwrap();
+    let guard = GROUP_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
     let mut defs = Vec::new();
     for group in guard.iter() {
         if group.strategy == "separate" {
@@ -272,7 +272,7 @@ fn group_to_separate_defs(group: &GroupDef) -> Vec<ToolDef> {
 }
 
 fn dispatch_group_action_by_name(group_name: &str, ctx: ToolContext, args: Value) -> ToolResult {
-    let guard = GROUP_REGISTRY.lock().unwrap();
+    let guard = GROUP_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
     let group = guard.iter().find(|g| g.name == group_name);
     match group {
         Some(g) => dispatch_group_action(g, ctx, args),
@@ -286,7 +286,7 @@ fn dispatch_group_action_by_name(group_name: &str, ctx: ToolContext, args: Value
 }
 
 fn dispatch_specific_action(group_name: &str, action_name: &str, ctx: ToolContext, args: Value) -> ToolResult {
-    let guard = GROUP_REGISTRY.lock().unwrap();
+    let guard = GROUP_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
     let group = guard.iter().find(|g| g.name == group_name);
     match group {
         Some(g) => {
@@ -456,7 +456,7 @@ fn levenshtein(a: &str, b: &str) -> usize {
 }
 
 pub fn clear_group_registry() {
-    GROUP_REGISTRY.lock().unwrap().clear();
+    GROUP_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).clear();
 }
 
 #[cfg(test)]
@@ -476,7 +476,8 @@ mod tests {
 
     #[test]
     fn test_group_registration() {
-        clear_group_registry();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool_group("math")
             .description("Math operations")
             .action("add", |a| {
@@ -494,7 +495,7 @@ mod tests {
             .register();
 
         {
-            let guard = GROUP_REGISTRY.lock().unwrap();
+            let guard = GROUP_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
             assert_eq!(guard.len(), 1);
             assert_eq!(guard[0].name, "math");
             assert_eq!(guard[0].description, "Math operations");
@@ -506,7 +507,8 @@ mod tests {
 
     #[test]
     fn test_union_strategy_schema() {
-        clear_group_registry();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool_group("db")
             .description("DB ops")
             .action("query", |a| {
@@ -543,7 +545,8 @@ mod tests {
 
     #[test]
     fn test_separate_strategy_schema() {
-        clear_group_registry();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool_group("files")
             .description("File ops")
             .strategy("separate")
@@ -569,7 +572,8 @@ mod tests {
 
     #[test]
     fn test_dispatch_correct_action() {
-        clear_group_registry();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool_group("calc")
             .action("add", |a| {
                 a.arg(ArgDef::int("a"))
@@ -583,7 +587,7 @@ mod tests {
             .register();
 
         {
-            let guard = GROUP_REGISTRY.lock().unwrap();
+            let guard = GROUP_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
             let result = dispatch_group_action(&guard[0], dummy_ctx(), serde_json::json!({
                 "action": "add",
                 "a": 3,
@@ -598,13 +602,14 @@ mod tests {
 
     #[test]
     fn test_dispatch_unknown_action() {
-        clear_group_registry();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool_group("calc2")
             .action("add", |a| a.handler(|_, _| ToolResult::new("ok")))
             .register();
 
         {
-            let guard = GROUP_REGISTRY.lock().unwrap();
+            let guard = GROUP_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
             let result = dispatch_group_action(&guard[0], dummy_ctx(), serde_json::json!({
                 "action": "ad",
             }));
@@ -618,13 +623,14 @@ mod tests {
 
     #[test]
     fn test_dispatch_missing_action() {
-        clear_group_registry();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool_group("calc3")
             .action("add", |a| a.handler(|_, _| ToolResult::new("ok")))
             .register();
 
         {
-            let guard = GROUP_REGISTRY.lock().unwrap();
+            let guard = GROUP_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
             let result = dispatch_group_action(&guard[0], dummy_ctx(), serde_json::json!({}));
             assert!(result.is_error);
             assert!(result.result_text.contains("Missing"));
@@ -635,8 +641,8 @@ mod tests {
 
     #[test]
     fn test_groups_in_tool_defs() {
-        clear_registry();
-        clear_group_registry();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool_group("tools_test")
             .description("Test group")
             .action("ping", |a| a.handler(|_, _| ToolResult::new("pong")))
@@ -653,7 +659,8 @@ mod tests {
 
     #[test]
     fn test_validation_requires() {
-        clear_group_registry();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool_group("val_req")
             .action("create", |a| {
                 a.requires(&["name", "email"])
@@ -662,7 +669,7 @@ mod tests {
             .register();
 
         {
-            let guard = GROUP_REGISTRY.lock().unwrap();
+            let guard = GROUP_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
             // Missing required field
             let result = dispatch_group_action(&guard[0], dummy_ctx(), serde_json::json!({
                 "action": "create",
@@ -686,7 +693,8 @@ mod tests {
 
     #[test]
     fn test_validation_enum_field() {
-        clear_group_registry();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool_group("val_enum")
             .action("set_mode", |a| {
                 a.enum_field("mode", &["fast", "slow", "balanced"])
@@ -695,7 +703,7 @@ mod tests {
             .register();
 
         {
-            let guard = GROUP_REGISTRY.lock().unwrap();
+            let guard = GROUP_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
             // Invalid enum value
             let result = dispatch_group_action(&guard[0], dummy_ctx(), serde_json::json!({
                 "action": "set_mode",
@@ -718,7 +726,8 @@ mod tests {
 
     #[test]
     fn test_validation_cross_rule() {
-        clear_group_registry();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool_group("val_cross")
             .action("transfer", |a| {
                 a.cross_rule(
@@ -734,7 +743,7 @@ mod tests {
             .register();
 
         {
-            let guard = GROUP_REGISTRY.lock().unwrap();
+            let guard = GROUP_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
             // Violates cross rule
             let result = dispatch_group_action(&guard[0], dummy_ctx(), serde_json::json!({
                 "action": "transfer",
@@ -760,7 +769,8 @@ mod tests {
 
     #[test]
     fn test_validation_enum_fuzzy_suggestion() {
-        clear_group_registry();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         tool_group("val_fuzzy")
             .action("color", |a| {
                 a.enum_field("color", &["red", "green", "blue"])
@@ -769,7 +779,7 @@ mod tests {
             .register();
 
         {
-            let guard = GROUP_REGISTRY.lock().unwrap();
+            let guard = GROUP_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
             let result = dispatch_group_action(&guard[0], dummy_ctx(), serde_json::json!({
                 "action": "color",
                 "color": "gren",

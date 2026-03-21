@@ -26,7 +26,7 @@ pub fn local_middleware(
         + Sync
         + 'static,
 ) {
-    LOCAL_MW_REGISTRY.lock().unwrap().push(LocalMiddlewareDef {
+    LOCAL_MW_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).push(LocalMiddlewareDef {
         priority,
         handler: Arc::new(handler),
     });
@@ -41,7 +41,7 @@ pub fn build_middleware_chain(
 ) -> Box<dyn Fn(ToolContext, Value) -> ToolResult + Send + Sync> {
     // Snapshot the middleware handlers (as Arcs) so we don't hold the lock during execution.
     let mut sorted: Vec<Arc<LocalMwFn>> = {
-        let guard = LOCAL_MW_REGISTRY.lock().unwrap();
+        let guard = LOCAL_MW_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
         if guard.is_empty() {
             return handler;
         }
@@ -79,7 +79,7 @@ pub fn build_middleware_chain(
 }
 
 pub fn clear_local_middleware() {
-    LOCAL_MW_REGISTRY.lock().unwrap().clear();
+    LOCAL_MW_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).clear();
 }
 
 #[cfg(test)]
@@ -98,7 +98,8 @@ mod tests {
 
     #[test]
     fn test_no_middleware() {
-        clear_local_middleware();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
         let handler: Box<dyn Fn(ToolContext, Value) -> ToolResult + Send + Sync> =
             Box::new(|_, _| ToolResult::new("direct"));
         let chain = build_middleware_chain("test_tool", handler);
@@ -109,7 +110,8 @@ mod tests {
 
     #[test]
     fn test_single_middleware() {
-        clear_local_middleware();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
 
         local_middleware(10, |ctx, _tool_name, args, next| {
             let mut result = next(ctx, args);
@@ -128,25 +130,26 @@ mod tests {
 
     #[test]
     fn test_priority_ordering() {
-        clear_local_middleware();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
 
         let call_order = Arc::new(Mutex::new(Vec::<i32>::new()));
 
         let co1 = call_order.clone();
         local_middleware(20, move |ctx, _tn, args, next| {
-            co1.lock().unwrap().push(20);
+            co1.lock().unwrap_or_else(|e| e.into_inner()).push(20);
             next(ctx, args)
         });
 
         let co2 = call_order.clone();
         local_middleware(5, move |ctx, _tn, args, next| {
-            co2.lock().unwrap().push(5);
+            co2.lock().unwrap_or_else(|e| e.into_inner()).push(5);
             next(ctx, args)
         });
 
         let co3 = call_order.clone();
         local_middleware(10, move |ctx, _tn, args, next| {
-            co3.lock().unwrap().push(10);
+            co3.lock().unwrap_or_else(|e| e.into_inner()).push(10);
             next(ctx, args)
         });
 
@@ -156,7 +159,7 @@ mod tests {
         let result = chain(dummy_ctx(), serde_json::json!({}));
         assert_eq!(result.result_text, "done");
 
-        let order = call_order.lock().unwrap();
+        let order = call_order.lock().unwrap_or_else(|e| e.into_inner());
         assert_eq!(*order, vec![5, 10, 20]);
 
         clear_local_middleware();
@@ -164,7 +167,8 @@ mod tests {
 
     #[test]
     fn test_middleware_can_short_circuit() {
-        clear_local_middleware();
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        crate::clear_all_registries();
 
         local_middleware(1, |_ctx, _tn, _args, _next| {
             ToolResult::error("blocked", "BLOCKED", "", false)

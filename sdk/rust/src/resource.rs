@@ -40,21 +40,29 @@ static RESOURCE_REGISTRY: Mutex<Vec<ResourceDef>> = Mutex::new(Vec::new());
 static TEMPLATE_REGISTRY: Mutex<Vec<ResourceTemplateDef>> = Mutex::new(Vec::new());
 
 pub fn register_resource(def: ResourceDef) {
-    RESOURCE_REGISTRY.lock().unwrap().push(def);
+    RESOURCE_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).push(def);
 }
 
 pub fn register_resource_template(def: ResourceTemplateDef) {
-    TEMPLATE_REGISTRY.lock().unwrap().push(def);
+    TEMPLATE_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).push(def);
 }
 
 pub(crate) fn with_resources<F, R>(f: F) -> R
 where F: FnOnce(&[ResourceDef]) -> R {
-    let guard = RESOURCE_REGISTRY.lock().unwrap();
+    let guard = RESOURCE_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
     f(&guard)
 }
 
 pub(crate) fn with_resource_templates<F, R>(f: F) -> R
 where F: FnOnce(&[ResourceTemplateDef]) -> R {
-    let guard = TEMPLATE_REGISTRY.lock().unwrap();
+    let guard = TEMPLATE_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
     f(&guard)
+}
+
+pub fn clear_resource_registry() {
+    RESOURCE_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).clear();
+}
+
+pub fn clear_resource_template_registry() {
+    TEMPLATE_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).clear();
 }

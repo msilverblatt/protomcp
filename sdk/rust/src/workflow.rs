@@ -177,7 +177,7 @@ impl WorkflowBuilder {
 
         // Generate tool defs and push to tool registry
         let tool_defs = workflow_to_tool_defs(&wf);
-        WORKFLOW_REGISTRY.lock().unwrap().push(wf);
+        WORKFLOW_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).push(wf);
 
         for td in tool_defs {
             crate::tool::push_to_registry(td);
@@ -405,7 +405,7 @@ fn compute_transition(
 // ── Step dispatch ──
 
 fn handle_step_call(workflow_name: &str, step_name: &str, ctx: ToolContext, args: Value) -> ToolResult {
-    let guard = WORKFLOW_REGISTRY.lock().unwrap();
+    let guard = WORKFLOW_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
     let wf = match guard.iter().find(|w| w.name == workflow_name) {
         Some(w) => w,
         None => return ToolResult::error(
@@ -420,7 +420,7 @@ fn handle_step_call(workflow_name: &str, step_name: &str, ctx: ToolContext, args
         ),
     };
 
-    let mut state_guard = ACTIVE_WORKFLOW.lock().unwrap();
+    let mut state_guard = ACTIVE_WORKFLOW.lock().unwrap_or_else(|e| e.into_inner());
 
     if step_def.initial {
         // Start new workflow
@@ -563,7 +563,7 @@ fn handle_step_call(workflow_name: &str, step_name: &str, ctx: ToolContext, args
 }
 
 fn handle_cancel(workflow_name: &str) -> ToolResult {
-    let guard = WORKFLOW_REGISTRY.lock().unwrap();
+    let guard = WORKFLOW_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
     let wf = match guard.iter().find(|w| w.name == workflow_name) {
         Some(w) => w,
         None => return ToolResult::error(
@@ -571,7 +571,7 @@ fn handle_cancel(workflow_name: &str) -> ToolResult {
         ),
     };
 
-    let mut state_guard = ACTIVE_WORKFLOW.lock().unwrap();
+    let mut state_guard = ACTIVE_WORKFLOW.lock().unwrap_or_else(|e| e.into_inner());
     match state_guard.as_ref() {
         Some(s) if s.workflow_name == workflow_name => {}
         _ => return ToolResult::error(
@@ -676,7 +676,7 @@ fn workflow_to_tool_defs(wf: &WorkflowDef) -> Vec<ToolDef> {
 }
 
 pub fn workflows_to_tool_defs() -> Vec<ToolDef> {
-    let guard = WORKFLOW_REGISTRY.lock().unwrap();
+    let guard = WORKFLOW_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
     let mut defs = Vec::new();
     for wf in guard.iter() {
         defs.extend(workflow_to_tool_defs(wf));
@@ -685,8 +685,8 @@ pub fn workflows_to_tool_defs() -> Vec<ToolDef> {
 }
 
 pub fn clear_workflow_registry() {
-    WORKFLOW_REGISTRY.lock().unwrap().clear();
-    *ACTIVE_WORKFLOW.lock().unwrap() = None;
+    WORKFLOW_REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).clear();
+    *ACTIVE_WORKFLOW.lock().unwrap_or_else(|e| e.into_inner()) = None;
 }
 
 // ── Tests ──
@@ -707,12 +707,12 @@ mod tests {
     }
 
     fn cleanup() {
-        clear_workflow_registry();
-        clear_registry();
+        crate::clear_all_registries();
     }
 
     #[test]
     fn test_basic_workflow_registration() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("deploy")
             .description("Deploy workflow")
@@ -729,7 +729,7 @@ mod tests {
             })
             .register();
 
-        let guard = WORKFLOW_REGISTRY.lock().unwrap();
+        let guard = WORKFLOW_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
         assert_eq!(guard.len(), 1);
         assert_eq!(guard[0].name, "deploy");
         assert_eq!(guard[0].steps.len(), 2);
@@ -739,6 +739,7 @@ mod tests {
 
     #[test]
     fn test_tool_defs_generated() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("order")
             .step("create", |s| {
@@ -778,6 +779,7 @@ mod tests {
 
     #[test]
     fn test_step_dispatch_initial() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("flow1")
             .step("begin", |s| {
@@ -804,6 +806,7 @@ mod tests {
 
     #[test]
     fn test_step_dispatch_terminal() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("flow2")
             .step("begin", |s| {
@@ -828,12 +831,13 @@ mod tests {
         assert!(result.disable_tools.contains(&"flow2.end".to_string()));
         assert!(result.disable_tools.contains(&"flow2.cancel".to_string()));
         // Active workflow should be cleared
-        assert!(ACTIVE_WORKFLOW.lock().unwrap().is_none());
+        assert!(ACTIVE_WORKFLOW.lock().unwrap_or_else(|e| e.into_inner()).is_none());
         cleanup();
     }
 
     #[test]
     fn test_cancel() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("flow3")
             .step("begin", |s| {
@@ -853,12 +857,13 @@ mod tests {
         let result = handle_cancel("flow3");
         assert!(!result.is_error);
         assert!(result.result_text.contains("cancelled"));
-        assert!(ACTIVE_WORKFLOW.lock().unwrap().is_none());
+        assert!(ACTIVE_WORKFLOW.lock().unwrap_or_else(|e| e.into_inner()).is_none());
         cleanup();
     }
 
     #[test]
     fn test_cancel_no_active() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("flow4")
             .step("begin", |s| {
@@ -880,6 +885,7 @@ mod tests {
 
     #[test]
     fn test_non_initial_without_active_workflow() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("flow5")
             .step("begin", |s| {
@@ -901,6 +907,7 @@ mod tests {
 
     #[test]
     fn test_dynamic_next_narrowing() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("branch")
             .step("start", |s| {
@@ -928,6 +935,7 @@ mod tests {
 
     #[test]
     fn test_dynamic_next_invalid() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("bad_next")
             .step("start", |s| {
@@ -949,6 +957,7 @@ mod tests {
 
     #[test]
     fn test_error_handling_with_on_error() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("errable")
             .step("risky", |s| {
@@ -974,6 +983,7 @@ mod tests {
 
     #[test]
     fn test_error_no_match_stays_in_state() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("errable2")
             .step("risky", |s| {
@@ -999,6 +1009,7 @@ mod tests {
 
     #[test]
     fn test_no_cancel_step() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("strict")
             .step("start", |s| {
@@ -1022,6 +1033,7 @@ mod tests {
 
     #[test]
     fn test_on_cancel_callback() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         use std::sync::{Arc, Mutex};
         let called = Arc::new(Mutex::new(false));
@@ -1038,19 +1050,20 @@ mod tests {
                     .handler(|_, _| StepResult::new("done"))
             })
             .on_cancel(move |_step, _history| {
-                *called_clone.lock().unwrap() = true;
+                *called_clone.lock().unwrap_or_else(|e| e.into_inner()) = true;
                 "cancelled".to_string()
             })
             .register();
 
         handle_step_call("cbflow", "begin", dummy_ctx(), serde_json::json!({}));
         handle_cancel("cbflow");
-        assert!(*called.lock().unwrap());
+        assert!(*called.lock().unwrap_or_else(|e| e.into_inner()));
         cleanup();
     }
 
     #[test]
     fn test_on_complete_callback() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         use std::sync::{Arc, Mutex};
         let called = Arc::new(Mutex::new(false));
@@ -1067,18 +1080,19 @@ mod tests {
                     .handler(|_, _| StepResult::new("done"))
             })
             .on_complete(move |_history| {
-                *called_clone.lock().unwrap() = true;
+                *called_clone.lock().unwrap_or_else(|e| e.into_inner()) = true;
             })
             .register();
 
         handle_step_call("compflow", "begin", dummy_ctx(), serde_json::json!({}));
         handle_step_call("compflow", "end", dummy_ctx(), serde_json::json!({}));
-        assert!(*called.lock().unwrap());
+        assert!(*called.lock().unwrap_or_else(|e| e.into_inner()));
         cleanup();
     }
 
     #[test]
     fn test_history_tracking() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         use std::sync::{Arc, Mutex};
         let history_len = Arc::new(Mutex::new(0usize));
@@ -1095,13 +1109,13 @@ mod tests {
                     .handler(|_, _| StepResult::new("b done"))
             })
             .on_complete(move |history| {
-                *hl.lock().unwrap() = history.len();
+                *hl.lock().unwrap_or_else(|e| e.into_inner()) = history.len();
             })
             .register();
 
         handle_step_call("hist", "a", dummy_ctx(), serde_json::json!({}));
         handle_step_call("hist", "b", dummy_ctx(), serde_json::json!({}));
-        assert_eq!(*history_len.lock().unwrap(), 2);
+        assert_eq!(*history_len.lock().unwrap_or_else(|e| e.into_inner()), 2);
         cleanup();
     }
 
@@ -1110,6 +1124,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "no initial step")]
     fn test_validation_no_initial() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("bad")
             .step("a", |s| {
@@ -1122,6 +1137,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "multiple initial steps")]
     fn test_validation_multiple_initial() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("bad2")
             .step("a", |s| {
@@ -1140,6 +1156,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "terminal step")]
     fn test_validation_terminal_with_next() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("bad3")
             .step("a", |s| {
@@ -1158,6 +1175,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "dead end")]
     fn test_validation_dead_end() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("bad4")
             .step("a", |s| {
@@ -1175,6 +1193,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "nonexistent step")]
     fn test_validation_bad_next_ref() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("bad5")
             .step("a", |s| {
@@ -1188,6 +1207,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "on_error references nonexistent")]
     fn test_validation_bad_on_error_ref() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("bad6")
             .step("a", |s| {
@@ -1207,6 +1227,7 @@ mod tests {
 
     #[test]
     fn test_glob_match() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         assert!(glob_match("foo*", "foobar"));
         assert!(glob_match("foo*", "foo"));
         assert!(!glob_match("foo*", "barfoo"));
@@ -1220,6 +1241,7 @@ mod tests {
 
     #[test]
     fn test_visibility_matching() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         // Neither allow nor block -> false
         assert!(!matches_visibility("tool", &None, &None));
 
@@ -1242,6 +1264,7 @@ mod tests {
 
     #[test]
     fn test_step_level_visibility_override() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("vis")
             .allow_during(&["global_*"])
@@ -1274,6 +1297,7 @@ mod tests {
 
     #[test]
     fn test_workflow_level_visibility() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("vis2")
             .allow_during(&["ext_*"])
@@ -1305,6 +1329,7 @@ mod tests {
 
     #[test]
     fn test_workflows_to_tool_defs() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("wf1")
             .step("init", |s| {
@@ -1325,6 +1350,7 @@ mod tests {
 
     #[test]
     fn test_all_no_cancel_no_cancel_tool() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("nc")
             .step("start", |s| {
@@ -1347,6 +1373,7 @@ mod tests {
 
     #[test]
     fn test_step_with_args_schema() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("argflow")
             .step("input", |s| {
@@ -1374,6 +1401,7 @@ mod tests {
 
     #[test]
     fn test_handler_receives_args() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("argtest")
             .step("greet", |s| {
@@ -1395,6 +1423,7 @@ mod tests {
 
     #[test]
     fn test_multi_step_flow() {
+        let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup();
         workflow("pipeline")
             .step("step1", |s| {
@@ -1423,7 +1452,7 @@ mod tests {
         let r3 = handle_step_call("pipeline", "step3", dummy_ctx(), serde_json::json!({}));
         assert!(!r3.is_error);
         assert_eq!(r3.result_text, "step3 done");
-        assert!(ACTIVE_WORKFLOW.lock().unwrap().is_none());
+        assert!(ACTIVE_WORKFLOW.lock().unwrap_or_else(|e| e.into_inner()).is_none());
         cleanup();
     }
 }
