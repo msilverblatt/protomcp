@@ -85,6 +85,16 @@ func (w *Watcher) Start(ctx context.Context) error {
 				continue
 			}
 
+			// Auto-watch newly created directories
+			if event.Has(fsnotify.Create) {
+				if info, err := os.Stat(event.Name); err == nil && info.IsDir() {
+					name := filepath.Base(event.Name)
+					if !strings.HasPrefix(name, ".") && name != "node_modules" && name != "__pycache__" && name != "target" && name != "venv" {
+						w.watcher.Add(event.Name)
+					}
+				}
+			}
+
 			if !w.matchesExtension(event.Name) {
 				continue
 			}
