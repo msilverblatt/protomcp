@@ -22,34 +22,34 @@ func syncResources(server *mcp.Server, backend ResourceBackend, registeredRes ma
 	resources, err := backend.ListResources(ctx)
 	if err != nil {
 		slog.Warn("failed to list resources", "error", err)
-		return
-	}
-	currentRes := make(map[string]bool, len(resources))
-	for _, r := range resources {
-		currentRes[r.Uri] = true
-		res := &mcp.Resource{
-			URI:         r.Uri,
-			Name:        r.Name,
-			Description: r.Description,
-			MIMEType:    r.MimeType,
+	} else {
+		currentRes := make(map[string]bool, len(resources))
+		for _, r := range resources {
+			currentRes[r.Uri] = true
+			res := &mcp.Resource{
+				URI:         r.Uri,
+				Name:        r.Name,
+				Description: r.Description,
+				MIMEType:    r.MimeType,
+			}
+			handler := makeResourceHandler(backend, r.Uri)
+			server.AddResource(res, handler)
 		}
-		handler := makeResourceHandler(backend, r.Uri)
-		server.AddResource(res, handler)
-	}
-	var staleRes []string
-	for uri := range registeredRes {
-		if !currentRes[uri] {
-			staleRes = append(staleRes, uri)
+		var staleRes []string
+		for uri := range registeredRes {
+			if !currentRes[uri] {
+				staleRes = append(staleRes, uri)
+			}
 		}
-	}
-	if len(staleRes) > 0 {
-		server.RemoveResources(staleRes...)
-	}
-	for uri := range registeredRes {
-		delete(registeredRes, uri)
-	}
-	for uri := range currentRes {
-		registeredRes[uri] = true
+		if len(staleRes) > 0 {
+			server.RemoveResources(staleRes...)
+		}
+		for uri := range registeredRes {
+			delete(registeredRes, uri)
+		}
+		for uri := range currentRes {
+			registeredRes[uri] = true
+		}
 	}
 
 	// Sync resource templates.
