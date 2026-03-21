@@ -90,7 +90,19 @@ func (w *Watcher) Start(ctx context.Context) error {
 				if info, err := os.Stat(event.Name); err == nil && info.IsDir() {
 					name := filepath.Base(event.Name)
 					if !strings.HasPrefix(name, ".") && name != "node_modules" && name != "__pycache__" && name != "target" && name != "venv" {
-						w.watcher.Add(event.Name)
+						filepath.WalkDir(event.Name, func(p string, d os.DirEntry, err error) error {
+							if err != nil {
+								return nil
+							}
+							if d.IsDir() {
+								n := d.Name()
+								if n != "." && (strings.HasPrefix(n, ".") || n == "node_modules" || n == "__pycache__" || n == "target" || n == "venv") {
+									return filepath.SkipDir
+								}
+								w.watcher.Add(p)
+							}
+							return nil
+						})
 					}
 				}
 			}
