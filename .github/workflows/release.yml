@@ -27,8 +27,8 @@ jobs:
         if: success()
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
-          git tag "sdk/go/${TAG}"
-          git push origin "sdk/go/${TAG}"
+          git tag -f "sdk/go/${TAG}"
+          git push origin "sdk/go/${TAG}" --force
 
   pypi:
     runs-on: ubuntu-latest
