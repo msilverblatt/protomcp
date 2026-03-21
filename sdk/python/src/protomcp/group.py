@@ -28,7 +28,7 @@ class GroupDef:
     description: str
     actions: list[ActionDef]
     instance: Any
-    strategy: str = "union"
+    strategy: str = "separate"
     title: str = ""
     destructive_hint: bool = False
     idempotent_hint: bool = False
@@ -81,7 +81,7 @@ def _generate_action_schema(method: Callable) -> dict:
 def tool_group(
     name: str,
     description: str = "",
-    strategy: str = "union",
+    strategy: str = "separate",
     title: str = "",
     destructive: bool = False,
     idempotent: bool = False,

@@ -51,7 +51,7 @@ pub fn tool_group(name: &str) -> GroupBuilder {
     GroupBuilder {
         name: name.to_string(),
         description: String::new(),
-        strategy: "union".to_string(),
+        strategy: "separate".to_string(),
         actions: Vec::new(),
     }
 }
@@ -511,6 +511,7 @@ mod tests {
         crate::clear_all_registries();
         tool_group("db")
             .description("DB ops")
+            .strategy("union")
             .action("query", |a| {
                 a.description("Run query").arg(ArgDef::string("sql"))
             })
@@ -649,7 +650,7 @@ mod tests {
             .register();
 
         crate::tool::with_registry(|tools| {
-            let found = tools.iter().any(|d| d.name == "tools_test");
+            let found = tools.iter().any(|d| d.name == "tools_test.ping");
             assert!(found);
         });
 

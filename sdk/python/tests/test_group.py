@@ -60,7 +60,7 @@ def test_action_schema_generation():
 
 
 def test_union_strategy_schema():
-    @tool_group(name="db", description="DB ops")
+    @tool_group(name="db", description="DB ops", strategy="union")
     class DbGroup:
         @action("query", description="Run query")
         def query(self, sql: str) -> str:
@@ -155,11 +155,11 @@ def test_groups_in_get_registered_tools():
 
     tools = get_registered_tools()
     names = [t.name for t in tools]
-    assert "tools_test" in names
+    assert "tools_test.ping" in names
 
 
 def test_union_handler_dispatch():
-    @tool_group(name="handler_test", description="Handler test")
+    @tool_group(name="handler_test", description="Handler test", strategy="union")
     class HandlerTestGroup:
         @action("greet", description="Greet")
         def greet(self, name: str) -> str:
