@@ -49,7 +49,7 @@ type Bridge struct {
 }
 
 // New creates a Bridge with an mcp.Server that proxies to the given backend.
-func New(backend FullBackend, logger *slog.Logger) *Bridge {
+func New(backend FullBackend, logger *slog.Logger, version string) *Bridge {
 	opts := &mcp.ServerOptions{
 		Logger: logger,
 		CompletionHandler: func(ctx context.Context, req *mcp.CompleteRequest) (*mcp.CompleteResult, error) {
@@ -81,7 +81,7 @@ func New(backend FullBackend, logger *slog.Logger) *Bridge {
 	}
 
 	server := mcp.NewServer(
-		&mcp.Implementation{Name: "protomcp", Version: "1.0.0"},
+		&mcp.Implementation{Name: "protomcp", Version: version},
 		opts,
 	)
 

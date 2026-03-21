@@ -158,7 +158,7 @@ func (e *Engine) Start(ctx context.Context) error {
 	e.be = newBackend(e.pm, e.tlm, tools)
 
 	// Create bridge
-	e.br = bridge.New(e.be, e.cfg.logger)
+	e.br = bridge.New(e.be, e.cfg.logger, "dev")
 	e.br.SetToolListMutationHandler(func(enable, disable []string) {
 		if len(enable) > 0 {
 			e.tlm.Enable(enable)

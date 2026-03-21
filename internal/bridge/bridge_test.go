@@ -65,7 +65,7 @@ func TestBridgeNew(t *testing.T) {
 			{Name: "echo", Description: "echoes input", InputSchemaJson: `{"type":"object"}`},
 		},
 	}
-	b := New(backend, nil)
+	b := New(backend, nil, "dev")
 	if b.Server == nil {
 		t.Fatal("expected non-nil server")
 	}
@@ -78,7 +78,7 @@ func TestSyncTools(t *testing.T) {
 			{Name: "add", Description: "adds numbers", InputSchemaJson: `{"type":"object"}`},
 		},
 	}
-	b := New(backend, nil)
+	b := New(backend, nil, "dev")
 	b.SyncTools()
 	// Server should now have 2 tools registered
 	// Verified via tool handler invocation in TestMakeToolHandler

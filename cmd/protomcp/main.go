@@ -24,6 +24,8 @@ import (
 	"github.com/msilverblatt/protomcp/internal/validate"
 )
 
+var version = "dev"
+
 func main() {
 	cfg, err := config.Parse(os.Args[1:])
 	if err != nil {
@@ -94,7 +96,7 @@ func main() {
 	backend := &toolBackend{pm: pm, tlm: tlm, allTools: tools}
 
 	// 5. Create bridge (replaces custom mcp.NewHandler)
-	b := bridge.New(backend, logger)
+	b := bridge.New(backend, logger, version)
 	b.SetToolListMutationHandler(func(enable, disable []string) {
 		if len(enable) > 0 {
 			tlm.Enable(enable)
