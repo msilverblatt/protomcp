@@ -88,6 +88,14 @@ mod tests {
     use std::sync::Arc;
     use std::sync::atomic::{AtomicBool, AtomicI32};
 
+    static TEST_LOCK: Mutex<()> = Mutex::new(());
+
+    fn lock_and_clear() -> std::sync::MutexGuard<'static, ()> {
+        let guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        clear_local_middleware();
+        guard
+    }
+
     fn dummy_ctx() -> ToolContext {
         ToolContext::new(
             String::new(),

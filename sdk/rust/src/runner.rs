@@ -26,6 +26,10 @@ pub async fn run() {
     let transport = Transport::connect(&socket_path).await
         .expect("failed to connect to socket");
 
+    start_sidecars("server_start");
+
+    let mut first_tool_call = true;
+
     loop {
         let env = match transport.recv().await {
             Ok(env) => env,
@@ -38,8 +42,13 @@ pub async fn run() {
             Some(proto::envelope::Msg::ListTools(_)) => {
                 handle_list_tools(&transport, &request_id).await;
                 send_middleware_registrations(&transport).await;
+                send_disable_hidden_tools(&transport).await;
             }
             Some(proto::envelope::Msg::CallTool(req)) => {
+                if first_tool_call {
+                    first_tool_call = false;
+                    start_sidecars("first_tool_call");
+                }
                 handle_call_tool(&transport, &req, &request_id).await;
             }
             Some(proto::envelope::Msg::Reload(_)) => {
@@ -115,9 +124,6 @@ async fn handle_call_tool(transport: &Transport, req: &proto::CallToolRequest, r
         serde_json::from_str(&req.arguments_json).unwrap_or(serde_json::json!({}))
     };
 
-    // Start sidecars on first tool call
-    start_sidecars("first_tool_call");
-
     // Resolve server contexts
     let ctx_values = resolve_contexts(&mut args);
     // Inject resolved context values into args
@@ -138,45 +144,35 @@ async fn handle_call_tool(transport: &Transport, req: &proto::CallToolRequest, r
         ..ToolCallEvent::new(&tool_name, "start")
     });
 
-    let result = with_registry(|tools| {
-        if let Some(tool_def) = tools.iter().find(|t| t.name == req.name) {
-            let cancelled = Arc::new(AtomicBool::new(false));
-            let ctx = ToolContext::new(
-                req.progress_token.clone(),
-                cancelled,
-                Box::new(|_| {}),
-            );
-
-            // Build local middleware chain around the tool handler
-            // We need to create a closure that captures the tool handler
-            let tool_name_inner = tool_def.name.clone();
-            let args_clone = args.clone();
-
-            // Since we can't move the handler out of the registry,
-            // call the handler directly but wrap via middleware chain
-            // We pass a handler that looks up and calls the tool
-            let handler: Box<dyn Fn(ToolContext, serde_json::Value) -> crate::result::ToolResult + Send + Sync> =
-                Box::new(move |ctx, args| {
-                    with_registry(|tools2| {
-                        if let Some(td) = tools2.iter().find(|t| t.name == tool_name_inner) {
-                            (td.handler)(ctx, args)
-                        } else {
-                            crate::result::ToolResult::error("Tool not found", "NOT_FOUND", "", false)
-                        }
-                    })
-                });
-
-            let chain = build_middleware_chain(&req.name, handler);
-            chain(ctx, args_clone)
-        } else {
-            crate::result::ToolResult::error(
-                format!("Tool not found: {}", req.name),
-                "NOT_FOUND",
-                "",
-                false,
-            )
-        }
+    let handler_opt = with_registry(|tools| {
+        tools.iter()
+            .find(|t| t.name == req.name)
+            .map(|t| t.handler.clone())
     });
+
+    let result = if let Some(handler) = handler_opt {
+        let cancelled = Arc::new(AtomicBool::new(false));
+        let ctx = ToolContext::new(
+            req.progress_token.clone(),
+            cancelled,
+            Box::new(|_| {}),
+        );
+
+        let chain_handler: Box<dyn Fn(ToolContext, serde_json::Value) -> crate::result::ToolResult + Send + Sync> =
+            Box::new(move |ctx, args| {
+                handler(ctx, args)
+            });
+
+        let chain = build_middleware_chain(&req.name, chain_handler);
+        chain(ctx, args)
+    } else {
+        crate::result::ToolResult::error(
+            format!("Tool not found: {}", req.name),
+            "NOT_FOUND",
+            "",
+            false,
+        )
+    };
 
     // Emit completion telemetry
     let duration = start_time.elapsed().as_millis() as i64;
@@ -238,6 +234,26 @@ async fn handle_reload(transport: &Transport, request_id: &str) {
     let _ = transport.send(&resp).await;
     handle_list_tools(transport, "").await;
     send_middleware_registrations(transport).await;
+    send_disable_hidden_tools(transport).await;
+}
+
+async fn send_disable_hidden_tools(transport: &Transport) {
+    let hidden: Vec<String> = with_registry(|tools| {
+        tools.iter()
+            .filter(|t| t.hidden)
+            .map(|t| t.name.clone())
+            .collect()
+    });
+    if hidden.is_empty() {
+        return;
+    }
+    let resp = proto::Envelope {
+        msg: Some(proto::envelope::Msg::DisableTools(proto::DisableToolsRequest {
+            tool_names: hidden,
+        })),
+        ..Default::default()
+    };
+    let _ = transport.send(&resp).await;
 }
 
 async fn send_middleware_registrations(transport: &Transport) {
@@ -337,8 +353,40 @@ async fn handle_list_resource_templates(transport: &Transport, request_id: &str)
     let _ = transport.send(&resp).await;
 }
 
+fn uri_matches_template(template: &str, uri: &str) -> bool {
+    let parts: Vec<&str> = template.split('{').collect();
+    if parts.is_empty() {
+        return template == uri;
+    }
+    if !uri.starts_with(parts[0]) {
+        return false;
+    }
+    let mut remaining = &uri[parts[0].len()..];
+    for part in &parts[1..] {
+        if let Some(suffix) = part.split_once('}') {
+            let literal = suffix.1;
+            if literal.is_empty() {
+                if remaining.is_empty() {
+                    return false;
+                }
+                remaining = "";
+            } else if let Some(pos) = remaining.find(literal) {
+                if pos == 0 {
+                    return false;
+                }
+                remaining = &remaining[pos + literal.len()..];
+            } else {
+                return false;
+            }
+        }
+    }
+    remaining.is_empty()
+}
+
 async fn handle_read_resource(transport: &Transport, req: &proto::ReadResourceRequest, request_id: &str) {
     let uri = &req.uri;
+
+    // First check static resources
     let contents: Vec<proto::ResourceContent> = with_resources(|resources| {
         for r in resources {
             if r.uri == *uri {
@@ -352,6 +400,26 @@ async fn handle_read_resource(transport: &Transport, req: &proto::ReadResourceRe
         }
         Vec::new()
     });
+
+    // If no static resource matched, try templates
+    let contents = if contents.is_empty() {
+        with_resource_templates(|templates| {
+            for t in templates {
+                if uri_matches_template(&t.uri_template, uri) {
+                    return (t.handler)(uri).iter().map(|c| proto::ResourceContent {
+                        uri: c.uri.clone(),
+                        mime_type: c.mime_type.clone(),
+                        text: c.text.clone(),
+                        blob: c.blob.clone(),
+                    }).collect();
+                }
+            }
+            Vec::new()
+        })
+    } else {
+        contents
+    };
+
     let resp = proto::Envelope {
         request_id: request_id.to_string(),
         msg: Some(proto::envelope::Msg::ReadResourceResponse(proto::ReadResourceResponse { contents })),

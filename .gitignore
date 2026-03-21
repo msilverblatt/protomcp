@@ -1,13 +1,13 @@
 bin/
-gen/
 dist/
 node_modules/
 __pycache__/
 *.egg-info/
 .venv/
-*.pb.go
-*_pb2.py
 .superpowers/
+docs/superpowers/
 sdk/rust/target/
 go.work
 go.work.sum
+/protomcp
+docs/.astro/

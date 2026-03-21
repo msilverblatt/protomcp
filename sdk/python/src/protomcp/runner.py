@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import sys
 import time
 
@@ -22,6 +23,11 @@ from protomcp.local_middleware import build_middleware_chain
 from protomcp.telemetry import emit_telemetry, ToolCallEvent
 from protomcp.sidecar import start_sidecars
 from protomcp.discovery import discover_handlers, get_config
+
+def _uri_matches_template(template: str, uri: str) -> bool:
+    """Check if a URI matches a URI template pattern like 'notes://{id}'."""
+    pattern = re.sub(r'\{[^}]+\}', '[^/]+', template)
+    return bool(re.fullmatch(pattern, uri))
 
 log: ServerLogger = ServerLogger(send_fn=lambda msg: None)
 
@@ -124,6 +130,8 @@ def _handle_call_tool(transport, env):
         transport.send(resp)
         return
 
+    start_time = time.monotonic()
+    action_name = ""
     try:
         args = json.loads(req.arguments_json) if req.arguments_json else {}
         # Resolve server contexts and inject into args if handler accepts them
@@ -201,9 +209,11 @@ def _handle_reload(transport, env, mw_handlers):
         request_id=env.request_id,
     )
     transport.send(resp)
-    # Also re-send tool list
-    _handle_list_tools(transport, env)
+    # Also re-send tool list with empty request_id so it routes to handshakeCh
+    fake_env = pb.Envelope()  # empty envelope (request_id defaults to "")
+    _handle_list_tools(transport, fake_env)
     _send_middleware_registrations(transport, mw_handlers)
+    _disable_hidden_tools(transport)
 
 def _send_middleware_registrations(transport, mw_handlers):
     mw_defs = get_registered_middleware()
@@ -256,8 +266,8 @@ def _handle_middleware_intercept(transport, env, mw_handlers):
 
     resp = pb.Envelope(
         middleware_intercept_response=pb.MiddlewareInterceptResponse(
-            arguments_json=resp_fields.get("arguments_json", ""),
-            result_json=resp_fields.get("result_json", ""),
+            arguments_json=resp_fields.get("arguments_json", req.arguments_json),
+            result_json=resp_fields.get("result_json", req.result_json),
             reject=resp_fields.get("reject", False),
             reject_reason=resp_fields.get("reject_reason", ""),
         ),
@@ -301,9 +311,9 @@ def _handle_read_resource(transport, env):
             break
     if handler is None:
         for t in templates:
-            # Simple template matching — check if URI could match the template
-            handler = t.handler
-            break  # Templates need proper URI template matching; simplified for now
+            if _uri_matches_template(t.uri_template, uri):
+                handler = t.handler
+                break
 
     if handler is None:
         resp = pb.Envelope(

@@ -29,7 +29,7 @@ Registers a tool and returns its `ToolDef`.
 |-------|------|----------|-------------|
 | `description` | `string` | Yes | Human-readable description |
 | `args` | `z.ZodObject<any>` | Yes | Zod schema for input arguments |
-| `handler` | `(args) => any` | Yes | Function to call when the tool is invoked |
+| `handler` | `(args, ctx: ToolContext) => any` | Yes | Function to call when the tool is invoked |
 | `name` | `string` | No | Explicit tool name (defaults to handler function name) |
 | `output` | `z.ZodObject<any>` | No | Zod schema for structured output |
 | `title` | `string` | No | Display name shown in the MCP host UI |
@@ -38,6 +38,7 @@ Registers a tool and returns its `ToolDef`.
 | `readOnlyHint` | `boolean` | No | Hint: the tool does not modify state |
 | `openWorldHint` | `boolean` | No | Hint: the tool may access resources outside the current context |
 | `taskSupport` | `boolean` | No | Hint: the tool supports long-running async task semantics |
+| `hidden` | `boolean` | No | If `true`, the tool is registered but hidden from the initial tool list |
 
 ### Name inference
 
@@ -317,6 +318,7 @@ interface ToolDef<T extends z.ZodType = z.ZodType> {
   readOnlyHint: boolean;
   openWorldHint: boolean;
   taskSupport: boolean;
-  handler: (args: z.infer<T>) => any;
+  hidden?: boolean;
+  handler: (args: z.infer<T>, ctx: ToolContext) => any;
 }
 ```

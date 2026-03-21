@@ -23,3 +23,6 @@ def completion(ref_type: str, ref_name: str, argument_name: str):
 
 def get_completion_handler(ref_type: str, ref_name: str, argument_name: str):
     return _completion_registry.get((ref_type, ref_name, argument_name))
+
+def clear_completion_registry():
+    _completion_registry.clear()

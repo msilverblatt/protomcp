@@ -57,6 +57,14 @@ mod tests {
     use std::sync::Arc;
     use std::sync::atomic::{AtomicI32, Ordering};
 
+    static TEST_LOCK: Mutex<()> = Mutex::new(());
+
+    fn lock_and_clear() -> std::sync::MutexGuard<'static, ()> {
+        let guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        clear_telemetry_sinks();
+        guard
+    }
+
     #[test]
     fn test_register_and_emit() {
         let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());

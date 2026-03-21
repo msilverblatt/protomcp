@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use serde_json::Value;
 use crate::context::ToolContext;
 use crate::result::ToolResult;
@@ -40,7 +40,7 @@ pub struct ToolDef {
     pub name: String,
     pub description: String,
     pub input_schema: Value,
-    pub handler: Box<dyn Fn(ToolContext, Value) -> ToolResult + Send + Sync>,
+    pub handler: Arc<dyn Fn(ToolContext, Value) -> ToolResult + Send + Sync>,
     pub destructive: bool,
     pub idempotent: bool,
     pub read_only: bool,
@@ -53,7 +53,7 @@ pub struct ToolBuilder {
     name: String,
     description: String,
     args: Vec<ArgDef>,
-    handler: Option<Box<dyn Fn(ToolContext, Value) -> ToolResult + Send + Sync>>,
+    handler: Option<Arc<dyn Fn(ToolContext, Value) -> ToolResult + Send + Sync>>,
     destructive: bool,
     idempotent: bool,
     read_only: bool,
@@ -126,7 +126,7 @@ impl ToolBuilder {
     where
         F: Fn(ToolContext, Value) -> ToolResult + Send + Sync + 'static,
     {
-        self.handler = Some(Box::new(f));
+        self.handler = Some(Arc::new(f));
         self
     }
 
@@ -154,7 +154,7 @@ impl ToolBuilder {
             name: self.name,
             description: self.description,
             input_schema,
-            handler: self.handler.unwrap_or_else(|| Box::new(|_, _| ToolResult::new(""))),
+            handler: self.handler.unwrap_or_else(|| Arc::new(|_, _| ToolResult::new(""))),
             destructive: self.destructive,
             idempotent: self.idempotent,
             read_only: self.read_only,
@@ -184,9 +184,21 @@ pub fn clear_registry() {
     REGISTRY.lock().unwrap_or_else(|e| e.into_inner()).clear();
 }
 
+/// Test-only lock to serialize tests that mutate the global REGISTRY.
+/// Multiple modules (tool, group, workflow) push into the same REGISTRY,
+/// so all their tests must hold this lock to avoid races.
+#[cfg(test)]
+pub(crate) static TEST_REGISTRY_LOCK: Mutex<()> = Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn lock_and_clear() -> std::sync::MutexGuard<'static, ()> {
+        let guard = TEST_REGISTRY_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        clear_registry();
+        guard
+    }
 
     #[test]
     fn test_tool_registration() {
@@ -306,5 +318,54 @@ mod tests {
             assert!(tools[0].destructive);
         });
         clear_registry();
+    }
+
+    #[test]
+    fn test_hidden_defaults_to_false() {
+        let _lock = lock_and_clear();
+        tool("my_tool")
+            .description("A tool")
+            .handler(|_, _| ToolResult::new("ok"))
+            .register();
+
+        with_registry(|tools| {
+            assert_eq!(tools.len(), 1);
+            assert!(!tools[0].hidden, "hidden should default to false");
+        });
+        clear_registry();
+    }
+
+    #[test]
+    fn test_hidden_field_set_by_direct_construction() {
+        let _lock = lock_and_clear();
+        // Since there's no builder method for hidden, verify the field
+        // is accessible and can be set directly on ToolDef
+        let td = ToolDef {
+            name: "secret".to_string(),
+            description: "A hidden tool".to_string(),
+            input_schema: serde_json::json!({"type": "object", "properties": {}}),
+            handler: Arc::new(|_, _| ToolResult::new("secret")),
+            destructive: false,
+            idempotent: false,
+            read_only: false,
+            open_world: false,
+            task_support: false,
+            hidden: true,
+        };
+        assert!(td.hidden, "hidden should be true when set explicitly");
+
+        let td2 = ToolDef {
+            name: "visible".to_string(),
+            description: "A visible tool".to_string(),
+            input_schema: serde_json::json!({"type": "object", "properties": {}}),
+            handler: Arc::new(|_, _| ToolResult::new("visible")),
+            destructive: false,
+            idempotent: false,
+            read_only: false,
+            open_world: false,
+            task_support: false,
+            hidden: false,
+        };
+        assert!(!td2.hidden, "hidden should be false when set explicitly");
     }
 }

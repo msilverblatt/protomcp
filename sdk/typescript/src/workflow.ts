@@ -1,9 +1,8 @@
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import type { ToolContext } from './context.js';
-import { type ToolDef, _setWorkflowsToToolDefs } from './tool.js';
+import { type ToolDef, _setWorkflowsToToolDefs, getRegisteredTools } from './tool.js';
 import { ToolResult } from './result.js';
-import { toolManager } from './manager.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -192,7 +191,7 @@ function getStepVisibility(stepDef: StepDef, workflowDef: WorkflowDef): { allowD
   return { allowDuring: workflowDef.allowDuring, blockDuring: workflowDef.blockDuring };
 }
 
-function transitionToSteps(workflowDef: WorkflowDef, state: WorkflowState, nextStepNames: string[]): void {
+function transitionToSteps(workflowDef: WorkflowDef, state: WorkflowState, nextStepNames: string[]): string[] {
   const stepMap = new Map(workflowDef.steps.map(s => [s.name, s]));
 
   const allowedTools: string[] = [];
@@ -224,7 +223,7 @@ function transitionToSteps(workflowDef: WorkflowDef, state: WorkflowState, nextS
     }
   }
 
-  toolManager.setAllowed(allowedTools);
+  return allowedTools;
 }
 
 // ---------------------------------------------------------------------------
@@ -247,7 +246,7 @@ function getActiveState(): WorkflowState | undefined {
 // Step dispatch
 // ---------------------------------------------------------------------------
 
-function handleStepCall(workflowName: string, stepName: string, kwargs: Record<string, any>, ctx: ToolContext): ToolResult {
+async function handleStepCall(workflowName: string, stepName: string, kwargs: Record<string, any>, ctx: ToolContext): Promise<ToolResult> {
   const wf = findWorkflow(workflowName);
   if (!wf) {
     return new ToolResult({ result: `Unknown workflow: ${workflowName}`, isError: true });
@@ -261,21 +260,16 @@ function handleStepCall(workflowName: string, stepName: string, kwargs: Record<s
   let state = getActiveState();
 
   if (stepDef.initial) {
-    const preTools = toolManager.getActiveTools();
+    // Snapshot all registered tool names minus this workflow's tools
+    const allTools = getRegisteredTools().map(t => t.name);
+    const preTools = allTools.filter(t => !t.startsWith(`${workflowName}.`));
     state = {
       workflowName,
       currentStep: stepName,
       history: [],
-      preWorkflowTools: [],
+      preWorkflowTools: preTools,
     };
     activeWorkflowStack.push(state);
-    // getActiveTools is async; store a promise-resolved value or use sync fallback
-    // In the workflow context, we handle this by storing tools asynchronously
-    preTools.then((tools: string[]) => {
-      state!.preWorkflowTools = tools;
-    }).catch(() => {
-      // If toolManager not connected, preWorkflowTools stays empty
-    });
   } else {
     if (!state || state.workflowName !== workflowName) {
       return new ToolResult({
@@ -289,7 +283,7 @@ function handleStepCall(workflowName: string, stepName: string, kwargs: Record<s
   // Run the handler
   let result: StepResult | string;
   try {
-    result = stepDef.handler(kwargs, ctx);
+    result = await stepDef.handler(kwargs, ctx);
   } catch (exc: any) {
     // Check onError mapping
     if (stepDef.onError) {
@@ -297,9 +291,14 @@ function handleStepCall(workflowName: string, stepName: string, kwargs: Record<s
       for (const [substring, targetStep] of Object.entries(stepDef.onError)) {
         if (errMsg.includes(substring)) {
           state!.currentStep = targetStep;
-          transitionToSteps(wf, state!, [targetStep]);
+          const allowedTools = transitionToSteps(wf, state!, [targetStep]);
+          const allToolNames = getRegisteredTools().map(t => t.name);
+          const allowedSet = new Set(allowedTools);
+          const onErrorDisableTools = allToolNames.filter(t => !allowedSet.has(t));
           return new ToolResult({
             result: `Error caught (${errMsg}), transitioning to '${targetStep}'`,
+            enableTools: allowedTools,
+            disableTools: onErrorDisableTools,
           });
         }
       }
@@ -345,14 +344,27 @@ function handleStepCall(workflowName: string, stepName: string, kwargs: Record<s
     if (wf.onComplete) {
       wf.onComplete(state!.history);
     }
-    // Restore pre-workflow tools
-    toolManager.setAllowed(state!.preWorkflowTools);
+    // Restore pre-workflow tools — disable everything not in pre-workflow set
+    const allToolNames = getRegisteredTools().map(t => t.name);
+    const preSet = new Set(state!.preWorkflowTools);
+    const terminalDisableTools = allToolNames.filter(t => !preSet.has(t));
     activeWorkflowStack.pop();
-    return new ToolResult({ result: result.result || 'Workflow complete' });
+    return new ToolResult({
+      result: result.result || 'Workflow complete',
+      enableTools: state!.preWorkflowTools,
+      disableTools: terminalDisableTools,
+    });
   } else {
     // Transition to next steps
-    transitionToSteps(wf, state!, effectiveNext || []);
-    return new ToolResult({ result: result.result || `Proceed to: ${JSON.stringify(effectiveNext)}` });
+    const allowedTools = transitionToSteps(wf, state!, effectiveNext || []);
+    const allToolNames = getRegisteredTools().map(t => t.name);
+    const allowedSet = new Set(allowedTools);
+    const disableTools = allToolNames.filter(t => !allowedSet.has(t));
+    return new ToolResult({
+      result: result.result || `Proceed to: ${JSON.stringify(effectiveNext)}`,
+      enableTools: allowedTools,
+      disableTools,
+    });
   }
 }
 
@@ -378,10 +390,16 @@ function handleCancel(workflowName: string): ToolResult {
     wf.onCancel(state.currentStep, state.history);
   }
 
-  // Restore pre-workflow tools
-  toolManager.setAllowed(state.preWorkflowTools);
+  // Restore pre-workflow tools — disable everything not in pre-workflow set
+  const allToolNames = getRegisteredTools().map(t => t.name);
+  const preSet = new Set(state.preWorkflowTools);
+  const cancelDisableTools = allToolNames.filter(t => !preSet.has(t));
   activeWorkflowStack.pop();
-  return new ToolResult({ result: `Workflow '${workflowName}' cancelled` });
+  return new ToolResult({
+    result: `Workflow '${workflowName}' cancelled`,
+    enableTools: state.preWorkflowTools,
+    disableTools: cancelDisableTools,
+  });
 }
 
 // ---------------------------------------------------------------------------

@@ -217,7 +217,7 @@ fn group_to_union_def(group: &GroupDef) -> ToolDef {
         name: group.name.clone(),
         description: desc,
         input_schema: schema,
-        handler: Box::new(move |ctx, args| {
+        handler: Arc::new(move |ctx, args| {
             dispatch_group_action_by_name(&group_name, ctx, args)
         }),
         destructive: false,
@@ -257,7 +257,7 @@ fn group_to_separate_defs(group: &GroupDef) -> Vec<ToolDef> {
             name: format!("{}.{}", group.name, act.name),
             description: desc,
             input_schema: schema,
-            handler: Box::new(move |ctx, args| {
+            handler: Arc::new(move |ctx, args| {
                 dispatch_specific_action(&group_name, &action_name, ctx, args)
             }),
             destructive: false,
@@ -512,9 +512,16 @@ pub fn clear_group_registry() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tool::clear_registry;
+    use crate::tool::{clear_registry, TEST_REGISTRY_LOCK};
     use std::sync::Arc;
     use std::sync::atomic::AtomicBool;
+
+    fn lock_and_clear() -> std::sync::MutexGuard<'static, ()> {
+        let guard = TEST_REGISTRY_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        clear_group_registry();
+        clear_registry();
+        guard
+    }
 
     fn dummy_ctx() -> ToolContext {
         ToolContext::new(

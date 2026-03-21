@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use serde_json::Value;
 use crate::context::ToolContext;
 use crate::result::ToolResult;
@@ -64,6 +64,7 @@ struct WorkflowState {
     workflow_name: String,
     current_step: String,
     history: Vec<StepHistoryEntry>,
+    pre_workflow_tools: Vec<String>,
 }
 
 // ── Builders ──
@@ -385,19 +386,12 @@ fn compute_transition(
     }
 
     // enable_tools = allowed_tools
-    // disable_tools = all workflow tools NOT in allowed (to hide them)
-    let all_wf_tools: Vec<String> = wf.steps.iter().map(|s| format!("{}.{}", wf.name, s.name)).collect();
-    let cancel_tool = format!("{}.cancel", wf.name);
-
-    let mut disable_tools: Vec<String> = Vec::new();
-    for t in &all_wf_tools {
-        if !allowed_tools.contains(t) {
-            disable_tools.push(t.clone());
-        }
-    }
-    if !allowed_tools.contains(&cancel_tool) {
-        disable_tools.push(cancel_tool);
-    }
+    // disable_tools = all registered tools NOT in allowed set
+    let allowed_set: std::collections::HashSet<&String> = allowed_tools.iter().collect();
+    let disable_tools: Vec<String> = all_tool_names.iter()
+        .filter(|t| !allowed_set.contains(t))
+        .cloned()
+        .collect();
 
     (allowed_tools, disable_tools)
 }
@@ -422,12 +416,23 @@ fn handle_step_call(workflow_name: &str, step_name: &str, ctx: ToolContext, args
 
     let mut state_guard = ACTIVE_WORKFLOW.lock().unwrap_or_else(|e| e.into_inner());
 
+    // Collect all tool names for visibility computation (must be before initial state creation)
+    let all_tool_names: Vec<String> = crate::tool::with_registry(|tools| {
+        tools.iter().map(|t| t.name.clone()).collect()
+    });
+
     if step_def.initial {
+        // Snapshot tools that aren't part of this workflow
+        let pre_tools: Vec<String> = all_tool_names.iter()
+            .filter(|t| !t.starts_with(&format!("{}.", workflow_name)))
+            .cloned()
+            .collect();
         // Start new workflow
         *state_guard = Some(WorkflowState {
             workflow_name: workflow_name.to_string(),
             current_step: step_name.to_string(),
             history: Vec::new(),
+            pre_workflow_tools: pre_tools,
         });
     } else {
         // Must have active workflow
@@ -442,15 +447,18 @@ fn handle_step_call(workflow_name: &str, step_name: &str, ctx: ToolContext, args
         }
     }
 
-    // Collect all tool names for visibility computation
-    let all_tool_names: Vec<String> = crate::tool::with_registry(|tools| {
-        tools.iter().map(|t| t.name.clone()).collect()
-    });
+    // Drop state lock before calling handler to avoid deadlock if handler
+    // accesses workflow state. Registry lock (guard) is still held since
+    // handler lives in the registry, but that's unavoidable without Arc.
+    drop(state_guard);
 
     // Run handler, catch panics as errors
     let handler_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         (step_def.handler)(ctx, args)
     }));
+
+    // Re-acquire state lock after handler call
+    let mut state_guard = ACTIVE_WORKFLOW.lock().unwrap_or_else(|e| e.into_inner());
 
     match handler_result {
         Err(panic_info) => {
@@ -537,10 +545,10 @@ fn handle_step_call(workflow_name: &str, step_name: &str, ctx: ToolContext, args
                 let cancel_tool = format!("{}.cancel", wf.name);
                 result.disable_tools = non_initial_tools;
                 result.disable_tools.push(cancel_tool);
-                // Don't re-enable initial — it was never disabled (it's always visible)
-                // But we do need to re-enable any external tools that were disabled
-                // Since we don't track pre-workflow state in the Rust version (no manager),
-                // we just clear the active state and let the result carry enable/disable
+                // Re-enable pre-workflow tools
+                if let Some(ref state) = *state_guard {
+                    result.enable_tools = state.pre_workflow_tools.clone();
+                }
                 *state_guard = None;
                 result
             } else {
@@ -596,6 +604,9 @@ fn handle_cancel(workflow_name: &str) -> ToolResult {
     let mut result = ToolResult::new(format!("Workflow '{}' cancelled", workflow_name));
     result.disable_tools = non_initial_tools;
     result.disable_tools.push(cancel_tool);
+    if let Some(ref state) = *state_guard {
+        result.enable_tools = state.pre_workflow_tools.clone();
+    }
 
     *state_guard = None;
     result
@@ -640,7 +651,7 @@ fn workflow_to_tool_defs(wf: &WorkflowDef) -> Vec<ToolDef> {
             name: tool_name,
             description: desc,
             input_schema: schema,
-            handler: Box::new(move |ctx, args| {
+            handler: Arc::new(move |ctx, args| {
                 handle_step_call(&wf_name, &sname, ctx, args)
             }),
             destructive: false,
@@ -660,7 +671,7 @@ fn workflow_to_tool_defs(wf: &WorkflowDef) -> Vec<ToolDef> {
             name: cancel_name,
             description: format!("Cancel the {} workflow", wf.name),
             input_schema: serde_json::json!({"type": "object", "properties": {}}),
-            handler: Box::new(move |_, _| {
+            handler: Arc::new(move |_, _| {
                 handle_cancel(&wf_name)
             }),
             destructive: false,
@@ -694,7 +705,7 @@ pub fn clear_workflow_registry() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tool::clear_registry;
+    use crate::tool::{clear_registry, TEST_REGISTRY_LOCK};
     use std::sync::Arc;
     use std::sync::atomic::AtomicBool;
 
@@ -708,6 +719,12 @@ mod tests {
 
     fn cleanup() {
         crate::clear_all_registries();
+    }
+
+    fn cleanup_and_lock() -> std::sync::MutexGuard<'static, ()> {
+        let guard = TEST_REGISTRY_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        cleanup();
+        guard
     }
 
     #[test]

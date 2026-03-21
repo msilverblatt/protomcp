@@ -1,6 +1,5 @@
-import json
 from dataclasses import dataclass, field
-from typing import Callable, Optional
+from typing import Callable
 
 _resource_registry: list["ResourceDef"] = []
 _resource_template_registry: list["ResourceTemplateDef"] = []
@@ -60,3 +59,9 @@ def get_registered_resources() -> list[ResourceDef]:
 
 def get_registered_resource_templates() -> list[ResourceTemplateDef]:
     return list(_resource_template_registry)
+
+def clear_resource_registry():
+    _resource_registry.clear()
+
+def clear_template_registry():
+    _resource_template_registry.clear()

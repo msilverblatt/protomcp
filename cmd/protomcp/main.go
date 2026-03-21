@@ -33,6 +33,22 @@ func main() {
 		os.Exit(1)
 	}
 
+	if cfg.Command == "help" {
+		printUsage()
+		return
+	}
+	if cfg.Command == "version" {
+		fmt.Println("pmcp version 0.2.0")
+		return
+	}
+
+	if cfg.File != "" {
+		if _, err := os.Stat(cfg.File); os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "error: file not found: %s\n", cfg.File)
+			os.Exit(1)
+		}
+	}
+
 	// Setup slog
 	logLevel := parseLogLevel(cfg.LogLevel)
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: logLevel}))
@@ -278,6 +294,40 @@ func (b *toolBackend) OnListRoots(fn func(string)) {
 	b.pm.OnListRoots(fn)
 }
 
+func printUsage() {
+	fmt.Println(`pmcp — language-agnostic MCP runtime
+
+Usage:
+  pmcp <command> <file> [flags]
+
+Commands:
+  dev         Start dev server with hot reload
+  run         Start production server
+  validate    Validate tool definitions
+  test        Test tools directly
+  playground  Start interactive web UI
+
+Flags:
+  --transport <stdio|sse>    Transport mode (default: stdio)
+  --hot-reload <immediate>   Hot reload strategy
+  --call-timeout <duration>  Tool call timeout (default: 5m)
+  --log-level <level>        Log level (default: info)
+  --socket <path>            Unix socket path
+  --runtime <cmd>            Override runtime command
+  --host <addr>              HTTP host (default: localhost)
+  --port <port>              HTTP port (default: 8080)
+  --auth <scheme:ENV_VAR>    Auth config (token:MY_TOKEN or apikey:MY_KEY)
+  --strict                   Strict validation mode
+  --format <text|json>       Output format
+
+Examples:
+  pmcp dev server.py
+  pmcp dev server.ts --transport sse --port 3000
+  pmcp validate server.py --strict
+  pmcp test server.py list
+  pmcp test server.py call add --args '{"a": 1, "b": 2}'`)
+}
+
 func parseLogLevel(s string) slog.Level {
 	switch s {
 	case "debug":
@@ -322,7 +372,12 @@ func runValidate(ctx context.Context, cfg *config.Config) {
 	result := validate.Tools(tools, cfg.Strict)
 
 	if cfg.Format == "json" {
-		fmt.Println(result.FormatJSON())
+		jsonOutput, err := result.FormatJSON()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println(jsonOutput)
 	} else {
 		fmt.Print(result.FormatText())
 	}

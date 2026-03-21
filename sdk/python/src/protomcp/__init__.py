@@ -2,7 +2,7 @@ from protomcp.tool import tool, get_registered_tools, clear_registry
 from protomcp.result import ToolResult
 from protomcp.context import ToolContext
 from protomcp.log import ServerLogger
-from protomcp.middleware import middleware, get_registered_middleware
+from protomcp.middleware import middleware, get_registered_middleware, clear_middleware_registry
 from protomcp import manager as tool_manager
 from protomcp.resource import resource, resource_template, ResourceContent
 from protomcp.prompt import prompt, PromptArg, PromptMessage
@@ -29,6 +29,7 @@ __all__ = [
     "log",
     "middleware",
     "get_registered_middleware",
+    "clear_middleware_registry",
     "resource",
     "resource_template",
     "ResourceContent",

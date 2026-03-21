@@ -620,9 +620,9 @@ PID files are stored in `~/.protomcp/sidecars/`. Processes receive `SIGTERM` on 
 Auto-discover handler files from a directory instead of importing them manually.
 
 ```typescript
-import { configure } from 'protomcp';
+import { configureDiscovery } from 'protomcp';
 
-configure({ handlersDir: './handlers', hotReload: true });
+configureDiscovery({ handlersDir: './handlers', hotReload: true });
 ```
 
 - All `.ts` and `.js` files in `handlersDir` are imported automatically.

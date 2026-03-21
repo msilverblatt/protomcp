@@ -32,7 +32,7 @@ This starts `pmcp dev` for each example, sends MCP protocol messages, and prints
 
 ## Prerequisites
 
-- [pmcp](https://github.com/msilverblatt/protomcp) installed (`brew install protomcp/tap/protomcp`)
+- [pmcp](https://github.com/msilverblatt/protomcp) installed (`brew install msilverblatt/tap/protomcp`)
 - Python 3.10+ (for Python examples)
 - Node.js 18+ (for TypeScript examples)
 

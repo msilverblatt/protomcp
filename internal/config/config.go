@@ -36,6 +36,12 @@ func Parse(args []string) (*Config, error) {
 	}
 
 	cmd := args[0]
+	if cmd == "--help" || cmd == "-h" || cmd == "help" {
+		return &Config{Command: "help"}, nil
+	}
+	if cmd == "--version" || cmd == "-v" || cmd == "version" {
+		return &Config{Command: "version"}, nil
+	}
 	if cmd != "dev" && cmd != "run" && cmd != "validate" && cmd != "test" && cmd != "playground" {
 		return nil, fmt.Errorf("unknown command %q: must be 'dev', 'run', 'validate', 'test', or 'playground'", cmd)
 	}

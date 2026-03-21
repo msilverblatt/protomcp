@@ -63,6 +63,57 @@ Validation checks:
 - Input schema is valid JSON Schema
 - **Strict mode**: description at least 10 characters, no generic names like "tool1"
 
+### `pmcp test <subcommand> [flags]`
+
+Test tool definitions and tool calls.
+
+#### `pmcp test list <file>`
+
+List all tools defined in the file.
+
+```sh
+pmcp test list tools.py
+pmcp test list tools.py --format json
+```
+
+#### `pmcp test call <file> <tool_name> [flags]`
+
+Call a specific tool with arguments.
+
+```sh
+pmcp test call tools.py add --args '{"a": 1, "b": 2}'
+pmcp test call tools.py greet --args '{"name": "World"}' --format json
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--args` | `'{}'` | JSON string of arguments to pass to the tool |
+| `--trace` | `true` | Show trace output (`--trace=false` to disable) |
+| `--format` | `text` | Output format: `text` or `json` |
+
+#### `pmcp test scenario <file>`
+
+Run a test scenario file against the tools.
+
+```sh
+pmcp test scenario tests/scenario.yaml
+```
+
+### `pmcp playground <file> [flags]`
+
+Launch an interactive playground for testing tools in the browser.
+
+```sh
+pmcp playground tools.py
+pmcp playground tools.py --port 3000
+pmcp playground tools.ts --host 0.0.0.0 --port 3000
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--port` | `8080` | Port to bind the playground server to |
+| `--host` | `localhost` | Host/address to bind the playground server to |
+
 ---
 
 ## Flags
@@ -194,7 +245,7 @@ pmcp dev tools.ts --log-level debug
 
 ### `--socket <path>`
 
-**Default:** `$XDG_RUNTIME_DIR/protomcp/<pid>.sock` or `$TMPDIR/protomcp/<pid>.sock`
+**Default:** `$XDG_RUNTIME_DIR/pmcp/<pid>.sock` or `$TMPDIR/protomcp/<pid>.sock`
 
 Path for the unix socket used to communicate with the tool process.
 
@@ -216,6 +267,25 @@ pmcp dev tools.py --runtime python3.12
 
 # Override TypeScript runtime
 pmcp dev tools.ts --runtime bun
+```
+
+### `--trace`
+
+**Default:** `true`
+
+Enable or disable trace output. Trace output shows detailed timing and protocol information.
+
+```sh
+# Disable trace output
+pmcp dev tools.py --trace=false
+```
+
+### `--args <json>`
+
+**Only for `test call`.** JSON string of arguments to pass to the tool being called.
+
+```sh
+pmcp test call tools.py add --args '{"a": 1, "b": 2}'
 ```
 
 ---
@@ -240,3 +310,7 @@ PROTOMCP_PYTHON=python3.12 pmcp dev tools.py
 # Use bun instead of node for TypeScript
 PROTOMCP_NODE=bun pmcp dev tools.ts
 ```
+
+:::note[`uv` detection]
+When running `.py` files, if `uv` is on `PATH` and a `pyproject.toml` exists near the file, protomcp uses `uv run python <file>` instead of `python3`.
+:::

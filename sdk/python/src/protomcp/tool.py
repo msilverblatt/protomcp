@@ -59,7 +59,7 @@ def get_registered_tools() -> list[ToolDef]:
     return list(_registry) + groups_to_tool_defs() + workflows_to_tool_defs()
 
 def get_hidden_tool_names() -> list[str]:
-    return [t.name for t in _registry if t.hidden]
+    return [t.name for t in get_registered_tools() if t.hidden]
 
 def clear_registry():
     _registry.clear()

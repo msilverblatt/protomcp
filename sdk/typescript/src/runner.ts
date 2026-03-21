@@ -1,6 +1,6 @@
 import * as process from 'process';
 import { Transport } from './transport.js';
-import { getRegisteredTools } from './tool.js';
+import { getRegisteredTools, getHiddenToolNames } from './tool.js';
 import { ToolResult } from './result.js';
 import { ToolContext } from './context.js';
 import { toolManager } from './manager.js';
@@ -13,6 +13,11 @@ import { buildMiddlewareChain } from './localMiddleware.js';
 import { emitTelemetry } from './telemetry.js';
 import { startSidecars } from './sidecar.js';
 import { discoverHandlers } from './discovery.js';
+
+function uriMatchesTemplate(template: string, uri: string): boolean {
+  const pattern = template.replace(/\{[^}]+\}/g, '[^/]+');
+  return new RegExp(`^${pattern}$`).test(uri);
+}
 
 export async function run(): Promise<void> {
   const socketPath = process.env['PROTOMCP_SOCKET'];
@@ -90,6 +95,8 @@ export async function run(): Promise<void> {
     await transport.send(resp);
   }
 
+  let firstToolCall = true;
+
   while (true) {
     let env: Record<string, any>;
     try {
@@ -103,6 +110,13 @@ export async function run(): Promise<void> {
     if (env['msg'] === 'listTools') {
       await sendListTools(requestId);
       await sendMiddlewareRegistrations();
+      const hiddenNames = getHiddenToolNames();
+      if (hiddenNames.length > 0) {
+        const disableResp = Envelope.create({
+          disableTools: { toolNames: hiddenNames },
+        });
+        await transport.send(disableResp);
+      }
     } else if (env['msg'] === 'middlewareIntercept') {
       const req = env['middlewareIntercept'] ?? {};
       const mwName: string = req['middlewareName'] ?? '';
@@ -126,8 +140,8 @@ export async function run(): Promise<void> {
 
       const resp = Envelope.create({
         middlewareInterceptResponse: MiddlewareInterceptResponse.create({
-          argumentsJson: respFields['argumentsJson'] ?? respFields['arguments_json'] ?? '',
-          resultJson: respFields['resultJson'] ?? respFields['result_json'] ?? '',
+          argumentsJson: respFields['argumentsJson'] ?? respFields['arguments_json'] ?? req['argumentsJson'] ?? '',
+          resultJson: respFields['resultJson'] ?? respFields['result_json'] ?? req['resultJson'] ?? '',
           reject: respFields['reject'] ?? false,
           rejectReason: respFields['rejectReason'] ?? respFields['reject_reason'] ?? '',
         }),
@@ -157,7 +171,10 @@ export async function run(): Promise<void> {
       let respMsg;
       try {
         // Start first_tool_call sidecars
-        await startSidecars('first_tool_call');
+        if (firstToolCall) {
+          firstToolCall = false;
+          await startSidecars('first_tool_call');
+        }
 
         let args = argumentsJson ? JSON.parse(argumentsJson) : {};
         const progressToken: string = req['progressToken'] ?? '';
@@ -231,7 +248,8 @@ export async function run(): Promise<void> {
       const allResources = getRegisteredResources();
       const allTemplates = getRegisteredResourceTemplates();
       const resDef = allResources.find(r => r.uri === uri);
-      const handler = resDef?.handler ?? allTemplates[0]?.handler;
+      const matchedTemplate = allTemplates.find(t => uriMatchesTemplate(t.uriTemplate, uri));
+      const handler = resDef?.handler ?? matchedTemplate?.handler;
       if (!handler) {
         const resp = Envelope.create({ readResourceResponse: { contents: [{ uri, text: `Resource not found: ${uri}`, mimeType: 'text/plain' }] }, requestId });
         await transport.send(resp);
@@ -304,8 +322,15 @@ export async function run(): Promise<void> {
         requestId,
       });
       await transport.send(reloadResp);
-      await sendListTools(requestId);
+      await sendListTools('');
       await sendMiddlewareRegistrations();
+      const reloadHiddenNames = getHiddenToolNames();
+      if (reloadHiddenNames.length > 0) {
+        const disableResp = Envelope.create({
+          disableTools: { toolNames: reloadHiddenNames },
+        });
+        await transport.send(disableResp);
+      }
     }
   }
 }

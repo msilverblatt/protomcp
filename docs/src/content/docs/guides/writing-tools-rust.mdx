@@ -10,7 +10,7 @@ Add `protomcp` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-protomcp = "0.1"
+protomcp = "0.2"
 tokio = { version = "1", features = ["full"] }
 serde_json = "1"
 ```
@@ -201,28 +201,38 @@ Cancellation is cooperative — protomcp sets the cancelled flag and your tool i
 
 ## Testing tools
 
-Use `clear_registry()` between tests:
+Test tool handlers directly by extracting the handler logic into a standalone function:
 
 ```rust
-use protomcp::{tool, ToolResult, ArgDef, clear_registry};
-use protomcp::tool::with_registry;
+use protomcp::{ToolResult, ToolContext};
+use serde_json::json;
+
+fn add_handler(_ctx: ToolContext, args: serde_json::Value) -> ToolResult {
+    let a = args["a"].as_i64().unwrap_or(0);
+    let b = args["b"].as_i64().unwrap_or(0);
+    ToolResult::new(format!("{}", a + b))
+}
 
 #[test]
 fn test_add() {
-    clear_registry();
-    tool("add")
-        .description("Add two numbers")
-        .arg(ArgDef::int("a"))
-        .arg(ArgDef::int("b"))
-        .handler(|_, _| ToolResult::new("3"))
-        .register();
-
-    with_registry(|tools| {
-        assert_eq!(tools.len(), 1);
-        assert_eq!(tools[0].name, "add");
-    });
-    clear_registry();
+    let ctx = ToolContext::default();
+    let result = add_handler(ctx, json!({"a": 2, "b": 3}));
+    assert_eq!(result.result_text, "5");
+    assert!(!result.is_error);
 }
+```
+
+Then register the same handler in your server setup:
+
+```rust
+use protomcp::{tool, ArgDef};
+
+tool("add")
+    .description("Add two numbers")
+    .arg(ArgDef::int("a"))
+    .arg(ArgDef::int("b"))
+    .handler(add_handler)
+    .register();
 ```
 
 ---

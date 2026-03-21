@@ -47,6 +47,46 @@ message Envelope {
     TaskStatusResponse task_status_response = 21;
     TaskResultRequest task_result = 22;
     TaskCancelRequest task_cancel = 23;
+
+    // Middleware
+    RegisterMiddlewareRequest register_middleware = 24;
+    RegisterMiddlewareResponse register_middleware_response = 25;
+    MiddlewareInterceptRequest middleware_intercept = 26;
+    MiddlewareInterceptResponse middleware_intercept_response = 27;
+
+    // Streaming
+    StreamHeader stream_header = 28;
+    StreamChunk stream_chunk = 29;
+
+    // Raw sideband transfer
+    RawHeader raw_header = 30;
+
+    // Resources
+    ListResourcesRequest list_resources_request = 31;
+    ResourceListResponse resource_list_response = 32;
+    ListResourceTemplatesRequest list_resource_templates_request = 33;
+    ResourceTemplateListResponse resource_template_list_response = 34;
+    ReadResourceRequest read_resource_request = 35;
+    ReadResourceResponse read_resource_response = 36;
+    ResourceChangedNotification resource_changed = 37;
+
+    // Prompts
+    ListPromptsRequest list_prompts_request = 40;
+    PromptListResponse prompt_list_response = 41;
+    GetPromptRequest get_prompt_request = 42;
+    GetPromptResponse get_prompt_response = 43;
+
+    // Completions
+    CompletionRequest completion_request = 50;
+    CompletionResponse completion_response = 51;
+
+    // Sampling (bidirectional: SDK process -> Go -> MCP client)
+    SamplingRequest sampling_request = 60;
+    SamplingResponse sampling_response = 61;
+
+    // Roots
+    ListRootsRequest list_roots_request = 62;
+    ListRootsResponse list_roots_response = 63;
   }
 
   // Correlation ID for matching requests to responses.

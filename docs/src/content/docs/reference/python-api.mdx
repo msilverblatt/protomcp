@@ -43,6 +43,7 @@ Registers a function as an MCP tool.
 | `read_only` | `bool` | `False` | Hint: the tool does not modify state |
 | `open_world` | `bool` | `False` | Hint: the tool may access resources outside the current context |
 | `task_support` | `bool` | `False` | Hint: the tool supports long-running async task semantics |
+| `hidden` | `bool` | `False` | If `True`, the tool is registered but hidden from the initial tool list |
 
 **Returns:** The original function (unmodified).
 
@@ -156,6 +157,22 @@ Returns `True` if the MCP host has sent a cancellation for this call. Thread-saf
 ```python
 if ctx.is_cancelled():
     return ToolResult(is_error=True, message="Cancelled")
+```
+
+#### `sample(messages, max_tokens, **kwargs)`
+
+Request an LLM completion from the MCP client (sampling). Returns a dict with the response content.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `messages` | `list[dict]` | required | List of message dicts with `role` and `content` keys |
+| `max_tokens` | `int` | required | Maximum tokens in the response |
+
+```python
+response = ctx.sample(
+    messages=[{"role": "user", "content": "Summarize this text"}],
+    max_tokens=500,
+)
 ```
 
 ---

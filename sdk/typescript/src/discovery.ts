@@ -33,8 +33,29 @@ export async function discoverHandlers(): Promise<void> {
   if (!fs.existsSync(handlersPath) || !fs.statSync(handlersPath).isDirectory()) return;
 
   if (config.hotReload && loadedModules.size > 0) {
+    const { clearRegistry } = await import('./tool.js');
     const { clearGroupRegistry } = await import('./group.js');
+    const { clearWorkflowRegistry } = await import('./workflow.js');
+    const { clearContextRegistry } = await import('./serverContext.js');
+    const { clearLocalMiddleware } = await import('./localMiddleware.js');
+    const { clearResourceRegistry, clearTemplateRegistry } = await import('./resource.js');
+    const { clearPromptRegistry } = await import('./prompt.js');
+    const { clearCompletionRegistry } = await import('./completion.js');
+    const { clearTelemetrySinks } = await import('./telemetry.js');
+    const { clearSidecarRegistry } = await import('./sidecar.js');
+    const { clearMiddlewareRegistry } = await import('./middleware.js');
+    clearRegistry();
     clearGroupRegistry();
+    clearWorkflowRegistry();
+    clearContextRegistry();
+    clearLocalMiddleware();
+    clearResourceRegistry();
+    clearTemplateRegistry();
+    clearPromptRegistry();
+    clearCompletionRegistry();
+    clearTelemetrySinks();
+    clearSidecarRegistry();
+    clearMiddlewareRegistry();
     loadedModules.clear();
   }
 

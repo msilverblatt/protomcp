@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -56,6 +57,7 @@ func Run() {
 		case env.GetListTools() != nil:
 			handleListTools(tp, reqID)
 			sendMiddlewareRegistrations(tp)
+			sendDisableHiddenTools(tp)
 		case env.GetCallTool() != nil:
 			handleCallTool(tp, env.GetCallTool(), reqID)
 		case env.GetReload() != nil:
@@ -103,6 +105,23 @@ func handleListTools(tp *Transport, reqID string) {
 		RequestId: reqID,
 		Msg: &pb.Envelope_ToolList{
 			ToolList: &pb.ToolListResponse{Tools: defs},
+		},
+	})
+}
+
+func sendDisableHiddenTools(tp *Transport) {
+	var hidden []string
+	for _, t := range GetRegisteredTools() {
+		if t.Hidden {
+			hidden = append(hidden, t.Name)
+		}
+	}
+	if len(hidden) == 0 {
+		return
+	}
+	tp.Send(&pb.Envelope{
+		Msg: &pb.Envelope_DisableTools{
+			DisableTools: &pb.DisableToolsRequest{ToolNames: hidden},
 		},
 	})
 }
@@ -295,6 +314,38 @@ func handleReload(tp *Transport, reqID string) {
 	})
 	handleListTools(tp, "")
 	sendMiddlewareRegistrations(tp)
+	sendDisableHiddenTools(tp)
+}
+
+func uriMatchesTemplate(template, uri string) bool {
+	parts := strings.Split(template, "{")
+	if len(parts) == 0 {
+		return template == uri
+	}
+	if !strings.HasPrefix(uri, parts[0]) {
+		return false
+	}
+	remaining := uri[len(parts[0]):]
+	for _, part := range parts[1:] {
+		closeBrace := strings.Index(part, "}")
+		if closeBrace < 0 {
+			return false
+		}
+		suffix := part[closeBrace+1:]
+		if suffix == "" {
+			if remaining == "" {
+				return false
+			}
+			remaining = ""
+		} else {
+			idx := strings.Index(remaining, suffix)
+			if idx <= 0 {
+				return false
+			}
+			remaining = remaining[idx+len(suffix):]
+		}
+	}
+	return remaining == ""
 }
 
 func handleListResources(tp *Transport, reqID string) {
@@ -350,7 +401,7 @@ func handleReadResource(tp *Transport, req *pb.ReadResourceRequest, reqID string
 
 	// Try resource templates.
 	for _, t := range GetRegisteredResourceTemplates() {
-		if t.HandlerFn != nil {
+		if t.HandlerFn != nil && uriMatchesTemplate(t.URITemplate, uri) {
 			contents := t.HandlerFn(uri)
 			if len(contents) > 0 {
 				sendResourceContents(tp, reqID, contents)

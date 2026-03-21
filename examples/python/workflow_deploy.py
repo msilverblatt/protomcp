@@ -3,7 +3,7 @@ Workflow Example: Deployment Pipeline
 =====================================
 Demonstrates @workflow with multi-step state machine.
 The agent only sees valid next steps at each point.
-Run with: pmcp dev -- python workflow_deploy.py
+Run with: pmcp dev examples/python/workflow_deploy.py
 """
 from protomcp import workflow, step, StepResult, tool, ToolResult
 from protomcp.runner import run

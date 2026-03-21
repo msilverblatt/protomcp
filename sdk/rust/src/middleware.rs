@@ -41,6 +41,8 @@ pub fn clear_middleware_registry() {
 mod tests {
     use super::*;
 
+    static TEST_LOCK: Mutex<()> = Mutex::new(());
+
     #[test]
     fn test_middleware_registration() {
         let _lock = crate::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());

@@ -1,6 +1,5 @@
-import json
 from dataclasses import dataclass, field
-from typing import Callable, Optional
+from typing import Callable
 
 _prompt_registry: list["PromptDef"] = []
 
@@ -37,3 +36,6 @@ def prompt(description: str, arguments: list[PromptArg] | None = None):
 
 def get_registered_prompts() -> list[PromptDef]:
     return list(_prompt_registry)
+
+def clear_prompt_registry():
+    _prompt_registry.clear()

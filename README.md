@@ -2,9 +2,8 @@
 
 [![CI](https://github.com/msilverblatt/protomcp/actions/workflows/ci.yml/badge.svg)](https://github.com/msilverblatt/protomcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Go](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go)](https://go.dev)
 
-**Build MCP servers in any language. Tools, resources, prompts — one file, one command.**
+**Build powerful MCP workflows with dynamic tool lists and server-defined workflows. Lightweight protobuf-based MCP runtime built on the official Go SDK.**
 
 protomcp is a language-agnostic MCP runtime. Write your server logic in Python, TypeScript, Go, or Rust. Run `pmcp dev server.py` and you get a spec-compliant MCP server with hot reload, no protocol boilerplate, and no framework lock-in.
 
@@ -21,12 +20,30 @@ protomcp is a language-agnostic MCP runtime. Write your server logic in Python, 
 
 pmcp uses the [official MCP Go SDK](https://github.com/modelcontextprotocol/go-sdk) for full spec compliance. Your code registers tools, resources, and prompts through a simple protobuf protocol over a unix socket. pmcp handles everything else — protocol negotiation, transport, pagination, session management, and hot reload.
 
+The unix socket + protobuf layer adds ~0.5ms of overhead per tool call.
+
 ## Quick Start
 
 ### Install
 
 ```sh
 brew install msilverblatt/tap/protomcp
+```
+
+### Install SDK
+
+```sh
+# Python
+pip install protomcp
+
+# TypeScript
+npm install protomcp
+
+# Go
+go get github.com/msilverblatt/protomcp/sdk/go/protomcp
+
+# Rust
+# Add to Cargo.toml: protomcp = "0.1"
 ```
 
 ### Python
@@ -174,6 +191,19 @@ protomcp implements the full MCP specification (2025-03-26) via the official Go 
 - **Server Logging** — 8 RFC 5424 log levels forwarded to the MCP host
 - **Custom Middleware** — intercept tool calls with before/after hooks
 - **Validation** — `pmcp validate` checks definitions before deployment
+
+## Advanced Features
+
+- **Native Tool Groups** -- Group related actions with per-action schemas (oneOf discriminated unions). Each action gets its own required fields, enums, and validation rules while appearing as a single tool to the LLM.
+- **Server-Defined Workflows** -- Multi-step state machines where the visible tool surface IS the state. The server defines the process, the agent follows it. Supports `no_cancel`, error recovery, dynamic branching, and tool visibility control.
+- **Local Middleware** -- In-process middleware chain for error handling, timing, auto-install, or any cross-cutting concern. Middleware receives the tool name, args, and a `next` handler.
+- **Server Context** -- Inject shared parameters (project directory, DB connection, auth tokens) into tool handlers automatically. Hidden contexts stay out of the tool schema entirely.
+- **Telemetry** -- Structured `ToolCallEvent`s (start, success, error, progress) emitted to pluggable sinks. Wire up logging, metrics, or tracing with a single decorator.
+- **Declarative Validation** -- Required fields, enum fuzzy matching (with "did you mean?" suggestions), and cross-parameter rules defined alongside your actions.
+- **Sidecar Management** -- Managed companion processes with health checks, started and stopped alongside your server.
+- **Handler Discovery** -- Auto-discover tool handlers from a directory so you can organize large servers into separate files.
+
+See the [full documentation](https://msilverblatt.github.io/protomcp/) for details on each feature.
 
 ## Tool Groups
 
@@ -329,24 +359,11 @@ Workflows also support:
 - **Lifecycle hooks** — `on_cancel` for cleanup, `on_complete` for audit logging
 - **Tool visibility** — `allow_during` / `block_during` with glob patterns, step-level overrides
 
-## Advanced Features
-
-- **Tool Groups** -- Group related actions with per-action schemas. By default each action becomes its own tool (separate strategy); the union strategy (oneOf discriminated union) is available as an opt-in for clients that support it. Each action gets its own required fields, enums, and validation rules.
-- **Server-Defined Workflows** -- Multi-step state machines where the visible tool surface IS the state. The server defines the process, the agent follows it. Supports `no_cancel`, error recovery, dynamic branching, and tool visibility control.
-- **Local Middleware** -- In-process middleware chain for error handling, timing, auto-install, or any cross-cutting concern. Middleware receives the tool name, args, and a `next` handler.
-- **Server Context** -- Inject shared parameters (project directory, DB connection, auth tokens) into tool handlers automatically. Hidden contexts stay out of the tool schema entirely.
-- **Telemetry** -- Structured `ToolCallEvent`s (start, success, error, progress) emitted to pluggable sinks. Wire up logging, metrics, or tracing with a single decorator.
-- **Declarative Validation** -- Required fields, enum fuzzy matching (with "did you mean?" suggestions), and cross-parameter rules defined alongside your actions.
-- **Sidecar Management** -- Managed companion processes with health checks, started and stopped alongside your server.
-- **Handler Discovery** -- Auto-discover tool handlers from a directory so you can organize large servers into separate files.
-
-See the [full documentation](https://msilverblatt.github.io/protomcp/) for details on each feature.
-
 ## When to Use protomcp
 
 protomcp is not a replacement for the official MCP SDKs — it's built on top of the [official Go SDK](https://github.com/modelcontextprotocol/go-sdk). Use protomcp when:
 
-- **You want one server in multiple languages** — write tools in Python, prompts in TypeScript, resources in Go, all served by a single MCP server
+- **You want the same API across languages** — switch between Python, TypeScript, Go, and Rust with identical concepts and patterns
 - **You want zero-config hot reload** — save a file, everything reloads instantly
 - **You don't want to learn MCP internals** — no JSON-RPC, no transport wiring, no session management
 - **You want a single binary** — `pmcp` is a single Go binary, no runtime dependencies for the server itself

@@ -26,7 +26,7 @@ pmcp uses the [official MCP Go SDK](https://github.com/modelcontextprotocol/go-s
 ### Install
 
 ```sh
-brew install protomcp/tap/protomcp
+brew install msilverblatt/tap/protomcp
 ```
 
 ### Python
