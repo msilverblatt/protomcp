@@ -61,7 +61,8 @@ func StartProtomcp(t *testing.T, args ...string) (io.Writer, *bufio.Scanner, fun
 // SendRequest sends a JSON-RPC request and reads the response.
 func SendRequest(t *testing.T, w io.Writer, r *bufio.Scanner, method string, params interface{}) testutil.JSONRPCResponse {
 	t.Helper()
-	id := json.RawMessage(`1`)
+	idVal := atomic.AddInt64(&requestIDCounter, 1)
+	id := json.RawMessage(fmt.Sprintf("%d", idVal))
 	req := testutil.JSONRPCRequest{
 		JSONRPC: "2.0",
 		ID:      id,
