@@ -50,6 +50,39 @@ func TestWatcherFileChange(t *testing.T) {
 	}
 }
 
+func TestWatcherDirectoryWatch(t *testing.T) {
+	dir := t.TempDir()
+	f1 := filepath.Join(dir, "main.py")
+	os.WriteFile(f1, []byte("v1"), 0644)
+
+	called := make(chan struct{}, 1)
+	w, err := reload.NewWatcher(dir, []string{".py"}, func() {
+		select {
+		case called <- struct{}{}:
+		default:
+		}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go w.Start(ctx)
+	defer w.Stop()
+
+	time.Sleep(50 * time.Millisecond)
+	f2 := filepath.Join(dir, "helper.py")
+	os.WriteFile(f2, []byte("v1"), 0644)
+
+	select {
+	case <-called:
+		// success
+	case <-time.After(2 * time.Second):
+		t.Error("expected callback for new file in watched directory")
+	}
+}
+
 func TestWatcherDebounce(t *testing.T) {
 	dir := t.TempDir()
 	testFile := filepath.Join(dir, "test.py")

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -129,7 +130,8 @@ func main() {
 
 	// 8. Start file watcher (dev mode only)
 	if cfg.Command == "dev" {
-		w, err := reload.NewWatcher(cfg.File, nil, func() {
+		ext := filepath.Ext(cfg.File)
+		w, err := reload.NewWatcher(filepath.Dir(cfg.File), []string{ext}, func() {
 			slog.Info("file changed, reloading...")
 			newTools, err := pm.Reload(ctx)
 			if err != nil {

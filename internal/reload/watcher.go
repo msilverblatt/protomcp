@@ -2,7 +2,9 @@ package reload
 
 import (
 	"context"
+	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -27,13 +29,37 @@ func NewWatcher(path string, extensions []string, onChange func()) (*Watcher, er
 		return nil, err
 	}
 
-	if err := fsw.Add(path); err != nil {
+	info, err := os.Stat(path)
+	if err != nil {
+		fsw.Close()
+		return nil, err
+	}
+
+	watchDir := path
+	if !info.IsDir() {
+		watchDir = filepath.Dir(path)
+	}
+
+	err = filepath.WalkDir(watchDir, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			name := d.Name()
+			if name != "." && (strings.HasPrefix(name, ".") || name == "node_modules" || name == "__pycache__" || name == "target" || name == "venv") {
+				return filepath.SkipDir
+			}
+			return fsw.Add(p)
+		}
+		return nil
+	})
+	if err != nil {
 		fsw.Close()
 		return nil, err
 	}
 
 	return &Watcher{
-		path:       path,
+		path:       watchDir,
 		extensions: extensions,
 		onChange:   onChange,
 		watcher:    fsw,
