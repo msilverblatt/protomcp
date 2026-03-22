@@ -130,7 +130,8 @@ class TestHiddenToolDetectionIncludesGroups:
                 return "done"
 
         hidden = get_hidden_tool_names()
-        assert "secret_ops" in hidden
+        # With "separate" default strategy, group tools are named "group.action"
+        assert "secret_ops.do_secret" in hidden
 
     def test_non_hidden_group_not_in_hidden_names(self):
         """A group registered without hidden=True should NOT appear in hidden tool names."""
@@ -141,7 +142,7 @@ class TestHiddenToolDetectionIncludesGroups:
                 return "done"
 
         hidden = get_hidden_tool_names()
-        assert "public_ops" not in hidden
+        assert "public_ops.do_public" not in hidden
 
     def test_hidden_individual_tool_in_hidden_names(self):
         """An individual tool with hidden=True should appear in get_hidden_tool_names()."""
@@ -176,7 +177,7 @@ class TestHiddenToolDetectionIncludesGroups:
 
         hidden = get_hidden_tool_names()
         assert "hidden_tool" in hidden
-        assert "hidden_group" in hidden
+        assert "hidden_group.act" in hidden
         assert "wf.end" in hidden
         assert "wf.cancel" in hidden
 
