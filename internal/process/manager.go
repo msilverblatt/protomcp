@@ -57,21 +57,21 @@ type ManagerConfig struct {
 // Manager spawns a tool process, communicates via protobuf over a unix socket,
 // and handles handshake, tool calls, reload, and crash detection.
 type Manager struct {
-	cfg      ManagerConfig
-	cmd      *exec.Cmd
-	conn     net.Conn
-	listener net.Listener
-	mu       sync.Mutex
-	writeMu  sync.Mutex // protects concurrent writes to conn
-	pending   map[string]chan *pb.Envelope
-	streams   map[string]*streamAssembly
-	streamChs map[string]chan StreamEvent
+	cfg         ManagerConfig
+	cmd         *exec.Cmd
+	conn        net.Conn
+	listener    net.Listener
+	mu          sync.Mutex
+	writeMu     sync.Mutex // protects concurrent writes to conn
+	pending     map[string]chan *pb.Envelope
+	streams     map[string]*streamAssembly
+	streamChs   map[string]chan StreamEvent
 	tools       []*pb.ToolDefinition
 	middlewares []RegisteredMiddleware
 	crashCh     chan error
-	stopCh   chan struct{}
-	readWg   sync.WaitGroup
-	nextID   int
+	stopCh      chan struct{}
+	readWg      sync.WaitGroup
+	nextID      int
 
 	// handshakeCh receives unsolicited ToolListResponse messages (no request_id).
 	handshakeCh chan *pb.Envelope
@@ -222,6 +222,9 @@ func (m *Manager) Stop() {
 
 // CallTool sends a CallToolRequest and waits for the matching CallToolResponse.
 func (m *Manager) CallTool(ctx context.Context, name, argsJSON string) (*pb.CallToolResponse, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	reqID := m.nextRequestID()
 
 	env := &pb.Envelope{
@@ -258,8 +261,10 @@ func (m *Manager) CallTool(ctx context.Context, name, argsJSON string) (*pb.Call
 
 	select {
 	case <-ctx.Done():
+		m.cancelTool(reqID)
 		return nil, ctx.Err()
 	case <-timer.C:
+		m.cancelTool(reqID)
 		return nil, fmt.Errorf("call tool %q timed out after %v", name, timeout)
 	case resp := <-respCh:
 		result := resp.GetCallResult()
@@ -268,6 +273,21 @@ func (m *Manager) CallTool(ctx context.Context, name, argsJSON string) (*pb.Call
 		}
 		return result, nil
 	}
+}
+
+// cancelTool best-effort forwards cancellation to the SDK process. A bounded
+// write prevents an unresponsive SDK from indefinitely delaying cancellation.
+func (m *Manager) cancelTool(requestID string) {
+	m.writeMu.Lock()
+	defer m.writeMu.Unlock()
+	if m.conn == nil {
+		return
+	}
+	_ = m.conn.SetWriteDeadline(time.Now().Add(time.Second))
+	defer m.conn.SetWriteDeadline(time.Time{})
+	_ = envelope.Write(m.conn, &pb.Envelope{
+		Msg: &pb.Envelope_Cancel{Cancel: &pb.CancelRequest{RequestId: requestID}},
+	})
 }
 
 // ListResources sends a ListResourcesRequest and waits for the matching ResourceListResponse.
@@ -567,6 +587,9 @@ func (m *Manager) Complete(ctx context.Context, refType, refName, argName, argVa
 // the channel receives one StreamEvent with Result set. If the tool streams,
 // it receives a Header event followed by Chunk events.
 func (m *Manager) CallToolStream(ctx context.Context, name, argsJSON string) (<-chan StreamEvent, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	reqID := m.nextRequestID()
 
 	env := &pb.Envelope{
@@ -608,11 +631,15 @@ func (m *Manager) CallToolStream(ctx context.Context, name, argsJSON string) (<-
 		}
 
 		m.mu.Lock()
-		if _, ok := m.streamChs[reqID]; ok {
+		_, active := m.streamChs[reqID]
+		if active {
 			delete(m.streamChs, reqID)
 			close(ch)
 		}
 		m.mu.Unlock()
+		if active {
+			m.cancelTool(reqID)
+		}
 	}()
 
 	return ch, nil
@@ -923,16 +950,13 @@ func (m *Manager) readLoop() {
 			m.mu.Lock()
 			sCh, isStream := m.streamChs[rawReqID]
 			pendCh, isPending := m.pending[rawReqID]
-			m.mu.Unlock()
 
 			if isStream {
 				select {
 				case sCh <- StreamEvent{Result: result.GetCallResult()}:
 				default:
 				}
-				m.mu.Lock()
 				delete(m.streamChs, rawReqID)
-				m.mu.Unlock()
 				close(sCh)
 			} else if isPending {
 				select {
@@ -940,6 +964,7 @@ func (m *Manager) readLoop() {
 				default:
 				}
 			}
+			m.mu.Unlock()
 			continue
 		}
 
@@ -996,7 +1021,6 @@ func (m *Manager) readLoop() {
 		if sh := env.GetStreamHeader(); sh != nil {
 			m.mu.Lock()
 			sCh, isStream := m.streamChs[reqID]
-			m.mu.Unlock()
 
 			if isStream {
 				// Streaming mode — forward header to channel.
@@ -1014,17 +1038,15 @@ func (m *Manager) readLoop() {
 				if sh.TotalSize > 0 {
 					assembly.buf.Grow(int(sh.TotalSize))
 				}
-				m.mu.Lock()
 				m.streams[reqID] = assembly
-				m.mu.Unlock()
 			}
+			m.mu.Unlock()
 			continue
 		}
 
 		if sc := env.GetStreamChunk(); sc != nil {
 			m.mu.Lock()
 			sCh, isStream := m.streamChs[reqID]
-			m.mu.Unlock()
 
 			if isStream {
 				// Streaming mode — forward chunk to channel.
@@ -1034,14 +1056,12 @@ func (m *Manager) readLoop() {
 				default:
 				}
 				if sc.Final {
-					m.mu.Lock()
 					delete(m.streamChs, reqID)
-					m.mu.Unlock()
 					close(sCh)
 				}
+				m.mu.Unlock()
 			} else {
 				// Reassembly mode.
-				m.mu.Lock()
 				assembly, ok := m.streams[reqID]
 				m.mu.Unlock()
 				if !ok {
@@ -1082,7 +1102,6 @@ func (m *Manager) readLoop() {
 		m.mu.Lock()
 		sCh, isStream := m.streamChs[reqID]
 		ch, isPending := m.pending[reqID]
-		m.mu.Unlock()
 
 		if isStream {
 			// Tool returned a non-chunked response to a streaming request.
@@ -1093,9 +1112,7 @@ func (m *Manager) readLoop() {
 				default:
 				}
 			}
-			m.mu.Lock()
 			delete(m.streamChs, reqID)
-			m.mu.Unlock()
 			close(sCh)
 		} else if isPending {
 			select {
@@ -1103,6 +1120,7 @@ func (m *Manager) readLoop() {
 			default:
 			}
 		}
+		m.mu.Unlock()
 	}
 }
 

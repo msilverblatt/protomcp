@@ -69,6 +69,25 @@ def explain(topic: str) -> list[PromptMessage]:
 pmcp dev server.py
 ```
 
+### Python async execution and structured results
+
+Python tools may be `async def`. The runner awaits handler/middleware results while
+keeping the socket reader available for cancellation and reverse requests. Tools
+remain serialized; an async middleware that wraps an async handler must await
+`next_handler(ctx, args)`.
+
+Return `ToolResult(structured_content={"rows": [[1, "example"]]})` for native MCP
+`structuredContent`. It must be a JSON object. `result` supplies an optional text
+preview; when omitted, the structured object is serialized as the text fallback.
+Large structured results preserve the full response envelope, including errors
+and tool-list mutations, rather than using the text-only raw transfer path.
+
+Client cancellation and tool timeouts are forwarded to the Python SDK. Async
+handlers are cancelled on their event loop so `finally` blocks can release
+resources. Synchronous handlers must poll `ctx.is_cancelled()` and stop their own
+work; arbitrary blocking synchronous code cannot be forcibly interrupted safely.
+Cancellation alone does not terminate subprocesses—handlers must clean them up.
+
 ### TypeScript
 
 ```typescript

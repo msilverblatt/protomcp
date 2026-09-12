@@ -26,6 +26,7 @@ class ToolContext:
         self._progress_token = progress_token
         self._send_fn = send_fn
         self._cancelled = False
+        self._cancel_callback = None
         self._lock = threading.Lock()
 
     def report_progress(self, progress: int, total: int = 0, message: str = ""):
@@ -47,7 +48,19 @@ class ToolContext:
 
     def _set_cancelled(self):
         with self._lock:
+            if self._cancelled:
+                return
             self._cancelled = True
+            if self._cancel_callback is not None:
+                self._cancel_callback()
+
+    def _bind_cancel(self, callback):
+        # Serialize binding/unbinding with cancellation to avoid scheduling on a
+        # closed event loop. A cancellation received before binding is retained.
+        with self._lock:
+            self._cancel_callback = callback
+            if self._cancelled and callback is not None:
+                callback()
 
     def sample(
         self,

@@ -38,7 +38,7 @@ func main() {
 		return
 	}
 	if cfg.Command == "version" {
-		fmt.Println("pmcp version 0.2.0")
+		fmt.Printf("pmcp version %s\n", version)
 		return
 	}
 

@@ -16,7 +16,7 @@ def test_send_recv_roundtrip():
 
     try:
         # Create a transport and inject the socket directly
-        transport = Transport.__new__(Transport)
+        transport = Transport("unused")
         transport._sock = s1
 
         # Build an envelope to send
@@ -64,7 +64,7 @@ def test_connection_closed():
     """Test that recv raises ConnectionError when socket closes."""
     s1, s2 = socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
 
-    transport = Transport.__new__(Transport)
+    transport = Transport("unused")
     transport._sock = s1
 
     s2.close()
@@ -76,3 +76,25 @@ def test_connection_closed():
         pass
     finally:
         s1.close()
+
+
+def test_concurrent_sends_preserve_frames():
+    from concurrent.futures import ThreadPoolExecutor
+
+    left, right = socket.socketpair()
+    sender, receiver = Transport("unused"), Transport("unused")
+    sender._sock, receiver._sock = left, right
+    right.settimeout(3)
+    try:
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            futures = [pool.submit(sender.send, pb.Envelope(
+                request_id=str(i), call_result=pb.CallToolResponse(result_json="x" * 100000)
+            )) for i in range(12)]
+            received = [receiver.recv() for _ in futures]
+            for future in futures:
+                future.result(timeout=3)
+        assert {env.request_id for env in received} == {str(i) for i in range(12)}
+        assert all(len(env.call_result.result_json) == 100000 for env in received)
+    finally:
+        left.close()
+        right.close()

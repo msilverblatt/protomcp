@@ -1,6 +1,7 @@
 import os
 import socket
 import struct
+import threading
 
 import protomcp.protomcp_pb2 as pb
 
@@ -8,6 +9,7 @@ class Transport:
     def __init__(self, socket_path: str):
         self._socket_path = socket_path
         self._sock: socket.socket | None = None
+        self._write_lock = threading.Lock()
 
     def connect(self):
         self._sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -16,7 +18,8 @@ class Transport:
     def send(self, envelope: pb.Envelope):
         data = envelope.SerializeToString()
         length = struct.pack(">I", len(data))
-        self._sock.sendall(length + data)
+        with self._write_lock:
+            self._sock.sendall(length + data)
 
     def send_chunked(self, request_id: str, field_name: str, data: bytes,
                      chunk_size: int = 65536):
@@ -69,7 +72,8 @@ class Transport:
         header_bytes = header.SerializeToString()
         length = struct.pack(">I", len(header_bytes))
         # Send header + raw payload in one sendall to minimize syscalls
-        self._sock.sendall(length + header_bytes + data)
+        with self._write_lock:
+            self._sock.sendall(length + header_bytes + data)
 
     def recv(self) -> pb.Envelope:
         length_bytes = self._recv_exactly(4)

@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import re
@@ -11,6 +12,7 @@ import inspect
 from protomcp.transport import Transport
 from protomcp.tool import get_registered_tools, get_hidden_tool_names
 from protomcp.result import ToolResult
+from protomcp.execution import ToolDispatcher, await_result
 from protomcp.context import ToolContext, _deliver_sampling_response
 from protomcp.log import ServerLogger
 from protomcp.middleware import get_registered_middleware
@@ -52,36 +54,43 @@ def run():
     # Track middleware handlers for intercept dispatch
     _mw_handlers = {}
 
-    while True:
-        try:
-            env = transport.recv()
-        except ConnectionError:
-            break
+    calls = ToolDispatcher(transport, _handle_call_tool)
+    try:
+        while True:
+            try:
+                env = transport.recv()
+            except ConnectionError:
+                break
 
-        if env.HasField("list_tools"):
-            _handle_list_tools(transport, env)
-            _send_middleware_registrations(transport, _mw_handlers)
-            _disable_hidden_tools(transport)
-        elif env.HasField("call_tool"):
-            _handle_call_tool(transport, env)
-        elif env.HasField("reload"):
-            _handle_reload(transport, env, _mw_handlers)
-        elif env.HasField("middleware_intercept"):
-            _handle_middleware_intercept(transport, env, _mw_handlers)
-        elif env.HasField("list_resources_request"):
-            _handle_list_resources(transport, env)
-        elif env.HasField("read_resource_request"):
-            _handle_read_resource(transport, env)
-        elif env.HasField("list_resource_templates_request"):
-            _handle_list_resource_templates(transport, env)
-        elif env.HasField("list_prompts_request"):
-            _handle_list_prompts(transport, env)
-        elif env.HasField("get_prompt_request"):
-            _handle_get_prompt(transport, env)
-        elif env.HasField("completion_request"):
-            _handle_completion(transport, env)
-        elif env.HasField("sampling_response"):
-            _deliver_sampling_response(env.request_id, env.sampling_response)
+            if env.HasField("list_tools"):
+                _handle_list_tools(transport, env)
+                _send_middleware_registrations(transport, _mw_handlers)
+                _disable_hidden_tools(transport)
+            elif env.HasField("call_tool"):
+                calls.submit(env)
+            elif env.HasField("cancel"):
+                calls.cancel(env.cancel.request_id)
+            elif env.HasField("reload"):
+                _handle_reload(transport, env, _mw_handlers)
+            elif env.HasField("middleware_intercept"):
+                _handle_middleware_intercept(transport, env, _mw_handlers)
+            elif env.HasField("list_resources_request"):
+                _handle_list_resources(transport, env)
+            elif env.HasField("read_resource_request"):
+                _handle_read_resource(transport, env)
+            elif env.HasField("list_resource_templates_request"):
+                _handle_list_resource_templates(transport, env)
+            elif env.HasField("list_prompts_request"):
+                _handle_list_prompts(transport, env)
+            elif env.HasField("get_prompt_request"):
+                _handle_get_prompt(transport, env)
+            elif env.HasField("completion_request"):
+                _handle_completion(transport, env)
+            elif env.HasField("sampling_response"):
+                _deliver_sampling_response(env.request_id, env.sampling_response)
+    finally:
+        calls.close()
+        transport.close()
 
 def _handle_list_tools(transport, env):
     tools = get_registered_tools()
@@ -105,7 +114,7 @@ def _handle_list_tools(transport, env):
     )
     transport.send(resp)
 
-def _handle_call_tool(transport, env):
+def _handle_call_tool(transport, env, ctx=None):
     global _first_tool_call
     if _first_tool_call:
         _first_tool_call = False
@@ -145,23 +154,32 @@ def _handle_call_tool(transport, env):
         action_name = args.get("action", "")
         emit_telemetry(ToolCallEvent(tool_name=req.name, action=action_name, phase="start", args=dict(args)))
         start_time = time.monotonic()
-        if "ctx" in sig.parameters:
-            ctx = ToolContext(
-                progress_token=req.progress_token,
-                send_fn=transport.send,
-            )
-            result = chain(ctx, args)
-        else:
-            result = chain(None, args)
+        if ctx is None:
+            ctx = ToolContext(req.progress_token, transport.send)
+        if ctx.is_cancelled():
+            return
+        result = chain(ctx if "ctx" in sig.parameters else None, args)
+        if inspect.isawaitable(result):
+            result = asyncio.run(await_result(result, ctx))
+        if ctx.is_cancelled():
+            return
 
         elapsed_ms = int((time.monotonic() - start_time) * 1000)
         result_str = result.result if isinstance(result, ToolResult) else str(result)
         emit_telemetry(ToolCallEvent(tool_name=req.name, action=action_name, phase="success", args={}, result=str(result_str)[:20000], duration_ms=elapsed_ms))
 
         if isinstance(result, ToolResult):
+            structured_json = ""
+            if result.structured_content is not None:
+                if not isinstance(result.structured_content, dict):
+                    raise TypeError("structured_content must be a JSON object")
+                structured_json = json.dumps(result.structured_content, allow_nan=False)
+            # Include a text fallback for MCP clients that do not consume structuredContent.
+            text = result.result if result.result else structured_json
             resp_msg = pb.CallToolResponse(
                 is_error=result.is_error,
-                result_json=json.dumps([{"type": "text", "text": str(result.result)}]),
+                result_json=json.dumps([{"type": "text", "text": str(text)}]),
+                structured_content_json=structured_json,
                 enable_tools=result.enable_tools or [],
                 disable_tools=result.disable_tools or [],
             )
@@ -176,6 +194,9 @@ def _handle_call_tool(transport, env):
             resp_msg = pb.CallToolResponse(
                 result_json=json.dumps([{"type": "text", "text": str(result)}]),
             )
+    except asyncio.CancelledError:
+        # The caller has cancelled; coroutine finally blocks have already run.
+        return
     except Exception as e:
         elapsed_ms = int((time.monotonic() - start_time) * 1000)
         emit_telemetry(ToolCallEvent(tool_name=req.name, action=action_name, phase="error", args={}, error=e, duration_ms=elapsed_ms))
@@ -189,7 +210,12 @@ def _handle_call_tool(transport, env):
     result_json_str = resp_msg.result_json
     result_json_bytes = result_json_str.encode('utf-8') if result_json_str else b''
 
-    if len(result_json_bytes) > chunk_threshold:
+    # Raw single-field transfers cannot carry sibling fields. Keep the full
+    # envelope for structured results, errors, or tool-list mutations.
+    plain_text_only = not (resp_msg.structured_content_json or resp_msg.is_error
+                           or resp_msg.enable_tools or resp_msg.disable_tools
+                           or resp_msg.HasField("error"))
+    if len(result_json_bytes) > chunk_threshold and plain_text_only:
         transport.send_raw(
             request_id=env.request_id,
             field_name='result_json',

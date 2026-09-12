@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	pb "github.com/msilverblatt/protomcp/gen/proto/protomcp"
@@ -108,6 +109,14 @@ func makeToolHandler(backend ProcessBackend, name string, onMutation ToolListMut
 
 		result := &mcp.CallToolResult{
 			IsError: resp.IsError,
+		}
+		if resp.StructuredContentJson != "" {
+			// Validate object shape without converting numbers through float64.
+			var object map[string]json.RawMessage
+			if err := json.Unmarshal([]byte(resp.StructuredContentJson), &object); err != nil || object == nil {
+				return nil, fmt.Errorf("tool %q returned invalid structured content: expected JSON object", name)
+			}
+			result.StructuredContent = json.RawMessage(resp.StructuredContentJson)
 		}
 
 		// Parse result_json into content items

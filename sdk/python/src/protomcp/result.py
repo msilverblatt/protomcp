@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 
 @dataclass
 class ToolResult:
@@ -11,3 +11,4 @@ class ToolResult:
     message: Optional[str] = None
     suggestion: Optional[str] = None
     retryable: bool = False
+    structured_content: Optional[dict[str, Any]] = None
